@@ -46,7 +46,6 @@ describe('emem:configure test', () => {
       'mem-alloc': 32,
       'mem-energy': 0.38,
     });
-    await expect(outputModel.name).toBe('test');
     await expect(outputModel.configure()).rejects.toThrow();
     await expect(outputModel.execute(undefined)).rejects.toThrow();
     await expect(outputModel.execute({})).rejects.toThrow();

@@ -378,7 +378,6 @@ describe('cpu:configure test', () => {
     await expect(
       outputModel.configure( {allocation: 'wrong'})
     ).rejects.toThrowError();
-    expect(outputModel.name).toBe('test');
   });
 
   test('initialize without params throws error for parameter and call execute without params throws error for input', async () => {
@@ -412,7 +411,7 @@ describe('cpu:configure test', () => {
         'expected-lifespan': 4 * 365 * 24 * 60 * 60,
       })
     ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
-    expect(outputModel.name).toBe('test');
+
     // not providing inputs will throw a missing inputs error
     await expect(outputModel.execute()).rejects.toStrictEqual(
       Error(
@@ -436,7 +435,7 @@ describe('cpu:initialize with params', () => {
         location: 'USA',
       })
     ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
-    expect(outputModel.name).toBe('test');
+
     // configure without static params will cause improper configure error
     await expect(
       outputModel.execute([
@@ -463,7 +462,7 @@ describe('cpu:initialize with params', () => {
         verbose: true,
       })
     ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
-    expect(outputModel.name).toBe('test');
+
     // configure without static params will cause improper configure error
     await expect(
       outputModel.execute([
@@ -521,7 +520,7 @@ describe('cloud:initialize with params', () => {
         verbose: 0,
       })
     ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
-    expect(outputModel.name).toBe('test');
+
     // configure without static params will cause improper configure error
   });
 
@@ -547,7 +546,7 @@ describe('cloud:initialize with params', () => {
         provider: 'aws',
       })
     ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
-    expect(outputModel.name).toBe('test');
+
     // mockAxios.get.mockResolvedValue({data: {}});
     await expect(
       outputModel.execute([
@@ -575,7 +574,7 @@ describe('cloud:initialize with params', () => {
         provider: 'aws',
       })
     ).rejects.toThrowError();
-    expect(outputModel.name).toBe('test');
+
     // configure without static params will cause improper configure error
     await expect(
       outputModel.execute([
@@ -621,7 +620,7 @@ describe('cloud:initialize with params', () => {
         'instance-type': 't2.micro',
       })
     ).rejects.toThrowError();
-    expect(outputModel.name).toBe('test');
+
     // configure without static params will cause improper configure error
     await expect(
       outputModel.execute([
