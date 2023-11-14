@@ -1,4 +1,8 @@
-import {MockAzureCredentials, MockComputeManagementClient, MockMonitorClient,} from '../../../../__mocks__/azure';
+import {
+  MockAzureCredentials,
+  MockComputeManagementClient,
+  MockMonitorClient,
+} from '../../../../__mocks__/azure';
 import {AzureImporterModel} from '../../../../lib/azure-importer';
 
 jest.mock('@azure/identity', () => ({
@@ -58,9 +62,7 @@ describe('lib/azure-importer: ', () => {
     it('throws error for missing input field.', async () => {
       const azureModel = new AzureImporterModel();
       expect.assertions(2);
-      expect(await azureModel.configure({})).toBeInstanceOf(
-        AzureImporterModel
-      );
+      expect(await azureModel.configure({})).toBeInstanceOf(AzureImporterModel);
       try {
         await azureModel.execute([
           {
