@@ -1,6 +1,6 @@
 # Teads' AWS Estimation Model
 
-> **Note**
+> [!NOTE]
 > `Teads-AWS` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 

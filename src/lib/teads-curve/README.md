@@ -1,6 +1,6 @@
 # Teads' CPU Estimation Model
 
-> **Note**
+> [!NOTE]
 > `Teads-Curve` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 Teads Engineering team has built a model that is capable of estimating CPU usages across varying type of CPUs using a curve commonly known as Teads Curve.
