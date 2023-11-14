@@ -1,7 +1,7 @@
 {
   "name": "@grnsft/if-unofficial-models",
   "description": "Impact Framework Unofficial Models.",
-  "version": "v0.0.1",
+  "version": "v0.0.2",
   "author": {
     "name": "Green Software Foundation",
     "email": "info@gsf.com"
@@ -52,6 +52,9 @@
   ],
   "license": "MIT",
   "main": "build/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "url": "https://github.com/Green-Software-Foundation/if-unofficial-models.git"
   },
