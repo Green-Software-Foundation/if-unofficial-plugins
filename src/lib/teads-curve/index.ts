@@ -29,7 +29,6 @@ export class TeadsCurveModel implements ModelPluginInterface {
   async configure(
     staticParams: object | undefined = undefined
   ): Promise<ModelPluginInterface> {
-
     if (staticParams === undefined) {
       throw new Error('Required Parameters not provided');
     }
@@ -77,7 +76,6 @@ export class TeadsCurveModel implements ModelPluginInterface {
       return input;
     });
   }
-
 
   /**
    * Calculates the energy consumption for a single input

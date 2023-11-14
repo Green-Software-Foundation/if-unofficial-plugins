@@ -376,7 +376,7 @@ describe('cpu:configure test', () => {
   test('initialize wrong params should throw error', async () => {
     const outputModel = new BoaviztaCpuOutputModel();
     await expect(
-      outputModel.configure( {allocation: 'wrong'})
+      outputModel.configure({allocation: 'wrong'})
     ).rejects.toThrowError();
   });
 
@@ -540,7 +540,7 @@ describe('cloud:initialize with params', () => {
       })
     ).rejects.toThrowError();
     await expect(
-      outputModel.configure( {
+      outputModel.configure({
         'instance-type': 't2.micro',
         location: 'USA',
         provider: 'aws',
@@ -568,7 +568,7 @@ describe('cloud:initialize with params', () => {
     const outputModel = new BoaviztaCloudOutputModel();
 
     await expect(
-      outputModel.configure( {
+      outputModel.configure({
         'instance-type': 't5.micro',
         location: 'USA',
         provider: 'aws',
@@ -606,7 +606,7 @@ describe('cloud:initialize with params', () => {
     const outputModel = new BoaviztaCloudOutputModel();
 
     await expect(
-      outputModel.configure( {
+      outputModel.configure({
         location: 'USA',
         provider: 'aws',
       })

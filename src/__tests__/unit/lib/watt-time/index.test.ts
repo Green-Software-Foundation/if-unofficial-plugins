@@ -28,7 +28,7 @@ mockAxios.get.mockImplementation(url => {
 });
 describe('watt-time:configure test', () => {
   test('initialize and test', async () => {
-    const model = await new WattTimeGridEmissions().configure( {
+    const model = await new WattTimeGridEmissions().configure({
       username: 'test1',
       password: 'test2',
     });
