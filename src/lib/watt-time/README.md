@@ -1,15 +1,16 @@
 # WattTime Grid Emissions Model
 
-**Please note** `Watt-time` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+> **Note**
+> `Watt-time` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 ## Introduction
 
 WattTime technology—based on real-time grid data, cutting-edge algorithms, and machine learning—provides first-of-its-kind insight into your local electricity grid’s marginal emissions rate. [Read More...](https://www.watttime.org/api-documentation/#introduction)
 
 
-## Scope 
+## Scope
 
-WattTime Model provides a way to calculate emissions for a given time in a specific location. 
+WattTime Model provides a way to calculate emissions for a given time in a specific location.
 
 The model is based on the WattTime API. The model uses the following inputs:
 * location: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
@@ -19,8 +20,8 @@ The model is based on the WattTime API. The model uses the following inputs:
 
 ## Implementation
 
-Limitations: 
-* Set of inputs are to be within 32 days of each other. 
+Limitations:
+* Set of inputs are to be within 32 days of each other.
 * Emissions are aggregated for every 5 minutes regardless of the granularity of the inputs.
 
 ### Authentication
@@ -41,7 +42,7 @@ https://www.watttime.org/get-the-data/data-plans/
   * ENV_WATT_TIME_PASSWORD - specifying this value enables the Impact to load the value from the environment variable `WATT_TIME_PASSWORD`
 
 
-### inputs 
+### inputs
 
 **Required Parameters:**
 * timestamp: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
@@ -71,7 +72,7 @@ const results = env_model.calculateEmissions(inputs);
 ### IMPL Usage
 #### Environment Variable based configuration for IMPL
 ```yaml
-# environment variable config , prefix the environment variables with "ENV" to load them inside the model.  
+# environment variable config , prefix the environment variables with "ENV" to load them inside the model.
 # export WATT_TIME_USERNAME=test1
 # export WATT_TIME_PASSWORD=test2
 config:

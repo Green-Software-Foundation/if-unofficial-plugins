@@ -137,7 +137,10 @@ graph:
 This impl is run using `impact-engine` using the following command, run from the project root:
 
 ```sh
-npx ts-node scripts/impact.ts --impl ./examples/impls/ccf-test.yml --ompl ./examples/ompls/ccf-test.yml
+
+npm i -g @grnsft/if
+npm i -g @grnsft/if-unofficial-models
+impact-engine --impl ./examples/impls/ccf-test.yml --ompl ./examples/ompls/ccf-test.yml
 ```
 
 This yields a result that looks like the following (saved to `/ompls/ccf-test.yml`):
@@ -148,9 +151,8 @@ description: example impl invoking CCF model
 initialize:
   models:
     - name: ccf
-      kind: plugin
       model: CloudCarbonFootprint
-      path: ccf
+      path: '@grnsft/if-unofficial-models'
 graph:
   children:
     front-end:

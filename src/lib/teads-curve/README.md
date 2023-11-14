@@ -1,6 +1,7 @@
 # Teads' CPU Estimation Model
 
-**Please note** `Teads-AWS` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+> **Note**
+> `Teads-Curve` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 Teads Engineering team has built a model that is capable of estimating CPU usages across varying type of CPUs using a curve commonly known as Teads Curve.
 
@@ -17,7 +18,7 @@ IF recognizes the Teads CPU model as `teads-curve`.
 
 ### Observations
 
-- `cpu-util`: percentage CPU utilization for the observation 
+- `cpu-util`: percentage CPU utilization for the observation
 
 ## Returns
 
@@ -34,7 +35,7 @@ The power curve provided for `IDLE`, `10%`, `50%`, `100%` in the Teads Curve are
 
 The algorithm in linear interpolation will take the lowest possible base value + linear interpolated value. ie. 75% usage will be calculated as follows.
 `100%` and `50%` are the known values hence we are interpolating linearly between them.
-(`50%` + `(100%-50%)` `x` `(75%-50%))` `x` `thermal-design-power`. 
+(`50%` + `(100%-50%)` `x` `(75%-50%))` `x` `thermal-design-power`.
 
 
 
@@ -99,16 +100,16 @@ initialize:
 graph:
   children:
     child:
-      pipeline: 
+      pipeline:
         - teads-cpu # duration & config -> embodied
       config:
         sci-m:
           total-embodied-emissions: 1533.120 # gCO2eq
           time-reserved: 1 # s per hour
-          expected-lifespan: 3 # 3 years in seconds        
+          expected-lifespan: 3 # 3 years in seconds
           resources-reserved: 1
           total-resources: 8
-      inputs: 
+      inputs:
         - timestamp: 2023-07-06T00:00
           duration: 3600
 ```
