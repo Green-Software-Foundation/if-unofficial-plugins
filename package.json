@@ -55,6 +55,9 @@
   "repository": {
     "url": "https://github.com/Green-Software-Foundation/if-unofficial-models.git"
   },
+  "bugs": {
+    "url": "https://github.com/Green-Software-Foundation/if-unofficial-models/issues/new?assignees=&labels=feedback&projects=&template=feedback.md&title=Feedback+-+"
+  },
   "scripts": {
     "build": "tsc",
     "fix": "gts fix",
