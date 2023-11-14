@@ -46,7 +46,7 @@ We'll need 2 role Assignments:
 
 * Reader
 * Monitor Reader
-  
+
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/52af6111-dde3-4f99-8739-769d72fdb5d8)
 
 Then Add the service principal you created as a member for the Role assignment
@@ -64,7 +64,7 @@ you should create a `.env` file in the IF project root directory. This is where 
 
 ```txt
 AZURE_TENANT_ID: <your-tenant-id>
-AZURE_CLIENT_ID: <your-client-id> 
+AZURE_CLIENT_ID: <your-client-id>
 AZURE_CLIENT_SECRET: <your-client-secret>
 ```
 
@@ -75,7 +75,7 @@ These are the required fields:
 
 - `timestamp`: An ISO8601 timestamp indicating the start time for your observation period. We work out your `timespan` by adding `duration` to this initial start time.
 - `duration`: Number of seconds your observation period should last. We add this number of seconds to `timestamp` to work out when your observation period should stop.
-- `azure-observation-window`: The time interval between measurements (temporal resolution) as a string with a value and a unit, e.g. `5 mins`. The value and unit must be space-separated. 
+- `azure-observation-window`: The time interval between measurements (temporal resolution) as a string with a value and a unit, e.g. `5 mins`. The value and unit must be space-separated.
 - `azure-observation-aggregation`: This indicates how you want metrics to be aggregated between each `interval`. The recommended default is `average`.
 - `azure-subscription-id`: Your Azure subscription ID, e.g. 9cf5e19b-8b18-4c37-9541-55fc47ad70c3
 - `azure-resource-group`: Your Azure resource group name
@@ -89,7 +89,8 @@ description: example impl invoking Azure model
 initialize:
   models:
     - name: azure-importer
-      kind: builtin
+      model: AzureImporterModel
+      path: @grnsft/if-unofficial-models
 graph:
   children:
     child:
@@ -100,14 +101,14 @@ graph:
       inputs:
           - timestamp: '2023-11-02T10:35:31.820Z'
             duration: 3600
-            azure-observation-window: 5 min  
+            azure-observation-window: 5 min
             azure-observation-aggregation: 'average'
             azure-subscription-id: 9cf5e19b-8b18-4c37-9541-55fc47ad70c3
             azure-resource-group: my_group
             azure-vm-name: my_vm
 ```
 
-This will grab Azure metrics for `my_vm` in `my_group` for a one hour period beginning at 10:35 UTC on 2nd November 2023, at 5 minute resolution, aggregating data occurring more frequently than 5 minutes by averaging. 
+This will grab Azure metrics for `my_vm` in `my_group` for a one hour period beginning at 10:35 UTC on 2nd November 2023, at 5 minute resolution, aggregating data occurring more frequently than 5 minutes by averaging.
 
 
 ## Outputs
@@ -123,7 +124,7 @@ The Azure importer model will enrich your `impl` with the following data:
 - `total-memoryGB`: The total memory allocated to your virtual machine, in GB.
 - `mem-util`: memory utilized, expressed as a percentage (`memory-usedGB`/`total-memoryGB` * 100)
 
-These can be used as inputs in other models in the pipeline. Typically, the `instance-type` can be used to obtain `tdp` data that can then, along with `cpu-util`, feed a model such as `teads-curve`. 
+These can be used as inputs in other models in the pipeline. Typically, the `instance-type` can be used to obtain `tdp` data that can then, along with `cpu-util`, feed a model such as `teads-curve`.
 
 The outputs look as follows:
 
