@@ -3,10 +3,8 @@ import Spline from 'typescript-cubic-spline';
 import * as AWS_INSTANCES from './aws-instances.json';
 import * as AWS_EMBODIED from './aws-embodied.json';
 
-
 import {KeyValuePair, Interpolation} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
-
 
 export class TeadsAWS implements ModelPluginInterface {
   authParams: object | undefined; // Defined for compatibility. Not used in TEADS.

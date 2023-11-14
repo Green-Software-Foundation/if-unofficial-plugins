@@ -2,7 +2,6 @@ import Spline from 'typescript-cubic-spline';
 
 import {INSTANCE_TYPE_COMPUTE_PROCESSOR_MAPPING} from '@cloud-carbon-footprint/aws/dist/lib/AWSInstanceTypes';
 
-
 import * as AWS_INSTANCES from './aws-instances.json';
 import * as GCP_INSTANCES from './gcp-instances.json';
 import * as AZURE_INSTANCES from './azure-instances.json';
@@ -63,7 +62,6 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
   async configure(
     staticParams: object | undefined = undefined
   ): Promise<ModelPluginInterface> {
-
     if (staticParams === undefined) {
       throw new Error('Required Parameters not provided');
     }

@@ -4,7 +4,6 @@ import {KeyValuePair} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
 import {BoaviztaInstanceTypes, IBoaviztaUsageSCI} from '../../types/boavizta';
 
-
 abstract class BoaviztaOutputModel implements ModelPluginInterface {
   name: string | undefined;
   sharedParams: object | undefined = undefined;
@@ -234,9 +233,8 @@ export class BoaviztaCloudOutputModel
       this.instanceTypes[provider] === undefined ||
       this.instanceTypes[provider].length === 0
     ) {
-      this.instanceTypes[provider] = await this.supportedInstancesList(
-        provider
-      );
+      this.instanceTypes[provider] =
+        await this.supportedInstancesList(provider);
     }
 
     if ('instance-type' in staticParamsCast) {
