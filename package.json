@@ -6,6 +6,9 @@
     "name": "Green Software Foundation",
     "email": "info@gsf.com"
   },
+  "bugs": {
+    "url": "https://github.com/Green-Software-Foundation/if-unofficial-models/issues/new?assignees=&labels=feedback&projects=&template=feedback.md&title=Feedback+-+"
+  },
   "dependencies": {
     "@azure/arm-compute": "^21.2.0",
     "@azure/arm-monitor": "^7.0.0",
@@ -58,15 +61,12 @@
   "repository": {
     "url": "https://github.com/Green-Software-Foundation/if-unofficial-models.git"
   },
-  "bugs": {
-    "url": "https://github.com/Green-Software-Foundation/if-unofficial-models/issues/new?assignees=&labels=feedback&projects=&template=feedback.md&title=Feedback+-+"
-  },
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf build && tsc --project tsconfig.build.json",
     "fix": "gts fix",
     "fix:package": "fixpack",
     "lint": "gts lint",
-    "prepare": "npm run build",
+    "prepublish": "yarn build",
     "test": "jest --verbose"
   }
 }
