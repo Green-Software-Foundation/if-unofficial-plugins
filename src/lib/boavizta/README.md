@@ -1,6 +1,6 @@
 # Boavizta
 
-**Please note** Boavizta is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+**Please note** Boavizta is an unofficial model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 
 [Boavizta](https://boavizta.org/) is an environmental impact calculator that exposes an API we use in IEF to retrieve energy and embodied carbon estimates.
@@ -8,10 +8,6 @@
 ## Implementation
 
 Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` model is included in an IEF pipeline, IEF sends API requests to Boavizta. The request payload is generated from input data provided to IEF in an `impl` file.
-
-## Model name
-
-IEF recognizes the Boavizta model as `boavizta-cpu`.
 
 ## Parameters
 
@@ -27,12 +23,12 @@ IEF recognizes the Boavizta model as `boavizta-cpu`.
 ### observations
 
 - `cpu-util`: percentage CPU utilization for a given observation
- 
+
 ## Returns
 
 - `embodied-carbon`: carbon emitted in manufacturing the device, in gCO2eq
 - `e-cpu`: energy used by CPU in kWh
-  
+
 ## Usage
 
 To run the `boavista-cpu` model an instance of `BoaviztaCpuImpactModel` must be created and its `configure()` method called. Then, the model's `execute()` method can be called, passing `duration`,`cpu-util`,`timestamp` arguments.
@@ -40,42 +36,39 @@ To run the `boavista-cpu` model an instance of `BoaviztaCpuImpactModel` must be 
 This is how you could run the model in Typescript:
 
 ```typescript
-import {BoaviztaCpuImpactModel, KeyValuePair} from '../src';
+import {BoaviztaCpuImpactModel, KeyValuePair} from '@grnsft/if-unofficial-models';
+
 
 async function runBoavizta() {
-  const params: KeyValuePair = {};
-  params.allocation = 'TOTAL';
-  params.verbose = true;
-
-  const newModel = await new BoaviztaCpuImpactModel().configure('test', {
+    const newModel = await new BoaviztaCpuImpactModel().configure({
         'physical-processor': 'Intel Xeon Gold 6138f',
         'core-units': 24,
         'expected-lifespan': 4 * 365 * 24 * 60 * 60,
-      })
-  const usage = await newModel.calculate([
-    {
-      timestamp: '2021-01-01T00:00:00Z',
-      duration: 1,
-      cpu-util: 34,
-    },
-    {
-      timestamp: '2021-01-01T00:00:15Z',
-      duration: 1,
-      cpu-util: 12,
-    },
-    {
-      timestamp: '2021-01-01T00:00:30Z',
-      duration: 1,
-      cpu-util: 1,
-    },
-    {
-      timestamp: '2021-01-01T00:00:45Z',
-      duration: 1,
-      cpu-util: 78,
-    },
-  ]);
+    })
+    const usage = await newModel.calculate([
+        {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 1,
+            'cpu-util': 34,
+        },
+        {
+            timestamp: '2021-01-01T00:00:15Z',
+            duration: 1,
+            'cpu-util': 12,
+        },
+        {
+            timestamp: '2021-01-01T00:00:30Z',
+            duration: 1,
+            'cpu-util': 1,
+        },
+        {
+            timestamp: '2021-01-01T00:00:45Z',
+            duration: 1,
+            'cpu-util': 78,
+        },
+    ]);
 
-  console.log(usage);
+    console.log(usage);
 }
 
 runBoavizta();
@@ -92,16 +85,15 @@ tags:
 initialize:
   models:
     - name: boavizta-cpu
-      kind: plugin
-      model: BoaviztaOutputModel
-      path: boavizta-cpu
+      model: BoaviztaCpuOutputModel
+      path: '@grnsft/if-unofficial-models'
       config:
         allocation: LINEAR
         verbose: true
 graph:
   children:
     child:
-      pipeline: 
+      pipeline:
         - boavizta-cpu
       config:
         boavizta-cpu:
@@ -114,11 +106,13 @@ graph:
         - timestamp: 2023-08-06T00:00 # [KEYWORD] [NO-SUBFIELDS] time when measurement occurred
           duration: 3600 # Secs
           cpu-util: 16
-          
+
 ```
 
 You can run this by passing it to `impact-engine`. Run impact using the following command run from the project root:
 
 ```sh
-npx ts-node scripts/impact.ts --impl ./examples/impls/boavizta.yml --ompl ./examples/ompls/boavizta.yml
+npm i -g @grnsft/if
+npm i -g @grnsft/if-unofficial-models
+impact-engine --impl ./examples/impls/boavizta.yml --ompl ./examples/ompls/boavizta.yml
 ```

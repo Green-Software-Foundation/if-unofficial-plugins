@@ -1,12 +1,8 @@
 # Cloud Carbon Footprint
 
-**Please note** CCF is a community cmodel, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+**Please note** CCF is an unoffical model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 "Cloud Carbon Footprint is an open source tool that provides visibility and tooling to measure, monitor and reduce your cloud carbon emissions. We use best practice methodologies to convert cloud utilization into estimated energy usage and carbon emissions, producing metrics and carbon savings estimates that can be shared with employees, investors, and other stakeholders." - [CCF](https://www.cloudcarbonfootprint.org/)
-
-## Model name
-
-IEF recognizes the Cloud Carbon Footprint model as `ccf`.
 
 ## Parameters
 
@@ -20,18 +16,18 @@ IEF recognizes the Cloud Carbon Footprint model as `ccf`.
 - `cpu-util`: percentage CPU utilization for a given observation
 - `duration`: the amount of time the observation covers, in seconds
 - `timestamp`: a timestamp for the observation
- 
+
 ## Returns
 
 - `embodied-carbon`: carbon emitted in manufacturing the device, in gCO2eq
 - `energy`: energy used by CPU in kWh
-  
+
 
 ## IEF Implementation
 
-IEF reimplements the Cloud Carbon Footprint methodology fro scratch conforming to the IEF specification. This means the CCF models can be run inside IEF without any external API calls and can be invoked as part of a model pipeline defined in an `impl`.
+IEF reimplements the Cloud Carbon Footprint methodology from scratch conforming to the IEF specification. This means the CCF models can be run inside IEF without any external API calls and can be invoked as part of a model pipeline defined in an `impl`.
 
-Cloud Carbon Footprint includes calculations for three cloud vendors: AWS, Azure and GCP. 
+Cloud Carbon Footprint includes calculations for three cloud vendors: AWS, Azure and GCP.
 
 The general methodology is as follows:
 
@@ -56,7 +52,7 @@ You can see example Typescript invocations for each vendor below:
 ### AWS
 
 ```typescript
-import {CloudCarbonFootprint} from 'ief';
+import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
 
 const ccf = new CloudCarbonFootprint();
 ccf.configure({
@@ -66,7 +62,7 @@ ccf.configure({
 const results = ccf.execute([
   {
     duration: 3600, // duration institute
-    cpu-util: 10, // CPU usage as a percentage
+    'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
   }
 ])
@@ -75,7 +71,7 @@ const results = ccf.execute([
 ### Azure
 
 ```typescript
-import {CloudCarbonFootprint} from 'ief';
+import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
 
 const ccf = new CloudCarbonFootprint();
 ccf.configure({
@@ -85,7 +81,7 @@ ccf.configure({
 const results = ccf.execute([
   {
     duration: 3600, // duration institute
-    cpu-util: 10, // CPU usage as a percentage
+    'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
   }
 ])
@@ -94,7 +90,8 @@ const results = ccf.execute([
 ### GCP
 
 ```typescript
-import {CloudCarbonFootprint} from 'ief';
+import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
+
 
 const ccf = new CloudCarbonFootprint();
 ccf.configure({
@@ -104,10 +101,10 @@ ccf.configure({
 const results = ccf.execute([
   {
     duration: 3600, // duration institute
-    cpu-util: 10, // CPU usage as a percentage
+    'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
   }
-]) 
+])
 ```
 
 ## Example Impl
@@ -120,9 +117,8 @@ description: example impl invoking CCF model
 initialize:
   models:
     - name: ccf
-      kind: plugin
       model: CloudCarbonFootprint
-      path: ccf
+      path: '@grnsft/if-unofficial-models'
 graph:
   children:
     child:

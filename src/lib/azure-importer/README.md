@@ -90,7 +90,7 @@ initialize:
   models:
     - name: azure-importer
       model: AzureImporterModel
-      path: @grnsft/if-unofficial-models
+      path: '@grnsft/if-unofficial-models'
 graph:
   children:
     child:
@@ -140,7 +140,7 @@ outputs:
     location: uksouth
     cloud-instance-type: Standard_B1s
   - timestamp: '2023-11-02T10:40:00.000Z'
-      duration: 300
+    duration: 300
     cpu-util: '0.314'
     mem-availableGB: 0.48978984960000005
     mem-usedGB: 0.5102101504
