@@ -1,26 +1,25 @@
 # Azure-importer
 
 > [!NOTE]
-> `Azure Importer` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+> `Azure Importer` is an unofficial, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 
 The Azure importer model allows you to provide some basic details about an Azure virtual machine and automatically populate your `impl` with usage metrics that can then be passed along a model pipeline to calculate energy and carbon impacts.
 
-
 ## Prerequisites
 
-### First, you need to have a VM instance running on Azure
+### 1. Create an Azure VM instance
 
 You can create one using [portal.azure.com](https://portal.azure.com). You also need to create a metrics application for that virtual machine and assign the relevant permissions.
 
-### Next, Provide an Azure identity for the IEF Azure Importer to access Azure VM metadata and observability metrics
+### 2. Provide an identity to access VM metadata and metrics
 
-The Azure Importer uses [AzureDefaultCredentials](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet) method which is an abstraction for different scenarios of authentication
+The Azure Importer uses [AzureDefaultCredentials](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet) method which is an abstraction for different scenarios of authentication.
 
 * When hosting the IEF Azure Importer on an Azure service, you can provide a [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview).
 * When running the Azure Importer outside of Azure, e.g. on your local machine, you can use an [App registration](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app) (an App registration is a representation of a technical service principal account; you can view it as an identity for your App on Azure).
 
-The following steps in this tutorial use a service principal. You can learn more on https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
+The following steps in this tutorial use a service principal. You can learn more at https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
 
 ### Create An App registration/service principal for the Azure Importer
 
@@ -37,10 +36,11 @@ Then, on the Overview Tab, copy/paste the **client_id** and **tenant_id** for th
 
 Now we have credentials to authenticate to Azure as the service principal (of this App registration)
 
-### Provide IAM access rights for the service principal to Query Azure VM info
-next, we need to provide access rights to this service principal to the test VM (or its resource group).
+### 3. Provide IAM access
 
-On the IAM Tab of the Ressource Group that contains the VM, add a new Role Assignment
+Next, we need to provide access rights to this service principal to the test VM (or its resource group).
+
+On the IAM Tab of the Resource Group that contains the VM, add a new Role Assignment
 
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/0588530c-bd67-4876-b26b-c076d5cda08d)
 
@@ -61,9 +61,9 @@ Repeat for the role Monitor Reader
 
 
 
-### On your local machine, add the service principal credentials ENV vars to Azure Importer
+### 4. Add credentials to `.env`
 
-you should create a `.env` file in the IF project root directory. This is where you can store your Azure authentication details. Your `.env` file should look as follows:
+Create a `.env` file in the IF project root directory. This is where you can store your Azure authentication details. Your `.env` file should look as follows:
 
 ```txt
 AZURE_TENANT_ID: <your-tenant-id>
@@ -102,13 +102,13 @@ graph:
       config:
         azure-importer:
       inputs:
-          - timestamp: '2023-11-02T10:35:31.820Z'
-            duration: 3600
-            azure-observation-window: 5 min
-            azure-observation-aggregation: 'average'
-            azure-subscription-id: 9cf5e19b-8b18-4c37-9541-55fc47ad70c3
-            azure-resource-group: my_group
-            azure-vm-name: my_vm
+        - timestamp: '2023-11-02T10:35:31.820Z'
+          duration: 3600
+          azure-observation-window: 5 min
+          azure-observation-aggregation: 'average'
+          azure-subscription-id: 9cf5e19b-8b18-4c37-9541-55fc47ad70c3
+          azure-resource-group: my_group
+          azure-vm-name: my_vm
 ```
 
 This will grab Azure metrics for `my_vm` in `my_group` for a one hour period beginning at 10:35 UTC on 2nd November 2023, at 5 minute resolution, aggregating data occurring more frequently than 5 minutes by averaging.
@@ -135,6 +135,11 @@ The outputs look as follows:
 outputs:
   - timestamp: '2023-11-02T10:35:00.000Z'
     duration: 300
+    azure-observation-window: 5 min
+    azure-observation-aggregation: 'average'
+    azure-subscription-id: 9cf5e19b-8b18-4c37-9541-55fc47ad70c3
+    azure-resource-group: my_group
+    azure-vm-name: my_vm
     cpu-util: '0.314'
     mem-availableGB: 0.488636416
     mem-usedGB: 0.5113635839999999
@@ -144,6 +149,11 @@ outputs:
     cloud-instance-type: Standard_B1s
   - timestamp: '2023-11-02T10:40:00.000Z'
     duration: 300
+    azure-observation-window: 5 min
+    azure-observation-aggregation: 'average'
+    azure-subscription-id: 9cf5e19b-8b18-4c37-9541-55fc47ad70c3
+    azure-resource-group: my_group
+    azure-vm-name: my_vm
     cpu-util: '0.314'
     mem-availableGB: 0.48978984960000005
     mem-usedGB: 0.5102101504
