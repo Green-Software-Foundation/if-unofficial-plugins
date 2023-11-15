@@ -75,7 +75,7 @@ async function runBoavizta() {
 runBoavizta();
 ```
 
-## Example impl
+## Example `impl`
 
 In IEF models are expected to be invoked from an `impl` file. This is a yaml containing the model configuration and inputs. The following `impl` initializes and runs the `boavizta-cpu` model:
 

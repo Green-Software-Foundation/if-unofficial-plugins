@@ -61,7 +61,7 @@ const results = teads.execute([
 
 This method implements the spline curve approximation using `typescript-cubic-spline`. It is not possible to customize the spline behaviour as of now.
 
-Resulting values are an approximation / estimation based on the testing done by Teads' Engineering Team. Further information can be found in the following links.
+Resulting values are an estimate based on the testing done by Teads' Engineering Team. Further information can be found in the following links.
 
 1. [TEADS Engineering: Building An AWS EC2 Carbon Emissions Dataset](https://medium.com/teads-engineering/building-an-aws-ec2-carbon-emissions-dataset-3f0fd76c98ac)
 2. [TEADS Engineering: Estimating AWS EC2 Instances Power Consumption](https://medium.com/teads-engineering/estimating-aws-ec2-instances-power-consumption-c9745e347959)
@@ -85,7 +85,7 @@ const results = teads.execute([
 ]);
 ```
 
-## Example impl
+## Example `impl`
 
 ```yaml
 name: teads-cpu
@@ -105,4 +105,12 @@ graph:
         - timestamp: 2023-07-06T00:00
           duration: 3600
           thermal-design-power: 300
+```
+
+You can run this by passing it to `impact-engine`. Run impact using the following command run from the project root:
+
+```sh
+npm i -g @grnsft/if
+npm i -g @grnsft/if-unofficial-models
+impact-engine --impl ./examples/impls/teads-cpu.yml --ompl ./examples/ompls/teads-cpu.yml
 ```
