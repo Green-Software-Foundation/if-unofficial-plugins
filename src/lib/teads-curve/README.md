@@ -69,7 +69,7 @@ Resulting values are an approximation / estimation based on the testing done by 
 #### Example
 
 ```typescript
-import {TeadsCurveModel, TeadsInterpolation} from '@gsf/ief';
+import {TeadsCurveModel, Interpolation} from '@grnsft/if-unofficial-models';
 
 const teads = new TeadsCurveModel();
 teads.configure({
@@ -89,27 +89,20 @@ const results = teads.execute([
 
 ```yaml
 name: teads-cpu
-description: simple demo invoking sci-m
+description: simple demo invoking teads-cpu
 tags:
 initialize:
   models:
     - name: teads-cpu
-      kind: plugin
-      model: TeadsCpu
-      path: teads-cpu
+      model: TeadsCurveModel
+      path: '@grnsft/if-unofficial-models'
 graph:
   children:
     child:
       pipeline:
-        - teads-cpu # duration & config -> embodied
-      config:
-        sci-m:
-          total-embodied-emissions: 1533.120 # gCO2eq
-          time-reserved: 1 # s per hour
-          expected-lifespan: 3 # 3 years in seconds
-          resources-reserved: 1
-          total-resources: 8
+        - teads-cpu
       inputs:
         - timestamp: 2023-07-06T00:00
           duration: 3600
+          thermal-design-power: 300
 ```

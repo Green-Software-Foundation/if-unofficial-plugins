@@ -1,6 +1,6 @@
 # WattTime Grid Emissions Model
 
-> **Note**
+> [!NOTE]
 > `Watt-time` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 ## Introduction
@@ -92,4 +92,32 @@ inputs:
   - timestamp: 2021-01-01T00:00:00Z
     latitude: "43.22,-80.22"
     duration: 3600
+```
+
+
+
+## Example impl
+
+```yaml
+name: watt-time
+description: simple demo invoking watt-time
+tags:
+initialize:
+  models:
+    - name: watt-time
+      model: WattTimeGridEmissions
+      path: '@grnsft/if-unofficial-models'
+graph:
+  children:
+    child:
+      pipeline:
+        - watt-time
+      config:
+        watt-time:
+          username: username
+          password: password
+      inputs:
+        - timestamp: 2023-07-06T00:00
+          duration: 3600
+          thermal-design-power: 300
 ```

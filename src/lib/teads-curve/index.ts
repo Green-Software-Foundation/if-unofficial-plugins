@@ -1,6 +1,6 @@
 import Spline from 'typescript-cubic-spline';
 
-import {KeyValuePair, Interpolation} from '../../types/common';
+import {KeyValuePair, Interpolation} from '../../types';
 import {ModelPluginInterface} from '../../interfaces';
 
 export class TeadsCurveModel implements ModelPluginInterface {

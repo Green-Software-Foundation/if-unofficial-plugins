@@ -28,7 +28,7 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 ## Returns
 
 - `embodied-carbon`: carbon emitted in manufacturing the device, in gCO2eq
-- `e-cpu`: energy used by CPU in kWh
+- `energy-cpu`: energy used by CPU in kWh
 
 ## Usage
 
@@ -37,7 +37,7 @@ To run the `boavista-cpu` model an instance of `BoaviztaCpuImpactModel` must be 
 This is how you could run the model in Typescript:
 
 ```typescript
-import {BoaviztaCpuImpactModel, KeyValuePair} from '@grnsft/if-unofficial-models';
+import {BoaviztaCpuImpactModel} from '@grnsft/if-unofficial-models';
 
 
 async function runBoavizta() {
