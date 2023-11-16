@@ -81,7 +81,6 @@ export class TeadsCurveModel implements ModelPluginInterface {
           throw new Error('invalid type for vcpus-total');
         }
 
-        console.log('updating energy');
         energy = energy * (allocated / total);
       }
       input['energy-cpu'] = energy;
