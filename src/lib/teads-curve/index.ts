@@ -65,7 +65,6 @@ export class TeadsCurveModel implements ModelPluginInterface {
       let total: number;
       let allocated: number;
       if ('vcpus-allocated' in input && 'vcpus-total' in input) {
-        console.log('IN HERE');
         if (typeof input['vcpus-allocated'] === 'string') {
           allocated = parseFloat(input['vcpus-allocated']);
         } else if (typeof input['vcpus-allocated'] === 'number') {
