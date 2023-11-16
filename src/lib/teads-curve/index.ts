@@ -37,17 +37,6 @@ export class TeadsCurveModel implements ModelPluginInterface {
       this.tdp = staticParams['thermal-design-power'] as number;
     }
 
-    // if ('curve' in staticParams && 'points' in staticParams) {
-    //   this.curve = staticParams?.curve as number[];
-    //   this.points = staticParams?.points as number[];
-    //   if (this.curve.length !== this.points.length) {
-    //     throw new Error(
-    //       'Number of points and curve values must be the same length'
-    //     );
-    //   }
-    //   this.spline = new Spline(this.points, this.curve);
-    // }
-
     if ('interpolation' in staticParams) {
       this.interpolation = staticParams?.interpolation as Interpolation;
     }
@@ -72,7 +61,31 @@ export class TeadsCurveModel implements ModelPluginInterface {
     }
     return inputs.map((input: KeyValuePair) => {
       this.configure(input);
-      input['energy-cpu'] = this.calculateEnergy(input);
+      let energy = this.calculateEnergy(input);
+      let total: number;
+      let allocated: number;
+      if ('vcpus-allocated' in input && 'vcpus-total' in input) {
+        console.log('IN HERE');
+        if (typeof input['vcpus-allocated'] === 'string') {
+          allocated = parseFloat(input['vcpus-allocated']);
+        } else if (typeof input['vcpus-allocated'] === 'number') {
+          allocated = input['vcpus-allocated'];
+        } else {
+          throw new Error('invalid type for vcpus-allocated');
+        }
+
+        if (typeof input['vcpus-total'] === 'string') {
+          total = parseFloat(input['vcpus-total']);
+        } else if (typeof input['vcpus-total'] === 'number') {
+          total = input['vcpus-total'];
+        } else {
+          throw new Error('invalid type for vcpus-total');
+        }
+
+        console.log('updating energy');
+        energy = energy * (allocated / total);
+      }
+      input['energy-cpu'] = energy;
       return input;
     });
   }

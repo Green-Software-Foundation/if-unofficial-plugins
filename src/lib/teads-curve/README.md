@@ -25,6 +25,10 @@ IF recognizes the Teads CPU model as `teads-curve`.
 - `energy-cpu`: The energy used by the CPU, in kWh
 
 
+> **Note** If `vcpus-allocated` and `vcpus-total` are available, these data will be used to scale the CPU energy usage. If they are not present, we assume the entire processor is being used. For example, if only 1 out of 64 available vCPUS are allocated, we scale the processor TDP by 1/64.
+
+
+
 ## Implementation
 
 ### Linear Interpolation
