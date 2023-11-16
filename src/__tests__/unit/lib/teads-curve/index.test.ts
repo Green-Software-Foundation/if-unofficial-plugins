@@ -26,6 +26,32 @@ describe('teads:configure test', () => {
       },
     ]);
   });
+  test('scale with vcpu usage', async () => {
+    const outputModel = new TeadsCurveModel();
+    await outputModel.configure({
+      'thermal-design-power': 200,
+    });
+    await expect(
+      outputModel.execute([
+        {
+          duration: 3600,
+          'cpu-util': 50.0,
+          timestamp: '2021-01-01T00:00:00Z',
+          'vcpus-allocated': 1,
+          'vcpus-total': 64,
+        },
+      ])
+    ).resolves.toStrictEqual([
+      {
+        'energy-cpu': 0.00234375,
+        duration: 3600,
+        'cpu-util': 50.0,
+        timestamp: '2021-01-01T00:00:00Z',
+        'vcpus-allocated': 1,
+        'vcpus-total': 64,
+      },
+    ]);
+  });
   test('teads:initialize with params:spline', async () => {
     const outputModel = new TeadsCurveModel();
     await outputModel.configure({
