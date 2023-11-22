@@ -4,6 +4,9 @@ import {ComputeManagementClient} from '@azure/arm-compute';
 import * as dotenv from 'dotenv';
 import {z} from 'zod';
 
+import {ERRORS} from '../../util/errors';
+import {buildErrorMessage} from '../../util/helpers';
+
 import {ModelPluginInterface} from '../../interfaces';
 
 import {
@@ -12,6 +15,8 @@ import {
   GetMetricsParams,
   AzureMetadataOutputs,
 } from '../../types/azure-importer';
+
+const {InputValidationError, UnsupportedValueError} = ERRORS;
 
 /**
  * @todo Move all input validation schemas to separate file.
@@ -33,13 +38,10 @@ export class AzureImporterModel implements ModelPluginInterface {
   authParams: object | undefined = undefined;
   staticParams: object | undefined;
   name: string | undefined;
+  errorBuilder = buildErrorMessage(AzureImporterModel);
 
   authenticate(authParams: object): void {
     this.authParams = authParams;
-  }
-
-  modelIdentifier(): string {
-    return 'azure';
   }
 
   /**
@@ -114,6 +116,7 @@ export class AzureImporterModel implements ModelPluginInterface {
       vmName,
     } = params;
     const metricnames = 'Percentage CPU';
+
     return monitorClient.metrics.list(
       `subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.Compute/virtualMachines/${vmName}`,
       {
@@ -141,6 +144,7 @@ export class AzureImporterModel implements ModelPluginInterface {
       vmName,
     } = params;
     const metricnames = 'Available Memory Bytes';
+
     return monitorClient.metrics.list(
       `subscriptions/${subscriptionId}/resourceGroups/${resourceGroupName}/providers/Microsoft.Compute/virtualMachines/${vmName}`,
       {
@@ -256,7 +260,11 @@ export class AzureImporterModel implements ModelPluginInterface {
     const years = ['year', 'years', 'yr', 'yrs', 'y', 'ys'];
 
     if (seconds.includes(unit)) {
-      throw new Error('The minimum unit of time for azure importer is minutes');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: 'The minimum unit of time for azure importer is minutes',
+        })
+      );
     }
 
     if (minutes.includes(unit)) {
@@ -283,7 +291,11 @@ export class AzureImporterModel implements ModelPluginInterface {
       return `${amountOfTime}Y`;
     }
 
-    throw new Error('azure-observation-window parameter is malformed');
+    throw new UnsupportedValueError(
+      this.errorBuilder({
+        message: 'azure-observation-window parameter is malformed',
+      })
+    );
   }
 
   /**
@@ -376,7 +388,7 @@ export class AzureImporterModel implements ModelPluginInterface {
    * Calculates number of seconds covered by each individual input using azure-time-window value
    */
   private calculateDurationPerInput(params: AzureInputs): number {
-    const window = params.window;
+    const {window} = params;
     const splits = window.split(' ', 2);
     const floatNumber = parseFloat(splits[0]);
     const unit = splits[1];
