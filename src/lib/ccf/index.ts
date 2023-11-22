@@ -12,31 +12,31 @@ import * as GCP_EMBODIED from './gcp-embodied.json';
 import * as AWS_EMBODIED from './aws-embodied.json';
 import * as AZURE_EMBODIED from './azure-embodied.json';
 
-import {KeyValuePair, Interpolation} from '../../types/common';
-import {ModelPluginInterface} from '../../interfaces';
+import {ERRORS} from '../../util/errors';
+
 import {IComputeInstance} from '../../types/ccf';
+import {KeyValuePair, Interpolation, ModelParams} from '../../types/common';
+import {ModelPluginInterface} from '../../interfaces';
+import {buildErrorMessage} from '../../util/helpers';
+
+const {InputValidationError, UnsupportedValueError} = ERRORS;
 
 export class CloudCarbonFootprint implements ModelPluginInterface {
-  // Defined for compatibility. Not used in CCF.
-  authParams: object | undefined;
-  // name of the data source
-  name: string | undefined;
-  // compute instances grouped by the vendor with usage data
   private computeInstances: {
     [key: string]: {
       [key: string]: IComputeInstance;
     };
-  } = {};
+  } = {}; // compute instances grouped by the vendor with usage data
 
-  // list of all the by Architecture
   private computeInstanceUsageByArchitecture: KeyValuePair = {
     gcp: {},
     aws: {},
     azure: {},
-  };
+  }; // list of all the by Architecture
   private vendor = '';
   private instanceType = '';
   private expectedLifespan = 4;
+  errorBuilder = buildErrorMessage(CloudCarbonFootprint);
 
   private interpolation = Interpolation.LINEAR;
 
@@ -45,47 +45,62 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
   }
 
   /**
-   * Defined for compatibility. Not used in CCF.
-   */
-  authenticate(authParams: object): void {
-    this.authParams = authParams;
-  }
-
-  /**
-   *  Configures the CCF Plugin for IEF
-   *  @param {Object} staticParams static parameters for the resource
-   *  @param {("aws"|"gcp"|"azure")} staticParams.vendor aws, gcp, azure
-   *  @param {string} staticParams.'instance-type' instance type from the list of supported instances
-   *  @param {number} staticParams.'expected-lifespan' expected lifespan of the instance in years
-   *  @param {Interpolation} staticParams.interpolation linear(All Clouds), spline (only for AWS)
+   * Configures the CCF Plugin for IEF
+   * @param {Object} staticParams static parameters for the resource
+   * @param {("aws"|"gcp"|"azure")} staticParams.vendor aws, gcp, azure
+   * @param {string} staticParams.'instance-type' instance type from the list of supported instances
+   * @param {number} staticParams.'expected-lifespan' expected lifespan of the instance in years
+   * @param {Interpolation} staticParams.interpolation linear(All Clouds), spline (only for AWS)
    */
   async configure(
     staticParams: object | undefined = undefined
   ): Promise<ModelPluginInterface> {
     if (staticParams === undefined) {
-      throw new Error('Required Parameters not provided');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is missing'})
+      );
     }
 
     if ('vendor' in staticParams) {
       const vendor = staticParams?.vendor as string;
+
       if (['aws', 'gcp', 'azure'].includes(vendor)) {
         this.vendor = vendor;
       } else {
-        throw new Error('vendor not supported');
+        throw new UnsupportedValueError(
+          this.errorBuilder({
+            message: `Vendor ${vendor} not supported`,
+            scope: 'configure',
+          })
+        );
       }
     } else {
-      throw new Error('vendor not provided');
+      throw new UnsupportedValueError(
+        this.errorBuilder({
+          message: 'Vendor is not provided',
+          scope: 'configure',
+        })
+      );
     }
 
     if ('instance-type' in staticParams) {
       const instanceType = staticParams['instance-type'] as string;
+
       if (instanceType in this.computeInstances[this.vendor]) {
         this.instanceType = instanceType;
       } else {
-        throw new Error('Instance Type not supported');
+        throw new UnsupportedValueError(
+          this.errorBuilder({
+            message: `Instance type ${instanceType} is not supported`,
+          })
+        );
       }
     } else {
-      throw new Error('Instance Type not provided');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: 'Instance type is not provided',
+        })
+      );
     }
 
     if ('expected-lifespan' in staticParams) {
@@ -94,13 +109,23 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
 
     if ('interpolation' in staticParams) {
       if (this.vendor !== 'aws') {
-        throw new Error('Interpolation method not supported');
+        throw new UnsupportedValueError(
+          this.errorBuilder({
+            message: `Interpolation ${staticParams.interpolation} method is not supported`,
+          })
+        );
       }
+
       const interpolation = staticParams?.interpolation as Interpolation;
+
       if (Object.values(Interpolation).includes(interpolation)) {
         this.interpolation = interpolation;
       } else {
-        throw new Error('Interpolation method not supported');
+        throw new UnsupportedValueError(
+          this.errorBuilder({
+            message: `Interpolation ${this.interpolation} method not supported`,
+          })
+        );
       }
     }
 
@@ -111,29 +136,39 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
    * Calculate the total emissions for a list of inputs
    *
    * Each input require:
-   *  @param {Object[]} inputs  ISO 8601 timestamp string
-   *  @param {string} inputs[].timestamp ISO 8601 timestamp string
-   *  @param {number} inputs[].duration input duration in seconds
-   *  @param {number} inputs[].cpu-util percentage cpu usage
+   * @param {Object[]} inputs  ISO 8601 timestamp string
+   * @param {string} inputs[].timestamp ISO 8601 timestamp string
+   * @param {number} inputs[].duration input duration in seconds
+   * @param {number} inputs[].cpu-util percentage cpu usage
    */
-  async execute(inputs: object | object[] | undefined): Promise<any[]> {
+  async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
     if (inputs === undefined) {
-      throw new Error('Required Parameters not provided');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is missing'})
+      );
     }
+
     if (!Array.isArray(inputs)) {
-      throw new Error('inputs should be an array');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is not an array'})
+      );
     }
 
     if (this.instanceType === '' || this.vendor === '') {
-      throw new Error('Configuration is incomplete');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message:
+            "Incomplete configuration: 'instanceType' or 'vendor' is missing",
+        })
+      );
     }
-    inputs.map((input: KeyValuePair) => {
+
+    return inputs.map(input => {
       input['energy'] = this.calculateEnergy(input);
       input['embodied-carbon'] = this.embodiedEmissions(input);
+
       return input;
     });
-
-    return inputs;
   }
 
   /**
@@ -152,16 +187,18 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       !('cpu-util' in input) ||
       !('timestamp' in input)
     ) {
-      throw new Error(
-        'Required Parameters duration,cpu,timestamp not provided for input'
+      throw new InputValidationError(
+        this.errorBuilder({
+          message:
+            "Required parameters 'duration', 'cpu', 'timestamp' are not provided",
+        })
       );
     }
 
     const duration = input['duration'];
     const cpu = input['cpu-util'];
 
-    //  get the wattage for the instance type
-    let wattage;
+    let wattage; // get the wattage for the instance type
 
     if (this.vendor === 'aws' && this.interpolation === 'spline') {
       const x = [0, 10, 50, 100];
@@ -364,7 +401,11 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
     }
 
     if (!(architecture in this.computeInstanceUsageByArchitecture['aws'])) {
-      throw new Error(`${architecture} not supported`);
+      throw new UnsupportedValueError(
+        this.errorBuilder({
+          message: `Architecture '${architecture}' is not supported`,
+        })
+      );
     }
 
     return architecture;
