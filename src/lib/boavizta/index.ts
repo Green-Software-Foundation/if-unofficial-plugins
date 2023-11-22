@@ -1,8 +1,13 @@
 import axios from 'axios';
 
-import {KeyValuePair} from '../../types/common';
+import {ERRORS} from '../../util/errors';
+import {buildErrorMessage} from '../../util/helpers';
+
+import {KeyValuePair, ModelParams} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
 import {BoaviztaInstanceTypes, IBoaviztaUsageSCI} from '../../types/boavizta';
+
+const {InputValidationError, UnsupportedValueError} = ERRORS;
 
 abstract class BoaviztaOutputModel implements ModelPluginInterface {
   name: string | undefined;
@@ -10,6 +15,7 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
   metricType: 'cpu-util' | 'gpu-util' | 'ram-util' = 'cpu-util';
   expectedLifespan = 4 * 365 * 24 * 60 * 60;
   protected authCredentials: object | undefined;
+  errorBuilder = buildErrorMessage(BoaviztaOutputModel);
 
   async authenticate(authParams: object) {
     this.authCredentials = authParams;
@@ -19,21 +25,29 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
     staticParams: object | undefined = undefined
   ): Promise<ModelPluginInterface> {
     this.sharedParams = await this.captureStaticParams(staticParams ?? {});
+
     return this;
   }
 
-  //fetches data from Boavizta API according to the specific endpoint of the model
+  /**
+   * Fetches data from Boavizta API according to the specific endpoint of the model
+   */
   abstract fetchData(usageData: object | undefined): Promise<object>;
 
-  // list of supported locations by the model
+  /**
+   * List of supported locations by the model.
+   */
   async supportedLocations(): Promise<string[]> {
     const countries = await axios.get(
       'https://api.boavizta.org/v1/utils/country_code'
     );
+
     return Object.values(countries.data);
   }
 
-  // converts the usage from IMPL input to the format required by Boavizta API.
+  /**
+   * Converts the usage from IMPL input to the format required by Boavizta API.
+   */
   transformToBoaviztaUsage(duration: number, metric: number) {
     // duration is in seconds, convert to hours
     // metric is between 0 and 1, convert to percentage
@@ -49,10 +63,10 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
     return usageInput;
   }
 
-  // Calculates the output of the given usage
-  async execute(
-    inputs: object | object[] | undefined = undefined
-  ): Promise<any[]> {
+  /**
+   * Calculates the output of the given usage.
+   */
+  async execute(inputs: ModelParams[]): Promise<any[]> {
     if (Array.isArray(inputs)) {
       const results: KeyValuePair[] = [];
 
@@ -63,13 +77,15 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
 
       return results;
     } else {
-      throw new Error(
-        'Parameter Not Given: invalid inputs parameter. Expecting an array of inputs'
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is not an array'})
       );
     }
   }
 
-  // Adds location to usage if location is defined in sharedParams
+  /**
+   * Adds location to usage if location is defined in sharedParams.
+   */
   addLocationToUsage(usageRaw: KeyValuePair) {
     if (this.sharedParams !== undefined && 'location' in this.sharedParams) {
       usageRaw['usage_location'] = this.sharedParams['location'];
@@ -78,10 +94,14 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
     return usageRaw;
   }
 
-  //abstract subs to make compatibility with base interface. allows configure to be defined in base class
+  /**
+   * Abstract subs to make compatibility with base interface. allows configure to be defined in base class
+   */
   protected abstract captureStaticParams(staticParams: object): object;
 
-  // extracts information from Boavizta API response to return the output in the format required by IMPL
+  /**
+   * Extracts information from Boavizta API response to return the output in the format required by IMPL.
+   */
   protected formatResponse(data: KeyValuePair): KeyValuePair {
     let m = 0;
     let e = 0;
@@ -104,9 +124,11 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
     return {'embodied-carbon': m, energy: e};
   }
 
-  // converts the usage to the format required by Boavizta API.
+  /**
+   * converts the usage to the format required by Boavizta API.
+   */
   protected async calculateUsageForinput(
-    input: KeyValuePair
+    input: ModelParams
   ): Promise<KeyValuePair> {
     if (
       'timestamp' in input &&
@@ -121,7 +143,11 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
 
       return usage;
     } else {
-      throw new Error('Invalid Input: Invalid inputs parameter');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: 'Invalid input parameter',
+        })
+      );
     }
   }
 }
@@ -144,7 +170,11 @@ export class BoaviztaCpuOutputModel
 
   async fetchData(usageData: object | undefined): Promise<object> {
     if (this.sharedParams === undefined) {
-      throw new Error('Improper configure: Missing configuration parameters');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: 'Missing configuration parameters',
+        })
+      );
     }
 
     const dataCast = this.sharedParams as KeyValuePair;
@@ -157,12 +187,6 @@ export class BoaviztaCpuOutputModel
 
     const result = this.formatResponse(response.data);
 
-    // console.log(
-    //   'hitting ',
-    //   `https://api.boavizta.org/v1/component/${this.componentType}?verbose=${this.verbose}&duration=${dataCast['usage']['hours_use_time']}`,
-    //   dataCast,
-    //   JSON.stringify(response.data)
-    // );
     return {
       'e-cpu': result.energy,
       'embodied-carbon': result['embodied-carbon'],
@@ -176,16 +200,25 @@ export class BoaviztaCpuOutputModel
     }
 
     if (!('physical-processor' in staticParams)) {
-      throw new Error('Improper configure: Missing processor parameter');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: "Missing 'physical-processor' parameter from configuration",
+        })
+      );
     }
 
     if (!('core-units' in staticParams)) {
-      throw new Error('Improper configure: Missing core-units parameter');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: "Missing 'core-units' parameter from configuration",
+        })
+      );
     }
 
     if ('expected-lifespan' in staticParams) {
       this.expectedLifespan = staticParams['expected-lifespan'] as number;
     }
+
     this.sharedParams = Object.assign({}, staticParams);
 
     return this.sharedParams;
@@ -206,25 +239,36 @@ export class BoaviztaCloudOutputModel
     if ('location' in staticParamsCast) {
       const location = (staticParamsCast.location as string) ?? 'USA';
       const countries = await this.supportedLocations();
+
       if (!countries.includes(location)) {
-        throw new Error(
-          "Improper configure: Invalid location parameter: '" +
-            location +
-            "'. Valid values are : " +
-            countries.join(', ')
+        throw new InputValidationError(
+          this.errorBuilder({
+            message: `Invalid location parameter location. Valid values are ${countries.join(
+              ', '
+            )}`,
+          })
         );
       }
+
       return staticParamsCast.location as string;
     }
   }
 
   async validateInstanceType(staticParamsCast: object) {
     if (!('provider' in staticParamsCast)) {
-      throw new Error('Improper configure: Missing provider parameter');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: "Missing 'provider' parameter from configuration",
+        })
+      );
     }
 
     if (!('instance-type' in staticParamsCast)) {
-      throw new Error("Improper configure: Missing 'instance-type' parameter");
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: "Missing 'instance-type' parameter from configuration",
+        })
+      );
     }
 
     const provider = staticParamsCast.provider as string;
@@ -243,10 +287,12 @@ export class BoaviztaCloudOutputModel
           staticParamsCast['instance-type'] as string
         )
       ) {
-        throw new Error(
-          `Improper configure: Invalid 'instance-type' parameter: '${
-            staticParamsCast['instance-type']
-          }'. Valid values are : ${this.instanceTypes[provider].join(', ')}`
+        throw new UnsupportedValueError(
+          this.errorBuilder({
+            message: `Invalid 'instance-type' parameter: '${
+              staticParamsCast['instance-type']
+            }'. Valid values are : ${this.instanceTypes[provider].join(', ')}`,
+          })
         );
       }
     }
@@ -254,16 +300,21 @@ export class BoaviztaCloudOutputModel
 
   async validateProvider(staticParamsCast: object) {
     if (!('provider' in staticParamsCast)) {
-      throw new Error('Improper configure: Missing provider parameter');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: "Missing 'provider' parameter from configuration",
+        })
+      );
     } else {
       const supportedProviders = await this.supportedProvidersList();
 
       if (!supportedProviders.includes(staticParamsCast.provider as string)) {
-        throw new Error(
-          "Improper configure: Invalid provider parameter: '" +
-            staticParamsCast.provider +
-            "'. Valid values are : " +
-            supportedProviders.join(', ')
+        throw new InputValidationError(
+          this.errorBuilder({
+            message: `Invalid 'provider' parameter '${
+              staticParamsCast.provider
+            }'. Valid values are ${supportedProviders.join(', ')}`,
+          })
         );
       }
     }
@@ -287,28 +338,29 @@ export class BoaviztaCloudOutputModel
 
   async fetchData(usageData: object | undefined): Promise<object> {
     if (this.sharedParams === undefined) {
-      throw new Error('Improper configure: Missing configuration parameters');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: 'Missing configuration parameters',
+        })
+      );
     }
 
     const dataCast = this.sharedParams as KeyValuePair;
+
     for (const key in dataCast) {
-      //   replace - with _ in keys
+      // replace - with _ in keys
       if (key.includes('-')) {
         const newKey = key.replace(/-/g, '_');
         dataCast[newKey] = dataCast[key];
         delete dataCast[key];
       }
     }
+
     dataCast['usage'] = usageData;
     const response = await axios.post(
       `https://api.boavizta.org/v1/cloud/instance?verbose=${this.verbose}&duration=${dataCast['usage']['hours_use_time']}`,
       dataCast
     );
-    // console.log(
-    //   `https://api.boavizta.org/v1/cloud/instance?verbose=${this.verbose}&duration=${dataCast['usage']['hours_use_time']}`,
-    //   JSON.stringify(response.data),
-    //   dataCast
-    // );
 
     return this.formatResponse(response.data);
   }
@@ -318,12 +370,12 @@ export class BoaviztaCloudOutputModel
       this.verbose = (staticParams.verbose as boolean) ?? false;
       staticParams.verbose = undefined;
     }
-    // if no valid provider found, throw error
-    await this.validateProvider(staticParams);
-    // if no valid 'instance-type' found, throw error
-    await this.validateInstanceType(staticParams);
-    // if no valid location found, throw error
-    await this.validateLocation(staticParams);
+
+    await this.validateProvider(staticParams); // if no valid provider found, throw error
+
+    await this.validateInstanceType(staticParams); // if no valid 'instance-type' found, throw error
+
+    await this.validateLocation(staticParams); // if no valid location found, throw error
 
     if ('expected-lifespan' in staticParams) {
       this.expectedLifespan = staticParams['expected-lifespan'] as number;
