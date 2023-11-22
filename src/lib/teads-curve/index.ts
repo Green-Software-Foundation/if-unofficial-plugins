@@ -1,23 +1,20 @@
 import Spline from 'typescript-cubic-spline';
 
-import {KeyValuePair, Interpolation} from '../../types';
+import {ERRORS} from '../../util/errors';
+import {buildErrorMessage} from '../../util/helpers';
+
+import {KeyValuePair, Interpolation, ModelParams} from '../../types';
 import {ModelPluginInterface} from '../../interfaces';
 
+const {InputValidationError} = ERRORS;
+
 export class TeadsCurveModel implements ModelPluginInterface {
-  authParams: object | undefined; // Defined for compatibility. Not used in TEADS.
-  name: string | undefined; // Name of the data source.
   tdp = 0; // `tdp` of the chip being measured.
   curve: number[] = [0.12, 0.32, 0.75, 1.02]; // Default power curve provided by the Teads Team.
   points: number[] = [0, 10, 50, 100]; // Default percentage points.
   spline: any = new Spline(this.points, this.curve); // Spline interpolation of the power curve.
   interpolation: Interpolation = Interpolation.SPLINE; // Interpolation method.
-
-  /**
-   * Defined for compatibility. Not used in TEADS.
-   */
-  authenticate(authParams: object): void {
-    this.authParams = authParams;
-  }
+  errorBuilder = buildErrorMessage(TeadsCurveModel);
 
   /**
    * Configures the TEADS Plugin for IEF
@@ -30,7 +27,9 @@ export class TeadsCurveModel implements ModelPluginInterface {
     staticParams: object | undefined = undefined
   ): Promise<ModelPluginInterface> {
     if (staticParams === undefined) {
-      throw new Error('Required Parameters not provided');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is missing'})
+      );
     }
 
     if ('thermal-design-power' in staticParams) {
@@ -53,24 +52,36 @@ export class TeadsCurveModel implements ModelPluginInterface {
    * @param {number} inputs[].duration input duration in seconds
    * @param {number} inputs[].cpu-util percentage cpu usage
    */
-  async execute(inputs: object | object[] | undefined): Promise<any[]> {
+  async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
     if (inputs === undefined) {
-      throw new Error('Required Parameters not provided');
-    } else if (!Array.isArray(inputs)) {
-      throw new Error('inputs must be an array');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is missing'})
+      );
     }
-    return inputs.map((input: KeyValuePair) => {
+
+    if (!Array.isArray(inputs)) {
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is not an array'})
+      );
+    }
+
+    return inputs.map((input, index) => {
       this.configure(input);
       let energy = this.calculateEnergy(input);
       let total: number;
       let allocated: number;
+
       if ('vcpus-allocated' in input && 'vcpus-total' in input) {
         if (typeof input['vcpus-allocated'] === 'string') {
           allocated = parseFloat(input['vcpus-allocated']);
         } else if (typeof input['vcpus-allocated'] === 'number') {
           allocated = input['vcpus-allocated'];
         } else {
-          throw new Error('invalid type for vcpus-allocated');
+          throw new InputValidationError(
+            this.errorBuilder({
+              message: `Invalid type for 'vcpus-allocated' in input[${index}]`,
+            })
+          );
         }
 
         if (typeof input['vcpus-total'] === 'string') {
@@ -78,12 +89,17 @@ export class TeadsCurveModel implements ModelPluginInterface {
         } else if (typeof input['vcpus-total'] === 'number') {
           total = input['vcpus-total'];
         } else {
-          throw new Error('invalid type for vcpus-total');
+          throw new InputValidationError(
+            this.errorBuilder({
+              message: `Invalid type for 'vcpus-total' in input[${index}]`,
+            })
+          );
         }
 
         energy = energy * (allocated / total);
       }
       input['energy-cpu'] = energy;
+
       return input;
     });
   }
@@ -104,18 +120,24 @@ export class TeadsCurveModel implements ModelPluginInterface {
       !('cpu-util' in input) ||
       !('timestamp' in input)
     ) {
-      throw new Error(
-        'Required Parameters duration,cpu-util,timestamp not provided for input'
+      throw new InputValidationError(
+        this.errorBuilder({
+          message:
+            "Required parameters 'duration', 'cpu', 'timestamp' are not provided",
+        })
       );
     }
 
-    //    duration is in seconds
-    const duration = input['duration'];
+    const duration = input['duration']; // duration is in seconds
+    const cpu = input['cpu-util']; // convert cpu usage to percentage
 
-    //    convert cpu usage to percentage
-    const cpu = input['cpu-util'];
     if (cpu < 0 || cpu > 100) {
-      throw new Error('cpu usage must be between 0 and 100');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message:
+            "Invalid value for 'mem-util'. Must be between '0' and '100'",
+        })
+      );
     }
 
     let tdp = this.tdp;
@@ -124,8 +146,11 @@ export class TeadsCurveModel implements ModelPluginInterface {
       tdp = input['thermal-design-power'] as number;
     }
     if (tdp === 0) {
-      throw new Error(
-        '`thermal-design-power` not provided. Can not compute energy.'
+      throw new InputValidationError(
+        this.errorBuilder({
+          message:
+            "'thermal-design-power' not provided. Can not compute energy.",
+        })
       );
     }
 
@@ -168,8 +193,3 @@ export class TeadsCurveModel implements ModelPluginInterface {
     return (wattage * duration) / 3600 / 1000;
   }
 }
-
-/**
- * For JSII.
- */
-export {KeyValuePair, Interpolation} from '../../types/common';
