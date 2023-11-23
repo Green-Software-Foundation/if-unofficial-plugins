@@ -3,57 +3,67 @@ import Spline from 'typescript-cubic-spline';
 import * as AWS_INSTANCES from './aws-instances.json';
 import * as AWS_EMBODIED from './aws-embodied.json';
 
-import {KeyValuePair, Interpolation} from '../../types/common';
+import {ERRORS} from '../../util/errors';
+import {buildErrorMessage} from '../../util/helpers';
+
+import {KeyValuePair, Interpolation, ModelParams} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
 
+const {InputValidationError, UnsupportedValueError} = ERRORS;
+
 export class TeadsAWS implements ModelPluginInterface {
-  authParams: object | undefined; // Defined for compatibility. Not used in TEADS.
-  name: string | undefined; // name of the data source
-  // compute instances grouped by the vendor with usage data
   private computeInstances: {
     [key: string]: KeyValuePair;
-  } = {};
+  } = {}; // compute instances grouped by the vendor with usage data
 
-  // list of all the by Architecture
-  private instanceType = '';
+  private instanceType = ''; // list of all the by Architecture
   private expectedLifespan = 4 * 365 * 24 * 3600;
   private interpolation = Interpolation.LINEAR;
+  errorBuilder = buildErrorMessage(TeadsAWS);
 
   constructor() {
     this.standardizeInstanceMetrics();
   }
 
   /**
-   * Defined for compatibility. Not used in TEADS.
-   */
-  authenticate(authParams: object): void {
-    this.authParams = authParams;
-  }
-
-  /**
-   *  Configures the TEADS Plugin for IEF
-   *  @param {string} name name of the resource
-   *  @param {Object} staticParams static parameters for the resource
-   *  @param {string} staticParams.instance-type instance type from the list of supported instances
-   *  @param {number} staticParams.expected-lifespan expected lifespan of the instance in years
-   *  @param {Interpolation} staticParams.interpolation expected lifespan of the instance in years
+   * Configures the TEADS Plugin for IEF
+   * @param {string} name name of the resource
+   * @param {Object} staticParams static parameters for the resource
+   * @param {string} staticParams.instance-type instance type from the list of supported instances
+   * @param {number} staticParams.expected-lifespan expected lifespan of the instance in years
+   * @param {Interpolation} staticParams.interpolation expected lifespan of the instance in years
    */
   async configure(
     staticParams: object | undefined = undefined
-  ): Promise<ModelPluginInterface> {
+  ): Promise<TeadsAWS> {
     if (staticParams === undefined) {
-      throw new Error('Required Parameters not provided');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is missing'})
+      );
     }
 
     if ('instance-type' in staticParams) {
       const instanceType = staticParams['instance-type'] as string;
+
       if (instanceType in this.computeInstances) {
         this.instanceType = instanceType;
       } else {
-        throw new Error('Instance Type not supported');
+        throw new UnsupportedValueError(
+          this.errorBuilder({
+            message: `Instance type ${instanceType} is not supported`,
+            scope: 'configure',
+          })
+        );
       }
-    } else if (this.instanceType === '') {
-      throw new Error('Instance Type not provided');
+    }
+
+    if (this.instanceType === '') {
+      throw new UnsupportedValueError(
+        this.errorBuilder({
+          message: 'Instance type is not provided',
+          scope: 'configure',
+        })
+      );
     }
 
     if ('expected-lifespan' in staticParams) {
@@ -71,29 +81,37 @@ export class TeadsAWS implements ModelPluginInterface {
    * Calculate the total emissions for a list of inputs
    *
    * Each input require:
-   *  @param {Object[]} inputs  ISO 8601 timestamp string
-   *  @param {string} inputs[].timestamp ISO 8601 timestamp string
-   *  @param {number} inputs[].duration input duration in seconds
-   *  @param {number} inputs[].cpu-util percentage cpu usage
+   * @param {Object[]} inputs  ISO 8601 timestamp string
+   * @param {string} inputs[].timestamp ISO 8601 timestamp string
+   * @param {number} inputs[].duration input duration in seconds
+   * @param {number} inputs[].cpu-util percentage cpu usage
    */
-  async execute(inputs: object | object[] | undefined): Promise<any[]> {
+  async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
     if (inputs === undefined) {
-      throw new Error('Required Parameters not provided');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is missing'})
+      );
     }
+
     if (!Array.isArray(inputs)) {
-      throw new Error('inputs should be an array');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is not an array'})
+      );
     }
 
     if (this.instanceType === '') {
-      throw new Error('Configuration is incomplete');
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Instance type is not provided.'})
+      );
     }
 
-    return inputs.map((input: KeyValuePair) => {
+    return inputs.map(input => {
       this.configure(input);
       const e = this.calculateEnergy(input);
       const m = this.embodiedEmissions(input);
       input['energy'] = e;
       input['embodied-carbon'] = m;
+
       return input;
     });
   }
@@ -144,8 +162,11 @@ export class TeadsAWS implements ModelPluginInterface {
       !('cpu-util' in input) ||
       !('timestamp' in input)
     ) {
-      throw new Error(
-        'Required Parameters duration,cpu-util,timestamp not provided for input'
+      throw new InputValidationError(
+        this.errorBuilder({
+          message:
+            "Required parameters 'duration', 'cpu', 'timestamp' are not provided",
+        })
       );
     }
 

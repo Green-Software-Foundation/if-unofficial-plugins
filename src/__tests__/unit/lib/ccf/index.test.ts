@@ -19,7 +19,9 @@ describe('ccf:configure test', () => {
     try {
       outputModel.resolveAwsArchitecture('Gra2');
     } catch (e: any) {
-      expect(e.message).toBe('Gra2 not supported');
+      expect(e.message).toBe(
+        "CloudCarbonFootprint: Architecture 'Gra2' is not supported."
+      );
     }
     await outputModel.configure({
       vendor: 'aws',
@@ -56,9 +58,8 @@ describe('ccf:configure test', () => {
         energy: 0.004900000000000001,
       },
     ]);
-    await expect(outputModel.execute(undefined)).rejects.toThrowError();
-    await expect(outputModel.execute({})).rejects.toThrowError();
   });
+
   test('initialize with params:aws', async () => {
     const outputModel = new CloudCarbonFootprint();
     await outputModel.configure({

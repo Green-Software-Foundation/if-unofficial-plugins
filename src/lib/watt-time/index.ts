@@ -1,21 +1,27 @@
 import axios from 'axios';
 import * as dayjs from 'dayjs';
 
-import {KeyValuePair} from '../../types/common';
+import {ERRORS} from '../../util/errors';
+import {buildErrorMessage} from '../../util/helpers';
+
+import {KeyValuePair, ModelParams} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
 
+const {AuthorizationError, InputValidationError, APIRequestError} = ERRORS;
+
 export class WattTimeGridEmissions implements ModelPluginInterface {
-  authParams: object | undefined = undefined;
   token = '';
   staticParams: object | undefined;
-  name: string | undefined;
   baseUrl = 'https://api2.watttime.org/v2';
+  errorBuilder = buildErrorMessage(WattTimeGridEmissions);
 
   async authenticate(authParams: object): Promise<void> {
     this.token = 'token' in authParams ? (authParams['token'] as string) : '';
+
     if (this.token.startsWith('ENV_')) {
       this.token = process.env[this.token.slice(4)] ?? '';
     }
+
     if (this.token === '') {
       // Extracting username and password from authParams
       let username =
@@ -34,7 +40,12 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
 
       //  WattTime API requires username and password / token
       if (username === '' || password === '') {
-        throw new Error('Missing username or password & token');
+        throw new AuthorizationError(
+          this.errorBuilder({
+            message: 'Missing username or password & token',
+            scope: 'authorization',
+          })
+        );
       }
 
       // Login to WattTime API to get a token
@@ -44,35 +55,54 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
           password,
         },
       });
+
       if (
         tokenResponse === undefined ||
         tokenResponse.data === undefined ||
         !('token' in tokenResponse.data)
       ) {
-        throw new Error(
-          'Missing token in response. Invalid credentials provided.'
+        throw new AuthorizationError(
+          this.errorBuilder({
+            message: 'Missing token in response. Invalid credentials provided.',
+            scope: 'authorization',
+          })
         );
       }
+
       this.token = tokenResponse.data.token;
     }
   }
 
-  async execute(inputs: object | object[] | undefined): Promise<any[]> {
-    if (!Array.isArray(inputs)) {
-      throw new Error('inputs should be an array');
+  async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
+    if (inputs === undefined) {
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is missing'})
+      );
     }
+
+    if (!Array.isArray(inputs)) {
+      throw new InputValidationError(
+        this.errorBuilder({message: 'Input data is not an array'})
+      );
+    }
+
     // validate inputs for location data + timestamp + duration
     this.validateinputs(inputs);
     // determine the earliest start and total duration of all input blocks
     const {startTime, fetchDuration} = this.determineinputStartEnd(inputs);
-    // fetch data from WattTime API for the entire duration
+
+    /**
+     * Fetch data from WattTime API for the entire duration
+     * @todo Check watt time data should be fetched for each input or not.
+     */
     const wattimedata = await this.fetchData({
+      ...inputs[0],
       timestamp: startTime.format(),
       duration: fetchDuration,
-      ...inputs[0],
     });
+
     // for each input block, calculate the average emission
-    inputs.map((input: KeyValuePair) => {
+    return inputs.map((input, index) => {
       const inputStart = dayjs(input.timestamp);
       const inputEnd = inputStart.add(input.duration, 'seconds');
       const {datapoints, data} = this.getWattTimeDataForDuration(
@@ -81,15 +111,19 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
         inputEnd
       );
       const emissionSum = data.reduce((a: number, b: number) => a + b, 0);
+
       if (datapoints === 0) {
-        throw new Error(
-          'Did not receive data from WattTime API for the input block.'
+        throw new InputValidationError(
+          this.errorBuilder({
+            message: `Did not receive data from WattTime API for the input[${index}] block`,
+          })
         );
       }
-      input['grid-carbon-intensity'] = emissionSum / datapoints;
-    });
 
-    return inputs;
+      input['grid-carbon-intensity'] = emissionSum / datapoints;
+
+      return input;
+    });
   }
 
   private getWattTimeDataForDuration(
@@ -98,6 +132,7 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     inputEnd: dayjs.Dayjs
   ): {datapoints: number; data: number[]} {
     let datapoints = 0;
+
     const data = wattimedata.map((data: KeyValuePair) => {
       // WattTime API returns full data for the entire duration.
       // if the data point is before the input start, ignore it
@@ -121,49 +156,80 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
       datapoints += 1;
       return grid_emission;
     });
+
     return {datapoints, data};
   }
 
   private validateinputs(inputs: object[]) {
-    inputs.forEach((input: KeyValuePair) => {
+    inputs.forEach((input: KeyValuePair, index) => {
       if (!('location' in input)) {
         const {latitude, longitude} = this.getLatitudeLongitudeFrominput(input);
+
         if (isNaN(latitude) || isNaN(longitude)) {
-          throw new Error('latitude or longitude is not a number');
+          throw new InputValidationError(
+            this.errorBuilder({
+              message: `'latitude' or 'longitude' from input[${index}] is not a number`,
+            })
+          );
         }
       }
+
       if (!('timestamp' in input)) {
-        throw new Error('timestamp is missing');
+        throw new InputValidationError(
+          this.errorBuilder({
+            message: `'timestamp' from rom input[${index}] is missing`,
+          })
+        );
       }
+
       if (!('duration' in input)) {
-        throw new Error('duration is missing');
+        throw new InputValidationError(
+          this.errorBuilder({
+            message: `'duration' from rom input[${index}] is missing`,
+          })
+        );
       }
     });
   }
 
   private getLatitudeLongitudeFrominput(input: KeyValuePair) {
     const location = input['location'].split(','); //split location into latitude and longitude
+
     if (location.length !== 2) {
-      throw new Error(
-        'location should be a comma separated string of latitude and longitude'
+      throw new InputValidationError(
+        this.errorBuilder({
+          message:
+            "'location' should be a comma separated string of 'latitude' and 'longitude'",
+        })
       );
     }
+
     if (location[0] === '' || location[1] === '') {
-      throw new Error('latitude or longitude is missing');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: "'latitude' or 'longitude' is missing",
+        })
+      );
     }
+
     if (location[0] === '0' || location[1] === '0') {
-      throw new Error('latitude or longitude is missing');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: "'latitude' or 'longitude' is missing",
+        })
+      );
     }
+
     const latitude = parseFloat(location[0]); //convert latitude to float
     const longitude = parseFloat(location[1]); //convert longitude to float
+
     return {latitude, longitude};
   }
 
   private determineinputStartEnd(inputs: object[]) {
-    // largest possible start time
-    let starttime = dayjs('9999-12-31');
-    // smallest possible end time
-    let endtime = dayjs('1970-01-01');
+    let starttime = dayjs('9999-12-31'); // largest possible start time
+    let endtime = dayjs('1970-01-01'); // smallest possible end time
+
     inputs.forEach((input: KeyValuePair) => {
       const duration = input.duration;
 
@@ -177,14 +243,17 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
         ? dayjs(input.timestamp).add(duration, 'seconds')
         : endtime;
     });
+
     const fetchDuration = endtime.diff(starttime, 'seconds');
-    if (fetchDuration > 32 * 24 * 60 * 60) {
-      throw new Error(
-        'duration is too long.WattTime API only supports up to 32 days. All inputs must be within 32 days of each other. Duration of ' +
-          fetchDuration +
-          ' seconds is too long.'
+
+    if (fetchDuration > 32 * 24 * 60 * 60 /** 32 days */) {
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: `WattTime API supports up to 32 days. Duration of ${fetchDuration} seconds is too long`,
+        })
       );
     }
+
     return {startTime: starttime, fetchDuration};
   }
 
@@ -192,8 +261,13 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     const duration = input.duration;
     // WattTime API only supports up to 32 days
     if (duration > 32 * 24 * 60 * 60) {
-      throw new Error('duration is too long');
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: `WattTime API supports up to 32 days. Duration of ${duration} seconds is too long`,
+        })
+      );
     }
+
     const {latitude, longitude} = this.getLatitudeLongitudeFrominput(input);
 
     const params = {
@@ -202,6 +276,7 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
       starttime: dayjs(input.timestamp).format('YYYY-MM-DDTHH:mm:ssZ'),
       endtime: dayjs(input.timestamp).add(duration, 'seconds'),
     };
+
     const result = await axios
       .get(`${this.baseUrl}/data`, {
         params,
@@ -209,15 +284,34 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
           Authorization: `Bearer ${this.token}`,
         },
       })
-      .catch(e => {
-        throw new Error('Error fetching data from WattTime API.' + e);
+      .catch(error => {
+        throw new APIRequestError(
+          this.errorBuilder({
+            message: `Error fetching data from WattTime API. ${JSON.stringify(
+              error
+            )}`,
+          })
+        );
       });
+
     if (result.status !== 200) {
-      throw new Error('Error fetching data from WattTime API.' + result.status);
+      throw new APIRequestError(
+        this.errorBuilder({
+          message: `Error fetching data from WattTime API: ${JSON.stringify(
+            result.status
+          )}`,
+        })
+      );
     }
+
     if (!('data' in result) || !Array.isArray(result.data)) {
-      throw new Error('Invalid response from WattTime API.');
+      throw new APIRequestError(
+        this.errorBuilder({
+          message: 'Invalid response from WattTime API',
+        })
+      );
     }
+
     return result.data.sort((a: any, b: any) => {
       return dayjs(a.point_time).unix() > dayjs(b.point_time).unix() ? 1 : -1;
     });
@@ -227,10 +321,13 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     staticParams: object | undefined
   ): Promise<ModelPluginInterface> {
     this.staticParams = staticParams;
+
     if (!staticParams) {
       throw new Error('Missing staticParams');
     }
+
     await this.authenticate(staticParams);
+
     return this;
   }
 }

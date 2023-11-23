@@ -4,6 +4,9 @@ import {
   MockMonitorClient,
 } from '../../../../__mocks__/azure';
 import {AzureImporterModel} from '../../../../lib/azure-importer';
+import {ERRORS} from '../../../../util/errors';
+
+const {InputValidationError} = ERRORS;
 
 jest.mock('@azure/identity', () => ({
   __esModule: true,
@@ -102,7 +105,7 @@ describe('lib/azure-importer: ', () => {
         if (error instanceof Error) {
           expect(error).toBeInstanceOf(Error);
           expect(error.message).toEqual(
-            'The minimum unit of time for azure importer is minutes'
+            'AzureImporterModel: The minimum unit of time for azure importer is minutes.'
           );
         }
       }
@@ -110,6 +113,7 @@ describe('lib/azure-importer: ', () => {
 
     it('throws error for time unit of seconds ', async () => {
       const azureModel = new AzureImporterModel();
+
       await expect(
         azureModel.execute([
           {
@@ -123,7 +127,9 @@ describe('lib/azure-importer: ', () => {
           },
         ])
       ).rejects.toStrictEqual(
-        Error('The minimum unit of time for azure importer is minutes')
+        new InputValidationError(
+          'AzureImporterModel: The minimum unit of time for azure importer is minutes.'
+        )
       );
     });
 
