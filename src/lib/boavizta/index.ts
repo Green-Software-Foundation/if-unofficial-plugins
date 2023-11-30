@@ -67,7 +67,7 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
    * Calculates the output of the given usage.
    */
   async execute(inputs: ModelParams[]): Promise<any[]> {
-    if (Array.isArray(inputs)) {
+    if (Array.isArray(inputs) && inputs.length > 0) {
       const results: KeyValuePair[] = [];
 
       for (const input of inputs) {
@@ -105,13 +105,13 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
   protected formatResponse(data: KeyValuePair): KeyValuePair {
     let m = 0;
     let e = 0;
-    if ('outputs' in data) {
+    if ('impacts' in data) {
       // embodied-carbon output is in kgCO2eq, convert to gCO2eq
-      m = data['outputs']['gwp']['embedded']['value'] * 1000;
+      m = data['impacts']['gwp']['embedded']['value'] * 1000;
       // use output is in J , convert to kWh.
       // 1,000,000 J / 3600 = 277.7777777777778 Wh.
       // 1 MJ / 3.6 = 0.278 kWh
-      e = data['outputs']['pe']['use']['value'] / 3.6;
+      e = data['impacts']['pe']['use']['value'] / 3.6;
     } else if ('gwp' in data && 'pe' in data) {
       // embodied-carbon output is in kgCO2eq, convert to gCO2eq
       m = data['gwp']['embodied-carbon'] * 1000;
@@ -154,8 +154,7 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
 
 export class BoaviztaCpuOutputModel
   extends BoaviztaOutputModel
-  implements ModelPluginInterface
-{
+  implements ModelPluginInterface {
   sharedParams: object | undefined = undefined;
   public name: string | undefined;
   public verbose = false;
@@ -202,7 +201,7 @@ export class BoaviztaCpuOutputModel
     if (!('physical-processor' in staticParams)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: "Missing 'physical-processor' parameter from configuration",
+          message: 'Missing \'physical-processor\' parameter from configuration',
         })
       );
     }
@@ -210,7 +209,7 @@ export class BoaviztaCpuOutputModel
     if (!('core-units' in staticParams)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: "Missing 'core-units' parameter from configuration",
+          message: 'Missing \'core-units\' parameter from configuration',
         })
       );
     }
@@ -227,8 +226,7 @@ export class BoaviztaCpuOutputModel
 
 export class BoaviztaCloudOutputModel
   extends BoaviztaOutputModel
-  implements ModelPluginInterface
-{
+  implements ModelPluginInterface {
   public sharedParams: object | undefined = undefined;
   public instanceTypes: BoaviztaInstanceTypes = {};
   public name: string | undefined;
@@ -258,7 +256,7 @@ export class BoaviztaCloudOutputModel
     if (!('provider' in staticParamsCast)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: "Missing 'provider' parameter from configuration",
+          message: 'Missing \'provider\' parameter from configuration',
         })
       );
     }
@@ -266,7 +264,7 @@ export class BoaviztaCloudOutputModel
     if (!('instance-type' in staticParamsCast)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: "Missing 'instance-type' parameter from configuration",
+          message: 'Missing \'instance-type\' parameter from configuration',
         })
       );
     }
@@ -302,7 +300,7 @@ export class BoaviztaCloudOutputModel
     if (!('provider' in staticParamsCast)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: "Missing 'provider' parameter from configuration",
+          message: 'Missing \'provider\' parameter from configuration',
         })
       );
     } else {
@@ -361,7 +359,6 @@ export class BoaviztaCloudOutputModel
       `https://api.boavizta.org/v1/cloud/instance?verbose=${this.verbose}&duration=${dataCast['usage']['hours_use_time']}`,
       dataCast
     );
-
     return this.formatResponse(response.data);
   }
 

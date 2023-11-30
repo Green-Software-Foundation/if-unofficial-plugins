@@ -101,6 +101,7 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
       duration: fetchDuration,
     });
 
+
     // for each input block, calculate the average emission
     return inputs.map((input, index) => {
       const inputStart = dayjs(input.timestamp);

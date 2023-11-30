@@ -3,6 +3,7 @@ import {WattTimeGridEmissions} from '../../../../lib';
 import * as DATA from '../../../../__mocks__/watt-time/data.json';
 import axios from 'axios';
 
+
 jest.setTimeout(30000);
 
 jest.mock('axios');
@@ -111,6 +112,6 @@ describe('watt-time:configure test', () => {
           duration: 3600,
         },
       ])
-    ).rejects.toThrowError();
+    ).rejects.toThrow();
   });
 });
