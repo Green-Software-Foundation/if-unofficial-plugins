@@ -3,7 +3,6 @@ import {WattTimeGridEmissions} from '../../../../lib';
 import * as DATA from '../../../../__mocks__/watt-time/data.json';
 import axios from 'axios';
 
-
 jest.setTimeout(30000);
 
 jest.mock('axios');
@@ -14,7 +13,10 @@ const mockAxios = axios as jest.Mocked<typeof axios>;
 mockAxios.get.mockImplementation((url, data) => {
   switch (url) {
     case 'https://api2.watttime.org/v2/login':
-      if (data?.auth?.username === 'test1' && data?.auth?.password === 'test2') {
+      if (
+        data?.auth?.username === 'test1' &&
+        data?.auth?.password === 'test2'
+      ) {
         return Promise.resolve({
           status: 200,
           data: {
@@ -28,7 +30,10 @@ mockAxios.get.mockImplementation((url, data) => {
         });
       }
     case 'https://apifail.watttime.org/v2/login':
-      if (data?.auth?.username === 'test1' && data?.auth?.password === 'test2') {
+      if (
+        data?.auth?.username === 'test1' &&
+        data?.auth?.password === 'test2'
+      ) {
         return Promise.resolve({
           status: 200,
           data: {
@@ -42,19 +47,19 @@ mockAxios.get.mockImplementation((url, data) => {
         });
       }
     case 'https://apifail2.watttime.org/v2/login':
-        return Promise.resolve({
-          status: 200,
-          data: {
-            token: 'test_token',
-          },
-        });
+      return Promise.resolve({
+        status: 200,
+        data: {
+          token: 'test_token',
+        },
+      });
     case 'https://apifail3.watttime.org/v2/login':
-        return Promise.resolve({
-          status: 200,
-          data: {
-            token: 'test_token',
-          },
-        });
+      return Promise.resolve({
+        status: 200,
+        data: {
+          token: 'test_token',
+        },
+      });
     case 'https://api2.watttime.org/v2/data':
       return Promise.resolve({
         data: DATA,
@@ -69,39 +74,49 @@ mockAxios.get.mockImplementation((url, data) => {
       return Promise.resolve({
         status: 200,
         data: {
-          none: {}
+          none: {},
         },
       });
     case 'https://apifail3.watttime.org/v2/data':
       return Promise.reject({
         status: 401,
         data: {
-          none: {}
+          none: {},
         },
       });
   }
 });
 describe('watt-time:configure test', () => {
   test('initialize and test', async () => {
-    await expect(new WattTimeGridEmissions().configure(undefined)).rejects.toThrow();
+    await expect(
+      new WattTimeGridEmissions().configure(undefined)
+    ).rejects.toThrow();
     const model = await new WattTimeGridEmissions().configure({
       username: 'test1',
       password: 'test2',
     });
-    await expect(new WattTimeGridEmissions().configure({
-      username: 'test1',
-      password: 'test1',
-    })).rejects.toThrow();
-    await expect(new WattTimeGridEmissions().configure({
-      password: 'test1',
-    })).rejects.toThrow();
-    await expect(new WattTimeGridEmissions().configure({
-      username: 'ENV_WATT_USERNAME',
-      password: 'ENV_WATT_PASSWORD',
-    })).rejects.toThrow();
-    await expect(new WattTimeGridEmissions().configure({
-      token: 'ENV_WATT_TOKEN'
-    })).rejects.toThrow();
+    await expect(
+      new WattTimeGridEmissions().configure({
+        username: 'test1',
+        password: 'test1',
+      })
+    ).rejects.toThrow();
+    await expect(
+      new WattTimeGridEmissions().configure({
+        password: 'test1',
+      })
+    ).rejects.toThrow();
+    await expect(
+      new WattTimeGridEmissions().configure({
+        username: 'ENV_WATT_USERNAME',
+        password: 'ENV_WATT_PASSWORD',
+      })
+    ).rejects.toThrow();
+    await expect(
+      new WattTimeGridEmissions().configure({
+        token: 'ENV_WATT_TOKEN',
+      })
+    ).rejects.toThrow();
     expect(model).toBeInstanceOf(WattTimeGridEmissions);
     await expect(
       model.execute([
@@ -168,10 +183,10 @@ describe('watt-time:configure test', () => {
       },
     ]);
     const modelFail = await new WattTimeGridEmissions().configure({
-      'baseUrl': 'https://apifail.watttime.org/v2',
-      'username': 'test1',
-      'password': 'test2',
-    })
+      baseUrl: 'https://apifail.watttime.org/v2',
+      username: 'test1',
+      password: 'test2',
+    });
     await expect(
       modelFail.execute([
         {
@@ -250,7 +265,7 @@ describe('watt-time:configure test', () => {
     const modelFail2 = await new WattTimeGridEmissions().configure({
       username: 'test1',
       password: 'test2',
-      baseUrl:'https://apifail2.watttime.org/v2'
+      baseUrl: 'https://apifail2.watttime.org/v2',
     });
     await expect(
       modelFail2.execute([
@@ -269,7 +284,7 @@ describe('watt-time:configure test', () => {
     const modelFail3 = await new WattTimeGridEmissions().configure({
       username: 'test1',
       password: 'test2',
-      baseUrl:'https://apifail3.watttime.org/v2'
+      baseUrl: 'https://apifail3.watttime.org/v2',
     });
     await expect(
       modelFail3.execute([

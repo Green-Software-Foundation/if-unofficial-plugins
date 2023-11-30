@@ -21,9 +21,7 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
     this.authCredentials = authParams;
   }
 
-  async configure(
-    staticParams: object
-  ): Promise<ModelPluginInterface> {
+  async configure(staticParams: object): Promise<ModelPluginInterface> {
     this.sharedParams = await this.captureStaticParams(staticParams);
 
     return this;
@@ -123,9 +121,7 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
   protected async calculateUsageForinput(
     input: ModelParams
   ): Promise<KeyValuePair> {
-    if (
-      this.metricType in input
-    ) {
+    if (this.metricType in input) {
       const usageInput = this.transformToBoaviztaUsage(
         input['duration'],
         input[this.metricType]
@@ -145,7 +141,8 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
 
 export class BoaviztaCpuOutputModel
   extends BoaviztaOutputModel
-  implements ModelPluginInterface {
+  implements ModelPluginInterface
+{
   sharedParams: object | undefined = undefined;
   public name: string | undefined;
   public verbose = false;
@@ -185,7 +182,10 @@ export class BoaviztaCpuOutputModel
 
   protected async captureStaticParams(staticParams: object): Promise<object> {
     // if verbose is defined in staticParams, remove it from staticParams and set verbose to the value defined in staticParams
-    if ('verbose' in staticParams && (staticParams.verbose === true || staticParams.verbose === false)) {
+    if (
+      'verbose' in staticParams &&
+      (staticParams.verbose === true || staticParams.verbose === false)
+    ) {
       this.verbose = staticParams.verbose;
       staticParams.verbose = undefined;
     }
@@ -193,7 +193,7 @@ export class BoaviztaCpuOutputModel
     if (!('physical-processor' in staticParams)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: 'Missing \'physical-processor\' parameter from configuration',
+          message: "Missing 'physical-processor' parameter from configuration",
         })
       );
     }
@@ -201,7 +201,7 @@ export class BoaviztaCpuOutputModel
     if (!('core-units' in staticParams)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: 'Missing \'core-units\' parameter from configuration',
+          message: "Missing 'core-units' parameter from configuration",
         })
       );
     }
@@ -218,7 +218,8 @@ export class BoaviztaCpuOutputModel
 
 export class BoaviztaCloudOutputModel
   extends BoaviztaOutputModel
-  implements ModelPluginInterface {
+  implements ModelPluginInterface
+{
   public sharedParams: object | undefined = undefined;
   public instanceTypes: BoaviztaInstanceTypes = {};
   public name: string | undefined;
@@ -248,7 +249,7 @@ export class BoaviztaCloudOutputModel
     if (!('provider' in staticParamsCast)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: 'Missing \'provider\' parameter from configuration',
+          message: "Missing 'provider' parameter from configuration",
         })
       );
     }
@@ -256,7 +257,7 @@ export class BoaviztaCloudOutputModel
     if (!('instance-type' in staticParamsCast)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: 'Missing \'instance-type\' parameter from configuration',
+          message: "Missing 'instance-type' parameter from configuration",
         })
       );
     }
@@ -292,7 +293,7 @@ export class BoaviztaCloudOutputModel
     if (!('provider' in staticParamsCast)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: 'Missing \'provider\' parameter from configuration',
+          message: "Missing 'provider' parameter from configuration",
         })
       );
     } else {
@@ -355,9 +356,11 @@ export class BoaviztaCloudOutputModel
   }
 
   protected async captureStaticParams(staticParams: object): Promise<object> {
-    if ('verbose' in staticParams &&
+    if (
+      'verbose' in staticParams &&
       staticParams.verbose !== undefined &&
-      (staticParams.verbose === true || staticParams.verbose === false)) {
+      (staticParams.verbose === true || staticParams.verbose === false)
+    ) {
       this.verbose = staticParams.verbose;
       staticParams.verbose = undefined;
     }

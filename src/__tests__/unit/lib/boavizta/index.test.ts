@@ -1,10 +1,12 @@
 import axios, {AxiosResponse} from 'axios';
-import {BoaviztaCloudOutputModel, BoaviztaCpuOutputModel,} from '../../../../lib/boavizta/index';
+import {
+  BoaviztaCloudOutputModel,
+  BoaviztaCpuOutputModel,
+} from '../../../../lib/boavizta/index';
 
 import * as PROVIDERS from '../../../../__mocks__/boavizta/providers.json';
 import * as COUNTRIES from '../../../../__mocks__/boavizta/countries.json';
 import * as INSTANCE_TYPES from '../../../../__mocks__/boavizta/instance_types.json';
-
 
 async function axiosGet<T = any, R = AxiosResponse<T, any>>(
   url: string
@@ -518,7 +520,7 @@ describe('cloud:initialize with params', () => {
     // configure without static params will cause improper configure error
   });
 
-  test('correct \'instance-type\': initialize with params and call usage in IMPL Format', async () => {
+  test("correct 'instance-type': initialize with params and call usage in IMPL Format", async () => {
     const outputModel = new BoaviztaCloudOutputModel();
 
     await expect(
@@ -612,8 +614,7 @@ describe('cloud:initialize with params', () => {
         location: 'USA',
         provider: 'aws',
       })
-    ).rejects.toThrow(
-    );
+    ).rejects.toThrow();
     await expect(
       outputModel.configure({
         location: 'USAF',
@@ -646,7 +647,6 @@ describe('cloud:initialize with params', () => {
           'cpu-util': 78,
         },
       ])
-    ).rejects.toThrow(
-    );
+    ).rejects.toThrow();
   });
 });
