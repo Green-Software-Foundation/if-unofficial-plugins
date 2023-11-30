@@ -22,9 +22,9 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
   }
 
   async configure(
-    staticParams: object | undefined = undefined
+    staticParams: object
   ): Promise<ModelPluginInterface> {
-    this.sharedParams = await this.captureStaticParams(staticParams ?? {});
+    this.sharedParams = await this.captureStaticParams(staticParams);
 
     return this;
   }
@@ -112,13 +112,6 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
       // 1,000,000 J / 3600 = 277.7777777777778 Wh.
       // 1 MJ / 3.6 = 0.278 kWh
       e = data['impacts']['pe']['use']['value'] / 3.6;
-    } else if ('gwp' in data && 'pe' in data) {
-      // embodied-carbon output is in kgCO2eq, convert to gCO2eq
-      m = data['gwp']['embodied-carbon'] * 1000;
-      // use output is in J , convert to kWh.
-      // 1,000,000 J / 3600 = 277.7777777777778 Wh.
-      // 1 MJ / 3.6 = 0.278 kWh
-      e = data['pe']['use'] / 3.6;
     }
 
     return {'embodied-carbon': m, energy: e};
@@ -131,8 +124,6 @@ abstract class BoaviztaOutputModel implements ModelPluginInterface {
     input: ModelParams
   ): Promise<KeyValuePair> {
     if (
-      'timestamp' in input &&
-      'duration' in input &&
       this.metricType in input
     ) {
       const usageInput = this.transformToBoaviztaUsage(
@@ -193,8 +184,9 @@ export class BoaviztaCpuOutputModel
   }
 
   protected async captureStaticParams(staticParams: object): Promise<object> {
-    if ('verbose' in staticParams) {
-      this.verbose = (staticParams.verbose as boolean) ?? false;
+    // if verbose is defined in staticParams, remove it from staticParams and set verbose to the value defined in staticParams
+    if ('verbose' in staticParams && (staticParams.verbose === true || staticParams.verbose === false)) {
+      this.verbose = staticParams.verbose;
       staticParams.verbose = undefined;
     }
 
@@ -235,7 +227,7 @@ export class BoaviztaCloudOutputModel
 
   async validateLocation(staticParamsCast: object): Promise<string | void> {
     if ('location' in staticParamsCast) {
-      const location = (staticParamsCast.location as string) ?? 'USA';
+      const location = staticParamsCast.location as string;
       const countries = await this.supportedLocations();
 
       if (!countries.includes(location)) {
@@ -362,9 +354,11 @@ export class BoaviztaCloudOutputModel
     return this.formatResponse(response.data);
   }
 
-  protected async captureStaticParams(staticParams: object) {
-    if ('verbose' in staticParams) {
-      this.verbose = (staticParams.verbose as boolean) ?? false;
+  protected async captureStaticParams(staticParams: object): Promise<object> {
+    if ('verbose' in staticParams &&
+      staticParams.verbose !== undefined &&
+      (staticParams.verbose === true || staticParams.verbose === false)) {
+      this.verbose = staticParams.verbose;
       staticParams.verbose = undefined;
     }
 

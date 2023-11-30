@@ -445,6 +445,14 @@ describe('cpu:initialize with params', () => {
         'physical-processor': 'Intel Xeon Gold 6138f',
         'core-units': 24,
         location: 'USA',
+        verbose: false,
+      })
+    ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
+    await expect(
+      outputModel.configure({
+        'physical-processor': 'Intel Xeon Gold 6138f',
+        'core-units': 24,
+        location: 'USA',
         verbose: true,
       })
     ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
@@ -548,6 +556,14 @@ describe('cloud:initialize with params', () => {
         energy: 1.6408333333333334,
       },
     ]);
+    await expect(
+      outputModel.execute([
+        {
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 15,
+        },
+      ])
+    ).rejects.toThrow();
   });
 
   test('wrong "instance-type": initialize with params and call usage in IMPL Format throws error', async () => {
