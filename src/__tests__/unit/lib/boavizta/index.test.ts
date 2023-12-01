@@ -383,7 +383,7 @@ describe('cpu:configure test', () => {
   test('initialize without params throws error for parameter and call execute without params throws error for input', async () => {
     const outputModel = new BoaviztaCpuOutputModel();
     const outputModelConfigFail = new BoaviztaCpuOutputModel();
-    await expect(outputModel.authenticate({})).resolves.toBe(undefined);
+    await expect(outputModel.authenticate({})).resolves.toBe(undefined); // authenticate does not have any params / output
     await expect(
       outputModelConfigFail.execute([
         {
@@ -442,6 +442,7 @@ describe('cpu:initialize with params', () => {
   });
   test('initialize with params and call multiple usages in IMPL format:verbose', async () => {
     const outputModel = new BoaviztaCpuOutputModel();
+    // test configuration with verbose false
     await expect(
       outputModel.configure({
         'physical-processor': 'Intel Xeon Gold 6138f',
@@ -450,6 +451,7 @@ describe('cpu:initialize with params', () => {
         verbose: false,
       })
     ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
+    // test configuration with verbose true
     await expect(
       outputModel.configure({
         'physical-processor': 'Intel Xeon Gold 6138f',
@@ -459,7 +461,7 @@ describe('cpu:initialize with params', () => {
       })
     ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
 
-    // configure without static params will cause improper configure error
+    // verbose still results in same output
     await expect(
       outputModel.execute([
         {
@@ -480,15 +482,6 @@ describe('cpu:initialize with params', () => {
 describe('cloud:initialize with params', () => {
   test('initialize with params and call usage in RAW Format', async () => {
     const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.validateLocation({location: 'SomethingFail'})
-    ).rejects.toThrow();
-    await expect(
-      outputModel.validateInstanceType({'instance-type': 'SomethingFail'})
-    ).rejects.toThrow();
-    await expect(
-      outputModel.validateProvider({provider: 'SomethingFail'})
-    ).rejects.toThrow();
     await expect(
       outputModel.configure({
         'instance-type': 't2.micro',
@@ -519,22 +512,55 @@ describe('cloud:initialize with params', () => {
 
     // configure without static params will cause improper configure error
   });
-
-  test("correct 'instance-type': initialize with params and call usage in IMPL Format", async () => {
+  test('invalid input for location throws error', async () => {
     const outputModel = new BoaviztaCloudOutputModel();
-
+    await expect(
+      outputModel.validateLocation({location: 'SomethingFail'})
+    ).rejects.toThrow();
+  });
+  test('invalid input for instance type throws error', async () => {
+    const outputModel = new BoaviztaCloudOutputModel();
+    await expect(
+      outputModel.validateInstanceType({'instance-type': 'SomethingFail'})
+    ).rejects.toThrow();
+  });
+  test('invalid input for provider throws error', async () => {
+    const outputModel = new BoaviztaCloudOutputModel();
+    await expect(
+      outputModel.validateProvider({provider: 'SomethingFail'})
+    ).rejects.toThrow();
+  });
+  test('missing provider throws error', async () => {
+    const outputModel = new BoaviztaCloudOutputModel();
     await expect(
       outputModel.configure({
         'instance-type': 't2.micro',
         location: 'USA',
       })
     ).rejects.toThrow();
+  });
+  test('missing `instance-type` throws error', async () => {
+    const outputModel = new BoaviztaCloudOutputModel();
     await expect(
       outputModel.configure({
         provider: 'aws',
         location: 'USA',
       })
     ).rejects.toThrow();
+  });
+
+  test('wrong `instance-type` throws error', async () => {
+    const outputModel = new BoaviztaCloudOutputModel();
+    await expect(
+      outputModel.configure({
+        'instance-type': 't5.micro',
+        location: 'USA',
+        provider: 'aws',
+      })
+    ).rejects.toThrow();
+  });
+  test("correct 'instance-type': initialize with params and call usage in IMPL Format", async () => {
+    const outputModel = new BoaviztaCloudOutputModel();
     await expect(
       outputModel.configure({
         'instance-type': 't2.micro',
@@ -542,8 +568,6 @@ describe('cloud:initialize with params', () => {
         provider: 'aws',
       })
     ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
-
-    // mockAxios.get.mockResolvedValue({data: {}});
     await expect(
       outputModel.execute([
         {
@@ -563,44 +587,6 @@ describe('cloud:initialize with params', () => {
         {
           timestamp: '2021-01-01T00:00:00Z',
           duration: 15,
-        },
-      ])
-    ).rejects.toThrow();
-  });
-
-  test('wrong "instance-type": initialize with params and call usage in IMPL Format throws error', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-
-    await expect(
-      outputModel.configure({
-        'instance-type': 't5.micro',
-        location: 'USA',
-        provider: 'aws',
-      })
-    ).rejects.toThrow();
-
-    // configure without static params will cause improper configure error
-    await expect(
-      outputModel.execute([
-        {
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 15,
-          'cpu-util': 34,
-        },
-        {
-          timestamp: '2021-01-01T00:00:15Z',
-          duration: 15,
-          'cpu-util': 12,
-        },
-        {
-          timestamp: '2021-01-01T00:00:30Z',
-          duration: 15,
-          'cpu-util': 1,
-        },
-        {
-          timestamp: '2021-01-01T00:00:45Z',
-          duration: 15,
-          'cpu-util': 78,
         },
       ])
     ).rejects.toThrow();

@@ -87,25 +87,48 @@ mockAxios.get.mockImplementation((url, data) => {
   }
 });
 describe('watt-time:configure test', () => {
-  test('initialize and test', async () => {
+  test('initialize without configurations throws error', async () => {
     await expect(
       new WattTimeGridEmissions().configure(undefined)
     ).rejects.toThrow();
-    const model = await new WattTimeGridEmissions().configure({
-      username: 'test1',
-      password: 'test2',
-    });
+  });
+  test('initialize with wrong credentials throw error', async () => {
     await expect(
       new WattTimeGridEmissions().configure({
         username: 'test1',
         password: 'test1',
       })
     ).rejects.toThrow();
+  });
+  test('initialize without either username / password throws error', async () => {
     await expect(
       new WattTimeGridEmissions().configure({
         password: 'test1',
       })
     ).rejects.toThrow();
+    await expect(
+      new WattTimeGridEmissions().configure({
+        username: 'test1',
+      })
+    ).rejects.toThrow();
+  });
+  test('initialize with wrong username / password throws error', async () => {
+    const modelFail = await new WattTimeGridEmissions().configure({
+      baseUrl: 'https://apifail.watttime.org/v2',
+      username: 'test1',
+      password: 'test2',
+    });
+    await expect(
+      modelFail.execute([
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 360,
+        },
+      ])
+    ).rejects.toThrow();
+  });
+  test('initialize with undefined environment variables throw error', async () => {
     await expect(
       new WattTimeGridEmissions().configure({
         username: 'ENV_WATT_USERNAME',
@@ -117,6 +140,139 @@ describe('watt-time:configure test', () => {
         token: 'ENV_WATT_TOKEN',
       })
     ).rejects.toThrow();
+  });
+
+  test('throws error if watttime api returns wrong data', async () => {
+    const model = await new WattTimeGridEmissions().configure({
+      username: 'test1',
+      password: 'test2',
+    });
+
+    // data is not enough to proceed with computation
+    await expect(
+      model.execute([
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+        },
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-02T01:00:00Z',
+          duration: 3600,
+        },
+      ])
+    ).rejects.toThrow();
+  });
+  test('throws error if wrong location is provided', async () => {
+    const model = await new WattTimeGridEmissions().configure({
+      username: 'test1',
+      password: 'test2',
+    });
+    await expect(
+      model.execute([
+        {
+          location: '0,-122.4194',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+        },
+      ])
+    ).rejects.toThrow();
+    await expect(
+      model.execute([
+        {
+          location: '0,',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+        },
+      ])
+    ).rejects.toThrow();
+    await expect(
+      model.execute([
+        {
+          location: '',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+        },
+      ])
+    ).rejects.toThrow();
+    await expect(
+      model.execute([
+        {
+          location: 'gsf,ief',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+        },
+      ])
+    ).rejects.toThrow();
+  });
+  test('throws error if no data is returned by API', async () => {
+    const modelFail2 = await new WattTimeGridEmissions().configure({
+      username: 'test1',
+      password: 'test2',
+      baseUrl: 'https://apifail2.watttime.org/v2',
+    });
+    await expect(
+      modelFail2.execute([
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+        },
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-02T01:00:00Z',
+          duration: 3600,
+        },
+      ])
+    ).rejects.toThrow();
+  });
+  test('throws error if unauthorized error occurs during data fetch', async () => {
+    const modelFail3 = await new WattTimeGridEmissions().configure({
+      username: 'test1',
+      password: 'test2',
+      baseUrl: 'https://apifail3.watttime.org/v2',
+    });
+    await expect(
+      modelFail3.execute([
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+        },
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-02T01:00:00Z',
+          duration: 3600,
+        },
+      ])
+    ).rejects.toThrow();
+    await expect(
+      modelFail3.execute([
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+        },
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-15T01:00:00Z',
+          duration: 3600,
+        },
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-02T01:00:00Z',
+          duration: 3600,
+        },
+      ])
+    ).rejects.toThrow();
+  });
+
+  test('proper initialization and test', async () => {
+    const model = await new WattTimeGridEmissions().configure({
+      username: 'test1',
+      password: 'test2',
+    });
     expect(model).toBeInstanceOf(WattTimeGridEmissions);
     await expect(
       model.execute([
@@ -182,142 +338,5 @@ describe('watt-time:configure test', () => {
         'grid-carbon-intensity': 2193.5995087395318,
       },
     ]);
-    const modelFail = await new WattTimeGridEmissions().configure({
-      baseUrl: 'https://apifail.watttime.org/v2',
-      username: 'test1',
-      password: 'test2',
-    });
-    await expect(
-      modelFail.execute([
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 360,
-        },
-      ])
-    ).rejects.toThrow();
-
-    await expect(
-      model.execute([
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-02T01:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
-    await expect(
-      model.execute([
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2022-01-02T01:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
-    await expect(
-      model.execute([
-        {
-          location: '0,-122.4194',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
-    await expect(
-      model.execute([
-        {
-          location: '0,',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
-    await expect(
-      model.execute([
-        {
-          location: '',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
-    await expect(
-      model.execute([
-        {
-          location: 'gsf,ief',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
-
-    const modelFail2 = await new WattTimeGridEmissions().configure({
-      username: 'test1',
-      password: 'test2',
-      baseUrl: 'https://apifail2.watttime.org/v2',
-    });
-    await expect(
-      modelFail2.execute([
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-02T01:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
-    const modelFail3 = await new WattTimeGridEmissions().configure({
-      username: 'test1',
-      password: 'test2',
-      baseUrl: 'https://apifail3.watttime.org/v2',
-    });
-    await expect(
-      modelFail3.execute([
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-02T01:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
-    await expect(
-      modelFail3.execute([
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-        },
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-15T01:00:00Z',
-          duration: 3600,
-        },
-        {
-          location: '37.7749,-122.4194',
-          timestamp: '2021-01-02T01:00:00Z',
-          duration: 3600,
-        },
-      ])
-    ).rejects.toThrow();
   });
 });
