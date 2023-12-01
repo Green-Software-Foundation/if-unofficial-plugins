@@ -64,6 +64,7 @@
   "scripts": {
     "build": "rm -rf build && tsc --project tsconfig.build.json",
     "fix": "gts fix",
+    "coverage": "jest --verbose --coverage",
     "fix:package": "fixpack",
     "lint": "gts lint",
     "prepublish": "yarn build",
