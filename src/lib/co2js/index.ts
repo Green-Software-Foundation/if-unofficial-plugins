@@ -24,7 +24,8 @@ export class Co2jsModel implements ModelPluginInterface {
         greenhosting = observation['green-web-host'];
       }
       let result;
-      switch (this.staticParams['type']) {
+      console.log('TYPE', this.staticParams.type)
+      switch (this.staticParams.type) {
         case 'swd': {
           result = this.model.perVisit(observation['bytes'], greenhosting)
           break;
@@ -34,7 +35,9 @@ export class Co2jsModel implements ModelPluginInterface {
           break;
         }
       }
-      console.log(result);
+      if (result !== undefined) {
+        observation['operational-carbon'] = result;
+      }
       return observation;
     });
   }
@@ -42,14 +45,14 @@ export class Co2jsModel implements ModelPluginInterface {
   async configure(
     staticParams: object
   ): Promise<ModelPluginInterface> {
-    this.staticParams = staticParams;
     if (staticParams !== undefined && 'type' in staticParams) {
       if (!['1byte', 'swd'].includes(staticParams.type as string)) {
         throw new Error(
           `Invalid co2js model: ${staticParams.type}. Must be one of 1byte or swd.`
         );
       }
-      this.model = co2({model: staticParams.type});
+      this.staticParams['type'] = staticParams.type;
+      this.model = new co2({model: staticParams.type});
     }
     return this;
   }
