@@ -24,14 +24,14 @@ export class Co2jsModel implements ModelPluginInterface {
         greenhosting = observation['green-web-host'];
       }
       let result;
-      console.log('TYPE', this.staticParams.type)
+      console.log('TYPE', this.staticParams.type);
       switch (this.staticParams.type) {
         case 'swd': {
-          result = this.model.perVisit(observation['bytes'], greenhosting)
+          result = this.model.perVisit(observation['bytes'], greenhosting);
           break;
         }
         case '1byte': {
-          result = this.model.perByte(observation['bytes'], greenhosting)
+          result = this.model.perByte(observation['bytes'], greenhosting);
           break;
         }
       }
@@ -42,9 +42,7 @@ export class Co2jsModel implements ModelPluginInterface {
     });
   }
 
-  async configure(
-    staticParams: object
-  ): Promise<ModelPluginInterface> {
+  async configure(staticParams: object): Promise<ModelPluginInterface> {
     if (staticParams !== undefined && 'type' in staticParams) {
       if (!['1byte', 'swd'].includes(staticParams.type as string)) {
         throw new Error(

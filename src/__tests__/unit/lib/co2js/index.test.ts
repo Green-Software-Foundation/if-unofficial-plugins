@@ -12,17 +12,17 @@ describe('sci:configure test', () => {
     await expect(
       model.execute([
         {
-          'timestamp': '2021-01-01T00:00:00Z',
-          'duration': 3600,
-          'bytes': 100000,
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+          bytes: 100000,
           'green-web-host': true,
         },
       ])
     ).resolves.toStrictEqual([
       {
-        'timestamp': '2021-01-01T00:00:00Z',
-        'duration': 3600,
-        'bytes': 100000,
+        timestamp: '2021-01-01T00:00:00Z',
+        duration: 3600,
+        bytes: 100000,
         'green-web-host': true,
         'operational-carbon': 0.023195833333333332,
       },
