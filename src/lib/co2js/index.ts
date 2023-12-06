@@ -20,7 +20,6 @@ export class Co2jsModel implements ModelPluginInterface {
         greenhosting = observation['green-web-host'];
       }
       let result;
-      console.log('TYPE', this.staticParams.type);
       switch (this.staticParams.type) {
         case 'swd': {
           result = this.model.perVisit(observation['bytes'], greenhosting);
