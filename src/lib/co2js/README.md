@@ -24,11 +24,19 @@
 
 # IF Implementation
 
-IF Utlilises the CO2JS Framework to calculate the carbon emissions of a website. The CO2JS Framework is a collection of models that calculate the carbon emissions of a website based on different parameters. The CO2JS Framework is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+IF utilizes the CO2JS Framework to calculate the carbon emissions of a website. The CO2JS Framework is a collection of models that calculate the carbon emissions of a website based on different parameters. IF installs the CO2js npm package from `@tgwf/co2js` and invokes its functions from a model plugin.
+
+The CO2JS Framework is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 
 ## Usage
-In IEF the model is called from an `impl`. An `impl` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `impact-engine`. There, the model's `configure` method is called first. The model config should define a `type` either `swd` or `1byte` supported by the CO2.JS library. Each input is expected to contain `bytes`,`green-web-host`,`duration` and `timestamp` fields.
+
+In IEF the model is called from an `impl`. An `impl` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `impact-engine`. There, the model's `configure` method is called first. 
+
+The model config should define a `type` supported by the CO2.JS library (either `swd` or `1byte`). These are different ways to calculate the operational carbon associated with a web application; `swd` is shorthand for 'sustainable web design' model and `1byte` refers to the OneByte mdoel. You can read about the details of these models and how they differ at the [Green Web Foundation website](https://developers.thegreenwebfoundation.org/co2js/explainer/methodologies-for-calculating-website-carbon/).
+
+Each input is expected to contain `bytes`, `green-web-host`, `duration` and `timestamp` fields.
+
 ## IMPL
 
 The following is an example of how CO2.JS can be invoked using an `impl`.
@@ -40,7 +48,6 @@ initialize:
     - name: co2js
       model: Co2JsModel
       path: '@grnsft/if-unofficial-models'
-
 graph:
   children:
     child:
