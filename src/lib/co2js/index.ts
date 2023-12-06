@@ -3,10 +3,7 @@ import {ModelPluginInterface} from '../../interfaces';
 import {KeyValuePair, ModelParams} from '../../types';
 
 export class Co2jsModel implements ModelPluginInterface {
-  authParams: object | undefined = undefined;
   staticParams: KeyValuePair = {};
-  name: string | undefined;
-  time: string | unknown;
   model: any | undefined;
 
   async execute(observations: ModelParams[]): Promise<ModelParams[]> {
