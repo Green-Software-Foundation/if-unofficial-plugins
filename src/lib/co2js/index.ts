@@ -9,10 +9,6 @@ export class Co2jsModel implements ModelPluginInterface {
   time: string | unknown;
   model: any | undefined;
 
-  authenticate(authParams: object): void {
-    this.authParams = authParams;
-  }
-
   async execute(observations: ModelParams[]): Promise<ModelParams[]> {
     return observations.map((observation: any) => {
       this.configure(observation);
