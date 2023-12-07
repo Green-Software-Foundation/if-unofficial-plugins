@@ -12,10 +12,9 @@ export class Co2jsModel implements ModelPluginInterface {
       if (observation['bytes'] === undefined) {
         throw new Error('bytes not provided');
       }
-      let greenhosting = false;
-      if (observation['green-web-host'] !== undefined) {
-        greenhosting = observation['green-web-host'];
-      }
+      const greenhosting =
+        observation['green-web-host'] !== undefined &&
+        observation['green-web-host'] === true;
       let result;
       switch (this.staticParams.type) {
         case 'swd': {
