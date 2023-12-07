@@ -14,6 +14,7 @@
     "@azure/arm-monitor": "^7.0.0",
     "@azure/identity": "^3.4.1",
     "@cloud-carbon-footprint/aws": "^0.15.0",
+    "@tgwf/co2": "^0.13.9",
     "axios": "^1.6.0",
     "dayjs": "^1.11.10",
     "dotenv": "16.3.1",
