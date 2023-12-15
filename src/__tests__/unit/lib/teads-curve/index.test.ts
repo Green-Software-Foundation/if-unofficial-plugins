@@ -4,7 +4,7 @@ import {TeadsCurveModel} from '../../../../lib';
 jest.setTimeout(30000);
 
 describe('lib/teads-curve', () => {
-  describe('initialize-configure',  () => {
+  describe('initialize-configure', () => {
     test('configure()', async () => {
       const outputModel = new TeadsCurveModel();
       await outputModel.configure({
@@ -13,7 +13,7 @@ describe('lib/teads-curve', () => {
       await expect(outputModel.configure()).rejects.toThrow();
     });
   });
-  describe('execute()',  () => {
+  describe('execute()', () => {
     test('tdp:200', async () => {
       const outputModel = new TeadsCurveModel();
       await outputModel.configure({
@@ -206,7 +206,10 @@ describe('lib/teads-curve', () => {
           duration: 3600,
           'cpu-util': 10.0,
           timestamp: '2021-01-01T00:00:00Z',
-          'energy-cpu': 0.096,
+
+          'vcpus-allocated': 1,
+          'vcpus-total': 64,
+          'energy-cpu': 0.0015,
         },
       ]);
       await expect(
@@ -224,7 +227,31 @@ describe('lib/teads-curve', () => {
           duration: 3600,
           'cpu-util': 10.0,
           timestamp: '2021-01-01T00:00:00Z',
-          'energy-cpu': 0.096,
+          'vcpus-allocated': '1',
+          'vcpus-total': '64',
+          'energy-cpu': 0.0015,
+        },
+      ]);
+      await expect(
+        outputModel.execute([
+          {
+            duration: 3600,
+            'cpu-util': 10.0,
+            'thermal-design-power': 200,
+            'vcpus-allocated': '1',
+            'vcpus-total': '64',
+            timestamp: '2021-01-01T00:00:00Z',
+          },
+        ])
+      ).resolves.toStrictEqual([
+        {
+          duration: 3600,
+          'cpu-util': 10.0,
+          timestamp: '2021-01-01T00:00:00Z',
+          'vcpus-allocated': '1',
+          'thermal-design-power': 200,
+          'vcpus-total': '64',
+          'energy-cpu': 0.001,
         },
       ]);
       await expect(
@@ -237,14 +264,7 @@ describe('lib/teads-curve', () => {
             timestamp: '2021-01-01T00:00:00Z',
           },
         ])
-      ).resolves.toStrictEqual([
-        {
-          duration: 3600,
-          'cpu-util': 10.0,
-          timestamp: '2021-01-01T00:00:00Z',
-          'energy-cpu': 0.096,
-        },
-      ]);
+      ).rejects.toThrow();
       await expect(
         outputModel.execute([
           {
@@ -255,14 +275,24 @@ describe('lib/teads-curve', () => {
             timestamp: '2021-01-01T00:00:00Z',
           },
         ])
-      ).resolves.toStrictEqual([
-        {
-          duration: 3600,
-          'cpu-util': 10.0,
-          timestamp: '2021-01-01T00:00:00Z',
-          'energy-cpu': 0.096,
-        },
-      ]);
+      ).rejects.toThrow();
+      await expect(
+        outputModel.execute([
+          {
+            duration: 3600,
+            timestamp: '2021-01-01T00:00:00Z',
+          },
+        ])
+      ).rejects.toThrow();
+      await expect(
+        outputModel.execute([
+          {
+            duration: 3600,
+            'cpu-util': 200,
+            timestamp: '2021-01-01T00:00:00Z',
+          },
+        ])
+      ).rejects.toThrow();
     });
   });
 });

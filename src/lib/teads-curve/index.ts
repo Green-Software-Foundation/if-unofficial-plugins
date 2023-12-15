@@ -54,14 +54,13 @@ export class TeadsCurveModel implements ModelPluginInterface {
    */
   async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
     return inputs.map((input, index) => {
-      console.log(input);
       this.configure(input);
       let energy = this.calculateEnergy(input);
       let total: number;
       let allocated: number;
 
       if ('vcpus-allocated' in input && 'vcpus-total' in input) {
-        switch (typeof input['vpus-allocated']) {
+        switch (typeof input['vcpus-allocated']) {
           case 'string':
             allocated = parseFloat(input['vcpus-allocated']);
             break;
@@ -116,7 +115,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            'Required parameters \'duration\', \'cpu\', \'timestamp\' are not provided',
+            'Required parameters \'duration\', \'cpu-util\', \'timestamp\' are not provided',
         })
       );
     }
@@ -128,7 +127,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            'Invalid value for \'mem-util\'. Must be between \'0\' and \'100\'',
+            'Invalid value for \'cpu-util\'. Must be between \'0\' and \'100\'',
         })
       );
     }
