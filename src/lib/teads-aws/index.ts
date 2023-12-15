@@ -44,6 +44,14 @@ export class TeadsAWS implements ModelPluginInterface {
 
     if ('instance-type' in staticParams) {
       const instanceType = staticParams['instance-type'] as string;
+      if (instanceType === '') {
+        throw new UnsupportedValueError(
+          this.errorBuilder({
+            message: 'Instance type is not provided',
+            scope: 'configure',
+          })
+        );
+      }
 
       if (instanceType in this.computeInstances) {
         this.instanceType = instanceType;
@@ -57,14 +65,6 @@ export class TeadsAWS implements ModelPluginInterface {
       }
     }
 
-    if (this.instanceType === '') {
-      throw new UnsupportedValueError(
-        this.errorBuilder({
-          message: 'Instance type is not provided',
-          scope: 'configure',
-        })
-      );
-    }
 
     if ('expected-lifespan' in staticParams) {
       this.expectedLifespan = staticParams['expected-lifespan'] as number;
@@ -87,17 +87,6 @@ export class TeadsAWS implements ModelPluginInterface {
    * @param {number} inputs[].cpu-util percentage cpu usage
    */
   async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-    if (inputs === undefined) {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is missing'})
-      );
-    }
-
-    if (!Array.isArray(inputs)) {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is not an array'})
-      );
-    }
 
     if (this.instanceType === '') {
       throw new InputValidationError(

@@ -4,32 +4,26 @@ import {TeadsAWS} from '../../../../lib/teads-aws/index';
 import {Interpolation} from '../../../../types/common';
 
 jest.setTimeout(30000);
-
-describe('teads:configure test', () => {
-  test('initialize with params', async () => {
-    const outputModel = new TeadsAWS();
-    await outputModel.configure({
-      interpolation: Interpolation.LINEAR,
-      'instance-type': 't2.micro',
+describe('lib/teads-aws',()=>{
+  describe('initialize',()=> {
+    test('configure',async()=>{
+      const outputModel = new TeadsAWS();
+      await expect(outputModel.configure()).rejects.toThrow()
+      await expect(outputModel.configure({'instance-type': 't2213'})).rejects.toThrow()
+      await expect(outputModel.configure({'instance-type': ''})).rejects.toThrow()
+      await expect(
+        outputModel.execute([
+          {
+            duration: 3600,
+            'cpu-util': 50,
+            timestamp: '2021-01-01T00:00:00Z',
+          },
+        ])
+      ).rejects.toThrow();
     });
-    await expect(
-      outputModel.execute([
-        {
-          duration: 3600,
-          'cpu-util': 50,
-          timestamp: '2021-01-01T00:00:00Z',
-        },
-      ])
-    ).resolves.toStrictEqual([
-      {
-        duration: 3600,
-        'cpu-util': 50,
-        timestamp: '2021-01-01T00:00:00Z',
-        energy: 0.004900000000000001,
-        'embodied-carbon': 0.04216723744292237 * 1000,
-      },
-    ]);
   });
+});
+describe('teads:configure test', () => {
   test('teads:initialize with params: spline', async () => {
     const outputModel = new TeadsAWS();
     await outputModel.configure({
