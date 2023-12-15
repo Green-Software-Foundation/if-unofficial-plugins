@@ -4,13 +4,17 @@ import {TeadsAWS} from '../../../../lib/teads-aws/index';
 import {Interpolation} from '../../../../types/common';
 
 jest.setTimeout(30000);
-describe('lib/teads-aws',()=>{
-  describe('initialize',()=> {
-    test('configure',async()=>{
+describe('lib/teads-aws', () => {
+  describe('initialize', () => {
+    test('configure', async () => {
       const outputModel = new TeadsAWS();
-      await expect(outputModel.configure()).rejects.toThrow()
-      await expect(outputModel.configure({'instance-type': 't2213'})).rejects.toThrow()
-      await expect(outputModel.configure({'instance-type': ''})).rejects.toThrow()
+      await expect(outputModel.configure()).rejects.toThrow();
+      await expect(
+        outputModel.configure({'instance-type': 't2213'})
+      ).rejects.toThrow();
+      await expect(
+        outputModel.configure({'instance-type': ''})
+      ).rejects.toThrow();
       await expect(
         outputModel.execute([
           {

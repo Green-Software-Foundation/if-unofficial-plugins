@@ -65,7 +65,6 @@ export class TeadsAWS implements ModelPluginInterface {
       }
     }
 
-
     if ('expected-lifespan' in staticParams) {
       this.expectedLifespan = staticParams['expected-lifespan'] as number;
     }
@@ -87,7 +86,6 @@ export class TeadsAWS implements ModelPluginInterface {
    * @param {number} inputs[].cpu-util percentage cpu usage
    */
   async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-
     if (this.instanceType === '') {
       throw new InputValidationError(
         this.errorBuilder({message: 'Instance type is not provided.'})
