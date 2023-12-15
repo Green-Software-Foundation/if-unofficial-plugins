@@ -1,5 +1,6 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import {CloudCarbonFootprint} from '../../../../lib/ccf/index';
+import {Interpolation} from '../../../../types';
 
 jest.setTimeout(30000);
 
@@ -61,6 +62,21 @@ describe('ccf:configure test', () => {
   });
   test('initialize with params:aws', async () => {
     const outputModel = new CloudCarbonFootprint();
+    await expect(
+      outputModel.configure({
+        vendor: 'aws',
+        'instance-type': 'm5n.large',
+        interpolation: 'linear2',
+      })
+    ).rejects.toThrow();
+    const outputModelLifespan = new CloudCarbonFootprint();
+    await expect(
+      outputModelLifespan.configure({
+        vendor: 'aws',
+        'instance-type': 'm5n.large',
+        'expected-lifespan': 365 * 24 * 60 * 60 * 7,
+      })
+    ).resolves.toBeInstanceOf(CloudCarbonFootprint);
     await outputModel.configure({
       vendor: 'aws',
       'instance-type': 'm5n.large',
@@ -109,6 +125,13 @@ describe('ccf:configure test', () => {
   });
   test('initialize with params:azure', async () => {
     const outputModel = new CloudCarbonFootprint();
+    await expect(
+      outputModel.configure({
+        vendor: 'azure',
+        'instance-type': 'D2 v4',
+        interpolation: Interpolation.SPLINE,
+      })
+    ).rejects.toThrow();
     await outputModel.configure({
       vendor: 'azure',
       'instance-type': 'D2 v4',
@@ -209,6 +232,13 @@ describe('ccf:configure test', () => {
       outputModel.configure({
         vendor: 'aws',
         'instance-type': 't5.micro',
+      })
+    ).rejects.toThrowError();
+    await expect(outputModel.configure()).rejects.toThrowError();
+    await expect(outputModel.configure({})).rejects.toThrowError();
+    await expect(
+      outputModel.configure({
+        vendor: 'aws',
       })
     ).rejects.toThrowError();
     await expect(
