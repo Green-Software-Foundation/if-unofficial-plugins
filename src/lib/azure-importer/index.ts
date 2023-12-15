@@ -191,16 +191,11 @@ export class AzureImporterModel implements ModelPluginInterface {
 
     // parse CPU util data
     for (const timeSeries of cpuMetricsResponse.value[0].timeseries || []) {
-      const timeSeriesData = timeSeries.data || [];
+      const timeSeriesData = timeSeries.data ?? [];
       for (const data of timeSeriesData) {
-        try {
-          timestamps.push(data.timeStamp.toISOString());
-
-          if (!(data.average === undefined)) {
-            cpu_utils.push(data.average.toString());
-          }
-        } catch (error) {
-          console.log('error retrieving CPU data');
+        timestamps.push(data.timeStamp.toISOString());
+        if (data.average !== undefined) {
+          cpu_utils.push(data.average.toString());
         }
       }
     }
@@ -212,8 +207,8 @@ export class AzureImporterModel implements ModelPluginInterface {
 
     // parse ram util data
     for (const timeSeries of ramMetricsResponse.value[0].timeseries || []) {
-      for (const data of timeSeries.data || []) {
-        if (!(typeof data.average === 'undefined')) {
+      for (const data of timeSeries.data ?? []) {
+        if (typeof data.average !== 'undefined') {
           memAvailable.push(data.average.toString());
         }
       }
