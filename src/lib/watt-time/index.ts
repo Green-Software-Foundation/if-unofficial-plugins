@@ -130,7 +130,7 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     wattimedata: KeyValuePair[],
     inputStart: dayjs.Dayjs,
     inputEnd: dayjs.Dayjs
-  ): {datapoints: number; data: number[]} {
+  ): { datapoints: number; data: number[] } {
     let datapoints = 0;
 
     const data = wattimedata.map((data: KeyValuePair) => {
@@ -182,7 +182,7 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            "'location' should be a comma separated string of 'latitude' and 'longitude'",
+            '\'location\' should be a comma separated string of \'latitude\' and \'longitude\'',
         })
       );
     }
@@ -190,7 +190,7 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     if (location[0] === '' || location[1] === '') {
       throw new InputValidationError(
         this.errorBuilder({
-          message: "'latitude' or 'longitude' is missing",
+          message: '\'latitude\' or \'longitude\' is missing',
         })
       );
     }
@@ -198,7 +198,7 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     if (location[0] === '0' || location[1] === '0') {
       throw new InputValidationError(
         this.errorBuilder({
-          message: "'latitude' or 'longitude' is missing",
+          message: '\'latitude\' or \'longitude\' is missing',
         })
       );
     }
@@ -212,13 +212,13 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
   private determineinputStartEnd(inputs: ModelParams[]): {
     startTime: dayjs.Dayjs;
     fetchDuration: number;
-  } {
+  }
+  {
     let starttime = dayjs('9999-12-31'); // largest possible start time
     let endtime = dayjs('1970-01-01'); // smallest possible end time
 
     inputs.forEach((input: ModelParams) => {
       const duration = input.duration;
-
       // if the input timestamp is before the current starttime, set it as the new starttime
       starttime = dayjs(input.timestamp).isBefore(starttime)
         ? dayjs(input.timestamp)
@@ -233,9 +233,11 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
 
     // WattTime API only supports up to 32 days
     if (fetchDuration > 32 * 24 * 60 * 60 /** 32 days */) {
+
       throw new InputValidationError(
         this.errorBuilder({
-          message: `WattTime API supports up to 32 days. Duration of ${fetchDuration} seconds is too long`,
+          message: `WattTime API supports up to 32 days. Duration` +
+            ` of ${fetchDuration} seconds is too long`,
         })
       );
     }

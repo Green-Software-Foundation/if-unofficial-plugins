@@ -3,7 +3,7 @@ import Spline from 'typescript-cubic-spline';
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
-import {KeyValuePair, Interpolation, ModelParams} from '../../types';
+import {Interpolation, KeyValuePair, ModelParams} from '../../types';
 import {ModelPluginInterface} from '../../interfaces';
 
 const {InputValidationError} = ERRORS;
@@ -53,49 +53,42 @@ export class TeadsCurveModel implements ModelPluginInterface {
    * @param {number} inputs[].cpu-util percentage cpu usage
    */
   async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-    if (inputs === undefined) {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is missing'})
-      );
-    }
-
-    if (!Array.isArray(inputs)) {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is not an array'})
-      );
-    }
-
     return inputs.map((input, index) => {
+      console.log(input);
       this.configure(input);
       let energy = this.calculateEnergy(input);
       let total: number;
       let allocated: number;
 
       if ('vcpus-allocated' in input && 'vcpus-total' in input) {
-        if (typeof input['vcpus-allocated'] === 'string') {
-          allocated = parseFloat(input['vcpus-allocated']);
-        } else if (typeof input['vcpus-allocated'] === 'number') {
-          allocated = input['vcpus-allocated'];
-        } else {
-          throw new InputValidationError(
-            this.errorBuilder({
-              message: `Invalid type for 'vcpus-allocated' in input[${index}]`,
-            })
-          );
+        switch (typeof input['vpus-allocated']) {
+          case 'string':
+            allocated = parseFloat(input['vcpus-allocated']);
+            break;
+          case 'number':
+            allocated = input['vcpus-allocated'];
+            break;
+          default:
+            throw new InputValidationError(
+              this.errorBuilder({
+                message: `Invalid type for 'vcpus-allocated' in input[${index}]`,
+              })
+            );
         }
-
-        if (typeof input['vcpus-total'] === 'string') {
-          total = parseFloat(input['vcpus-total']);
-        } else if (typeof input['vcpus-total'] === 'number') {
-          total = input['vcpus-total'];
-        } else {
-          throw new InputValidationError(
-            this.errorBuilder({
-              message: `Invalid type for 'vcpus-total' in input[${index}]`,
-            })
-          );
+        switch (typeof input['vcpus-total']) {
+          case 'string':
+            total = parseFloat(input['vcpus-total']);
+            break;
+          case 'number':
+            total = input['vcpus-total'];
+            break;
+          default:
+            throw new InputValidationError(
+              this.errorBuilder({
+                message: `Invalid type for 'vcpus-total' in input[${index}]`,
+              })
+            );
         }
-
         energy = energy * (allocated / total);
       }
       input['energy-cpu'] = energy;
@@ -123,7 +116,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            "Required parameters 'duration', 'cpu', 'timestamp' are not provided",
+            'Required parameters \'duration\', \'cpu\', \'timestamp\' are not provided',
         })
       );
     }
@@ -135,7 +128,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            "Invalid value for 'mem-util'. Must be between '0' and '100'",
+            'Invalid value for \'mem-util\'. Must be between \'0\' and \'100\'',
         })
       );
     }
@@ -149,7 +142,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            "'thermal-design-power' not provided. Can not compute energy.",
+            '\'thermal-design-power\' not provided. Can not compute energy.',
         })
       );
     }

@@ -372,7 +372,7 @@ mockAxios.post.mockImplementation(
   }
 );
 jest.setTimeout(30000);
-describe('lib/boavista', () => {
+describe('lib/boavizta', () => {
   describe('CpuOutputModel', () => {
     describe('initialise', () => {
       test('validate model', async () => {

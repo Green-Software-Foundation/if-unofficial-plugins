@@ -59,7 +59,6 @@ describe('ccf:configure test', () => {
       },
     ]);
   });
-
   test('initialize with params:aws', async () => {
     const outputModel = new CloudCarbonFootprint();
     await outputModel.configure({
@@ -204,7 +203,6 @@ describe('ccf:configure test', () => {
       },
     ]);
   });
-
   test('initialize with wrong params', async () => {
     const outputModel = new CloudCarbonFootprint();
     await expect(
@@ -233,7 +231,6 @@ describe('ccf:configure test', () => {
       ])
     ).rejects.toThrowError();
   });
-
   test('initialize with correct params but wrong input', async () => {
     const outputModel = new CloudCarbonFootprint();
     await expect(
