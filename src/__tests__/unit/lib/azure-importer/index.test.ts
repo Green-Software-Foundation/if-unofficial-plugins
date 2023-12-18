@@ -7,7 +7,7 @@ import {AzureImporterModel} from '../../../../lib/azure-importer';
 import {ERRORS} from '../../../../util/errors';
 import {KeyValuePair} from '../../../../types';
 
-const {InputValidationError} = ERRORS;
+const {InputValidationError, UnsupportedValueError} = ERRORS;
 
 jest.mock('@azure/identity', () => ({
   __esModule: true,
@@ -30,7 +30,6 @@ describe('lib/azure-importer: ', () => {
   describe('init AzureImporterModel: ', () => {
     it('initalizes object with properties.', async () => {
       const azureModel = await new AzureImporterModel();
-      expect(azureModel).toHaveProperty('authenticate');
       expect(azureModel).toHaveProperty('configure');
       expect(azureModel).toHaveProperty('execute');
     });
@@ -167,6 +166,23 @@ describe('lib/azure-importer: ', () => {
           'cloud-vendor': 'azure',
         },
       ]);
+    });
+    it('throws error for invalid azure-observation-window value', async () => {
+      const azureModel = new AzureImporterModel();
+      const input: KeyValuePair = {
+        timestamp: '2023-11-02T10:35:00.000Z',
+        duration: 300,
+        'azure-observation-aggregation': 'average',
+        'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
+        'azure-resource-group': 'vm1_group',
+        'azure-vm-name': 'vm1',
+        'azure-observation-window': 'dummy',
+      };
+      await expect(azureModel.execute([input])).rejects.toStrictEqual(
+        new UnsupportedValueError(
+          'AzureImporterModel: azure-observation-window parameter is malformed.'
+        )
+      );
     });
     it('returns valid data.', async () => {
       const azureModel = new AzureImporterModel();

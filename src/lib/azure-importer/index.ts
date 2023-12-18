@@ -40,10 +40,6 @@ export class AzureImporterModel implements ModelPluginInterface {
   name: string | undefined;
   errorBuilder = buildErrorMessage(AzureImporterModel);
 
-  authenticate(authParams: object): void {
-    this.authParams = authParams;
-  }
-
   /**
    * Validates given `inputs` params. If it's valid, then captures params, then passes to monitor.
    * Returns flattened result from Azure monitor client.
@@ -389,7 +385,6 @@ export class AzureImporterModel implements ModelPluginInterface {
     const unit = splits[1];
     let duration = 0;
 
-    const seconds = ['seconds', 'second', 'secs', 'sec', 's'];
     const minutes = ['minutes', 'm', 'min', 'mins'];
     const hours = ['hour', 'hours', 'h', 'hr', 'hrs'];
     const days = ['days', 'd'];
@@ -397,10 +392,6 @@ export class AzureImporterModel implements ModelPluginInterface {
     const months = ['month', 'months', 'mth'];
     const years = ['year', 'years', 'yr', 'yrs', 'y', 'ys'];
 
-    if (seconds.includes(unit)) {
-      const secs_per_unit = 1;
-      duration = secs_per_unit * floatNumber;
-    }
     if (minutes.includes(unit)) {
       const secs_per_unit = 60;
       duration = secs_per_unit * floatNumber;
