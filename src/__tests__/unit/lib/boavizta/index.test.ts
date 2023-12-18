@@ -436,7 +436,7 @@ describe('cpu:initialize with params', () => {
     ).resolves.toStrictEqual([
       {
         'embodied-carbon': 0.8,
-        'e-cpu': 0.575,
+        'energy-cpu': 0.575,
       },
     ]);
   });
@@ -473,7 +473,7 @@ describe('cpu:initialize with params', () => {
     ).resolves.toStrictEqual([
       {
         'embodied-carbon': 1.6,
-        'e-cpu': 1.6408333333333334,
+        'energy-cpu': 1.6408333333333334,
       },
     ]);
   });

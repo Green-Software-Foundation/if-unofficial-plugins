@@ -175,7 +175,7 @@ export class BoaviztaCpuOutputModel
     const result = this.formatResponse(response.data);
 
     return {
-      'e-cpu': result.energy,
+      'energy-cpu': result.energy,
       'embodied-carbon': result['embodied-carbon'],
     };
   }
