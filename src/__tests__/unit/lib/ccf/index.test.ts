@@ -38,12 +38,17 @@ describe('ccf:configure test', () => {
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0023031270462730543,
-        'embodied-carbon': 0.04216723744292237 * 1000,
+        'embodied-carbon': 0.8784841133942161,
       },
     ]);
     await outputModel.configure({
       vendor: 'aws',
       interpolation: 'spline',
+      'instance-type': 't2.micro',
+    });
+    await outputModel.configure({
+      vendor: 'aws',
+      interpolation: Interpolation.SPLINE,
       'instance-type': 't2.micro',
     });
     await expect(
@@ -55,7 +60,7 @@ describe('ccf:configure test', () => {
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         duration: 3600,
-        'embodied-carbon': 42.16723744292237,
+        'embodied-carbon': 0.8784841133942161,
         energy: 0.004900000000000001,
       },
     ]);
@@ -105,21 +110,21 @@ describe('ccf:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0019435697915529846,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0046062540925461085,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.007934609468787513,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
     ]);
   });
@@ -160,21 +165,21 @@ describe('ccf:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0019435697915529846,
-        'embodied-carbon': 0.08179908675799086 * 1000,
+        'embodied-carbon': 0.3195276826484018,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0046062540925461085,
-        'embodied-carbon': 0.08179908675799086 * 1000,
+        'embodied-carbon': 0.3195276826484018,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.007934609468787513,
-        'embodied-carbon': 0.08179908675799086 * 1000,
+        'embodied-carbon': 0.3195276826484018,
       },
     ]);
   });
@@ -208,21 +213,21 @@ describe('ccf:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0018785992503765141,
-        'embodied-carbon': 0.10778881278538813 * 1000,
+        'embodied-carbon': 0.8421000998858448,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.004281401386663755,
-        'embodied-carbon': 0.10778881278538813 * 1000,
+        'embodied-carbon': 0.8421000998858448,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0072849040570228075,
-        'embodied-carbon': 0.10778881278538813 * 1000,
+        'embodied-carbon': 0.8421000998858448,
       },
     ]);
   });

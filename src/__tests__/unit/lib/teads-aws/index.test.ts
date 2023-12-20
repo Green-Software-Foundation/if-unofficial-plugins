@@ -24,6 +24,15 @@ describe('lib/teads-aws', () => {
           },
         ])
       ).rejects.toThrow();
+      await expect(
+        outputModel.execute([
+          {
+            duration: 3600,
+            'cpu-util': 50,
+            timestamp: '2021-01-01T00:00:00Z',
+          },
+        ])
+      ).rejects.toThrowError(Error('TeadsAWS: Instance type is not provided..'));
     });
   });
 });
@@ -58,23 +67,89 @@ describe('teads:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0067,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.011800000000000001,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.016300000000000002,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
     ]);
+    await outputModel.configure({
+      'instance-type': 'm5n.large',
+      interpolation: Interpolation.LINEAR,
+    });
+    await expect(
+      outputModel.execute([
+        {
+          duration: 3600,
+          'cpu-util': 8,
+          timestamp: '2021-01-01T00:00:00Z',
+        },
+        {
+          duration: 3600,
+          'cpu-util': 15,
+          timestamp: '2021-01-01T00:00:00Z',
+        },
+        {
+          duration: 3600,
+          'cpu-util': 55,
+          timestamp: '2021-01-01T00:00:00Z',
+        },
+        {
+          duration: 3600,
+          'cpu-util': 95,
+          timestamp: '2021-01-01T00:00:00Z',
+        },
+      ])
+    ).resolves.toStrictEqual([
+      {
+        duration: 3600,
+        'cpu-util': 8,
+        timestamp: '2021-01-01T00:00:00Z',
+        energy: 0.00618,
+        'embodied-carbon': 0.9577090468036529,
+      },
+      {
+        duration: 3600,
+        'cpu-util': 15,
+        timestamp: '2021-01-01T00:00:00Z',
+        energy: 0.0073375,
+        'embodied-carbon': 0.9577090468036529,
+      },
+      {
+        duration: 3600,
+        'cpu-util': 55,
+        timestamp: '2021-01-01T00:00:00Z',
+        energy: 0.01225,
+        'embodied-carbon': 0.9577090468036529,
+      },
+      {
+        duration: 3600,
+        'cpu-util': 95,
+        timestamp: '2021-01-01T00:00:00Z',
+        energy: 0.015850000000000003,
+        'embodied-carbon': 0.9577090468036529,
+      },
+    ]);
+
+    await expect(
+      outputModel.execute([
+        {
+          duration: 3600,
+          timestamp: '2021-01-01T00:00:00Z',
+        },
+      ])
+    ).rejects.toThrowError(Error('TeadsAWS: Required parameters \'cpu-util\' is not provided.'));
   });
   test('teads:initialize with params: linear', async () => {
     const outputModel = new TeadsAWS();
@@ -106,21 +181,21 @@ describe('teads:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0067,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.011800000000000001,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.016300000000000002,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
     ]);
   });
@@ -155,21 +230,21 @@ describe('teads:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0067,
-        'embodied-carbon': 45.97003424657534,
+        'embodied-carbon': 0.47885452340182644,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.011800000000000001,
-        'embodied-carbon': 45.97003424657534,
+        'embodied-carbon': 0.47885452340182644,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.016300000000000002,
-        'embodied-carbon': 45.97003424657534,
+        'embodied-carbon': 0.47885452340182644,
       },
     ]);
   });

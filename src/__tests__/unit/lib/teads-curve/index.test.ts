@@ -294,5 +294,22 @@ describe('lib/teads-curve', () => {
         ])
       ).rejects.toThrow();
     });
+    test('linear: vcpus-allocated execute()', async () => {
+      const outputModel = new TeadsCurveModel();
+      await outputModel.configure({
+        interpolation: 'linear',
+      });
+      await expect(
+        outputModel.execute([
+          {
+            duration: 3600,
+            'cpu-util': 10.0,
+            'vcpus-allocated': 1,
+            'vcpus-total': 64,
+            timestamp: '2021-01-01T00:00:00Z',
+          },
+        ])
+      ).rejects.toThrow();
+    });
   });
 });

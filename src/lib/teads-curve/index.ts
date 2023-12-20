@@ -3,7 +3,7 @@ import Spline from 'typescript-cubic-spline';
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
-import {Interpolation, KeyValuePair, ModelParams} from '../../types';
+import {Interpolation, ModelParams} from '../../types';
 import {ModelPluginInterface} from '../../interfaces';
 
 const {InputValidationError} = ERRORS;
@@ -106,16 +106,14 @@ export class TeadsCurveModel implements ModelPluginInterface {
    *
    * Uses a spline method on the teads cpu wattage data
    */
-  private calculateEnergy(input: KeyValuePair) {
+  private calculateEnergy(input: ModelParams) {
     if (
-      !('duration' in input) ||
-      !('cpu-util' in input) ||
-      !('timestamp' in input)
+      !('cpu-util' in input)
     ) {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            "Required parameters 'duration', 'cpu-util', 'timestamp' are not provided",
+            'Required parameters \'cpu-util\' are not provided',
         })
       );
     }
@@ -127,7 +125,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            "Invalid value for 'cpu-util'. Must be between '0' and '100'",
+            'Invalid value for \'cpu-util\'. Must be between \'0\' and \'100\'',
         })
       );
     }
@@ -141,7 +139,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            "'thermal-design-power' not provided. Can not compute energy.",
+            '\'thermal-design-power\' not provided. Can not compute energy.',
         })
       );
     }

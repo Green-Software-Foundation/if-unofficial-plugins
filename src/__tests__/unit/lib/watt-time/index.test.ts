@@ -267,6 +267,27 @@ describe('watt-time:configure test', () => {
       ])
     ).rejects.toThrow();
   });
+  test('throws error if span is more than 32 days', async () => {
+    const model = await new WattTimeGridEmissions().configure({
+      username: 'test1',
+      password: 'test2',
+    });
+    expect(model).toBeInstanceOf(WattTimeGridEmissions);
+    await expect(
+      model.execute([
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 1200,
+        },
+        {
+          location: '37.7749,-122.4194',
+          timestamp: '2022-01-01T00:00:00Z',
+          duration: 1200,
+        },
+      ])
+    ).rejects.toThrow();
+  });
 
   test('proper initialization and test', async () => {
     const model = await new WattTimeGridEmissions().configure({

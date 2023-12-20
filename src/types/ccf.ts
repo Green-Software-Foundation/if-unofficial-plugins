@@ -2,12 +2,12 @@
  * Consumption information for a single instance.
  */
 export type IConsumption = {
-  idle?: number;
-  tenPercent?: number;
-  fiftyPercent?: number;
-  hundredPercent?: number;
-  minWatts?: number;
-  maxWatts?: number;
+  idle: number;
+  tenPercent: number;
+  fiftyPercent: number;
+  hundredPercent: number;
+  minWatts: number;
+  maxWatts: number;
 };
 
 /**
@@ -15,10 +15,10 @@ export type IConsumption = {
  */
 export type IComputeInstance = {
   consumption: IConsumption;
-  embodiedEmission?: number;
+  embodiedEmission: number;
   name: string;
-  vCPUs?: number;
-  maxVCPUs?: number;
+  vCPUs: number;
+  maxvCPUs: number;
 };
 
 export type ICcfResult = {
