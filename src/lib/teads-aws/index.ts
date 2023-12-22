@@ -6,14 +6,15 @@ import * as AWS_EMBODIED from './aws-embodied.json';
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
-import {KeyValuePair, Interpolation, ModelParams} from '../../types/common';
+import {Interpolation, KeyValuePair, ModelParams} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
+import {IComputeInstance} from '../../types';
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
 export class TeadsAWS implements ModelPluginInterface {
   private computeInstances: {
-    [key: string]: KeyValuePair;
+    [key: string]: IComputeInstance;
   } = {}; // compute instances grouped by the vendor with usage data
 
   private instanceType = ''; // list of all the by Architecture
@@ -44,6 +45,14 @@ export class TeadsAWS implements ModelPluginInterface {
 
     if ('instance-type' in staticParams) {
       const instanceType = staticParams['instance-type'] as string;
+      if (instanceType === '') {
+        throw new UnsupportedValueError(
+          this.errorBuilder({
+            message: 'Instance type is not provided',
+            scope: 'configure',
+          })
+        );
+      }
 
       if (instanceType in this.computeInstances) {
         this.instanceType = instanceType;
@@ -55,15 +64,6 @@ export class TeadsAWS implements ModelPluginInterface {
           })
         );
       }
-    }
-
-    if (this.instanceType === '') {
-      throw new UnsupportedValueError(
-        this.errorBuilder({
-          message: 'Instance type is not provided',
-          scope: 'configure',
-        })
-      );
     }
 
     if ('expected-lifespan' in staticParams) {
@@ -87,18 +87,6 @@ export class TeadsAWS implements ModelPluginInterface {
    * @param {number} inputs[].cpu-util percentage cpu usage
    */
   async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-    if (inputs === undefined) {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is missing'})
-      );
-    }
-
-    if (!Array.isArray(inputs)) {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is not an array'})
-      );
-    }
-
     if (this.instanceType === '') {
       throw new InputValidationError(
         this.errorBuilder({message: 'Instance type is not provided.'})
@@ -138,7 +126,7 @@ export class TeadsAWS implements ModelPluginInterface {
         vCPUs: cpus,
         maxvCPUs: parseInt(instance['Platform Total Number of vCPU'], 10),
         name: instance['Instance type'],
-      } as KeyValuePair;
+      } as IComputeInstance;
     });
     AWS_EMBODIED.forEach((instance: KeyValuePair) => {
       this.computeInstances[instance['type']].embodiedEmission =
@@ -156,16 +144,11 @@ export class TeadsAWS implements ModelPluginInterface {
    *
    * Uses a spline method for AWS and linear interpolation for GCP and Azure
    */
-  private calculateEnergy(input: KeyValuePair) {
-    if (
-      !('duration' in input) ||
-      !('cpu-util' in input) ||
-      !('timestamp' in input)
-    ) {
+  private calculateEnergy(input: ModelParams) {
+    if (!('cpu-util' in input)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message:
-            "Required parameters 'duration', 'cpu', 'timestamp' are not provided",
+          message: "Required parameters 'cpu-util' is not provided",
         })
       );
     }
@@ -175,10 +158,10 @@ export class TeadsAWS implements ModelPluginInterface {
 
     const x = [0, 10, 50, 100]; // Get the wattage for the instance type.
     const y: number[] = [
-      this.computeInstances[this.instanceType].consumption.idle ?? 0,
-      this.computeInstances[this.instanceType].consumption.tenPercent ?? 0,
-      this.computeInstances[this.instanceType].consumption.fiftyPercent ?? 0,
-      this.computeInstances[this.instanceType].consumption.hundredPercent ?? 0,
+      this.computeInstances[this.instanceType].consumption.idle,
+      this.computeInstances[this.instanceType].consumption.tenPercent,
+      this.computeInstances[this.instanceType].consumption.fiftyPercent,
+      this.computeInstances[this.instanceType].consumption.hundredPercent,
     ];
 
     const spline = new Spline(x, y);
@@ -192,6 +175,7 @@ export class TeadsAWS implements ModelPluginInterface {
       let base_cpu = 0;
       let ratio = 0;
       // find the base rate and ratio
+      console.log('CPU at', cpu);
       for (let i = 0; i < x.length; i++) {
         if (cpu === x[i]) {
           base_rate = y[i];
@@ -222,7 +206,7 @@ export class TeadsAWS implements ModelPluginInterface {
   /**
    * Calculates the embodied emissions for a given input
    */
-  private embodiedEmissions(input: KeyValuePair): number {
+  private embodiedEmissions(input: ModelParams): number {
     // duration
     const durationInHours = input['duration'] / 3600;
     // M = TE * (TR/EL) * (RR/TR)
@@ -233,13 +217,11 @@ export class TeadsAWS implements ModelPluginInterface {
     // RR = Resources Reserved, the number of resources reserved for use by the software.
     // TR = Total Resources, the total number of resources available.
     const totalEmissions =
-      this.computeInstances[this.instanceType].embodiedEmission ?? 0;
+      this.computeInstances[this.instanceType].embodiedEmission;
     const timeReserved = durationInHours;
     const expectedLifespan = this.expectedLifespan / 3600;
-    const reservedResources =
-      this.computeInstances[this.instanceType].vCPUs ?? 1.0;
-    const totalResources =
-      this.computeInstances[this.instanceType].maxVCPUs ?? 1.0;
+    const reservedResources = this.computeInstances[this.instanceType].vCPUs;
+    const totalResources = this.computeInstances[this.instanceType].maxvCPUs;
     // Multiply totalEmissions by 1000 to convert from kgCO2e to gCO2e
     return (
       totalEmissions *

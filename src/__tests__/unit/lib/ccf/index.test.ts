@@ -1,5 +1,6 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import {CloudCarbonFootprint} from '../../../../lib/ccf/index';
+import {Interpolation} from '../../../../types';
 
 jest.setTimeout(30000);
 
@@ -37,12 +38,17 @@ describe('ccf:configure test', () => {
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0023031270462730543,
-        'embodied-carbon': 0.04216723744292237 * 1000,
+        'embodied-carbon': 0.8784841133942161,
       },
     ]);
     await outputModel.configure({
       vendor: 'aws',
       interpolation: 'spline',
+      'instance-type': 't2.micro',
+    });
+    await outputModel.configure({
+      vendor: 'aws',
+      interpolation: Interpolation.SPLINE,
       'instance-type': 't2.micro',
     });
     await expect(
@@ -54,14 +60,28 @@ describe('ccf:configure test', () => {
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         duration: 3600,
-        'embodied-carbon': 42.16723744292237,
+        'embodied-carbon': 0.8784841133942161,
         energy: 0.004900000000000001,
       },
     ]);
   });
-
   test('initialize with params:aws', async () => {
     const outputModel = new CloudCarbonFootprint();
+    await expect(
+      outputModel.configure({
+        vendor: 'aws',
+        'instance-type': 'm5n.large',
+        interpolation: 'linear2',
+      })
+    ).rejects.toThrow();
+    const outputModelLifespan = new CloudCarbonFootprint();
+    await expect(
+      outputModelLifespan.configure({
+        vendor: 'aws',
+        'instance-type': 'm5n.large',
+        'expected-lifespan': 365 * 24 * 60 * 60 * 7,
+      })
+    ).resolves.toBeInstanceOf(CloudCarbonFootprint);
     await outputModel.configure({
       vendor: 'aws',
       'instance-type': 'm5n.large',
@@ -90,26 +110,33 @@ describe('ccf:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0019435697915529846,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0046062540925461085,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.007934609468787513,
-        'embodied-carbon': 91.94006849315068,
+        'embodied-carbon': 0.9577090468036529,
       },
     ]);
   });
   test('initialize with params:azure', async () => {
     const outputModel = new CloudCarbonFootprint();
+    await expect(
+      outputModel.configure({
+        vendor: 'azure',
+        'instance-type': 'D2 v4',
+        interpolation: Interpolation.SPLINE,
+      })
+    ).rejects.toThrow();
     await outputModel.configure({
       vendor: 'azure',
       'instance-type': 'D2 v4',
@@ -138,21 +165,21 @@ describe('ccf:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0019435697915529846,
-        'embodied-carbon': 0.08179908675799086 * 1000,
+        'embodied-carbon': 0.3195276826484018,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0046062540925461085,
-        'embodied-carbon': 0.08179908675799086 * 1000,
+        'embodied-carbon': 0.3195276826484018,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.007934609468787513,
-        'embodied-carbon': 0.08179908675799086 * 1000,
+        'embodied-carbon': 0.3195276826484018,
       },
     ]);
   });
@@ -186,31 +213,37 @@ describe('ccf:configure test', () => {
         'cpu-util': 10,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0018785992503765141,
-        'embodied-carbon': 0.10778881278538813 * 1000,
+        'embodied-carbon': 0.8421000998858448,
       },
       {
         duration: 3600,
         'cpu-util': 50,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.004281401386663755,
-        'embodied-carbon': 0.10778881278538813 * 1000,
+        'embodied-carbon': 0.8421000998858448,
       },
       {
         duration: 3600,
         'cpu-util': 100,
         timestamp: '2021-01-01T00:00:00Z',
         energy: 0.0072849040570228075,
-        'embodied-carbon': 0.10778881278538813 * 1000,
+        'embodied-carbon': 0.8421000998858448,
       },
     ]);
   });
-
   test('initialize with wrong params', async () => {
     const outputModel = new CloudCarbonFootprint();
     await expect(
       outputModel.configure({
         vendor: 'aws',
         'instance-type': 't5.micro',
+      })
+    ).rejects.toThrowError();
+    await expect(outputModel.configure()).rejects.toThrowError();
+    await expect(outputModel.configure({})).rejects.toThrowError();
+    await expect(
+      outputModel.configure({
+        vendor: 'aws',
       })
     ).rejects.toThrowError();
     await expect(
@@ -233,7 +266,6 @@ describe('ccf:configure test', () => {
       ])
     ).rejects.toThrowError();
   });
-
   test('initialize with correct params but wrong input', async () => {
     const outputModel = new CloudCarbonFootprint();
     await expect(

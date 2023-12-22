@@ -372,267 +372,289 @@ mockAxios.post.mockImplementation(
   }
 );
 jest.setTimeout(30000);
-describe('cpu:configure test', () => {
-  test('initialize wrong params should throw error', async () => {
-    const outputModel = new BoaviztaCpuOutputModel();
-    await expect(
-      outputModel.configure({allocation: 'wrong'})
-    ).rejects.toThrow();
-  });
+describe('lib/boavizta', () => {
+  describe('CpuOutputModel', () => {
+    describe('initialise', () => {
+      test('validate model', async () => {
+        const outputModel = new BoaviztaCpuOutputModel();
+        expect(outputModel).toHaveProperty('configure');
+        expect(outputModel).toHaveProperty('execute');
+      });
+      test('wrong parameters throw error', async () => {
+        const outputModel = new BoaviztaCpuOutputModel();
+        expect(outputModel).toHaveProperty('configure');
+        expect(outputModel).toHaveProperty('execute');
+        await expect(
+          outputModel.configure({allocation: 'wrong'})
+        ).rejects.toThrow();
+      });
+      test('initialize without params throws error for parameter and call execute without params throws error for input', async () => {
+        const outputModel = new BoaviztaCpuOutputModel();
+        const outputModelConfigFail = new BoaviztaCpuOutputModel();
+        await expect(outputModel.authenticate({})).resolves.toBe(undefined); // authenticate does not have any params / output
+        await expect(
+          outputModelConfigFail.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 3600,
+              'cpu-util': 50,
+            },
+          ])
+        ).rejects.toThrow();
+        await expect(outputModel.configure({})).rejects.toThrow();
+        await expect(
+          outputModel.configure({
+            'physical-processor': 'Intel Xeon Gold 6138f',
+          })
+        ).rejects.toThrow();
+        await expect(
+          outputModel.configure({
+            'physical-processor': 'Intel Xeon Gold 6138f',
+            'core-units': 24,
+            'expected-lifespan': 4 * 365 * 24 * 60 * 60,
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
+        // not providing inputs will throw a missing inputs error
+        await expect(outputModel.execute([])).rejects.toThrow();
+      });
+    });
+    describe('configure()', () => {
+      test('initialize with params', async () => {
+        const outputModel = new BoaviztaCpuOutputModel();
+        await expect(
+          outputModel.configure({
+            'physical-processor': 'Intel Xeon Gold 6138f',
+            'core-units': 24,
+            location: 'USA',
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
+      });
+    });
+    describe('execute()', () => {
+      test('initialize with params and call multiple usages in IMPL format', async () => {
+        const outputModel = new BoaviztaCpuOutputModel();
+        await expect(
+          outputModel.configure({
+            'physical-processor': 'Intel Xeon Gold 6138f',
+            'core-units': 24,
+            location: 'USA',
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
 
-  test('initialize without params throws error for parameter and call execute without params throws error for input', async () => {
-    const outputModel = new BoaviztaCpuOutputModel();
-    const outputModelConfigFail = new BoaviztaCpuOutputModel();
-    await expect(outputModel.authenticate({})).resolves.toBe(undefined); // authenticate does not have any params / output
-    await expect(
-      outputModelConfigFail.execute([
-        {
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-          'cpu-util': 50,
-        },
-      ])
-    ).rejects.toThrow();
+        // configure without static params will cause improper configure error
+        await expect(
+          outputModel.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 3600,
+              'cpu-util': 50,
+            },
+          ])
+        ).resolves.toStrictEqual([
+          {
+            'embodied-carbon': 0.8,
+            'energy-cpu': 0.575,
+          },
+        ]);
+      });
+      test('initialize with params and call multiple usages in IMPL format:verbose', async () => {
+        const outputModel = new BoaviztaCpuOutputModel();
+        // test configuration with verbose false
+        await expect(
+          outputModel.configure({
+            'physical-processor': 'Intel Xeon Gold 6138f',
+            'core-units': 24,
+            location: 'USA',
+            verbose: false,
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
+        // test configuration with verbose true
+        await expect(
+          outputModel.configure({
+            'physical-processor': 'Intel Xeon Gold 6138f',
+            'core-units': 24,
+            location: 'USA',
+            verbose: true,
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
 
-    await expect(outputModel.configure({})).rejects.toThrow();
-    await expect(
-      outputModel.configure({
-        'physical-processor': 'Intel Xeon Gold 6138f',
-      })
-    ).rejects.toThrow();
-    await expect(
-      outputModel.configure({
-        'physical-processor': 'Intel Xeon Gold 6138f',
-        'core-units': 24,
-        'expected-lifespan': 4 * 365 * 24 * 60 * 60,
-      })
-    ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
+        // verbose still results in same output
+        await expect(
+          outputModel.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 7200,
+              'cpu-util': 100,
+            },
+          ])
+        ).resolves.toStrictEqual([
+          {
+            'embodied-carbon': 1.6,
+            'energy-cpu': 1.6408333333333334,
+          },
+        ]);
+      });
+    });
+  });
+  describe('CloudOutputModel', () => {
+    describe('initialize', () => {
+      test('initialize with params and call usage in RAW Format', async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
+        await expect(
+          outputModel.configure({
+            'instance-type': 't2.micro',
+            location: 'USA',
+            'expected-lifespan': 4 * 365 * 24 * 60 * 60,
+            provider: 'aws',
+            verbose: false,
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
+        await expect(
+          outputModel.configure({
+            'instance-type': 't2.micro',
+            location: 'USA',
+            'expected-lifespan': 4 * 365 * 24 * 60 * 60,
+            provider: 'aws',
+            verbose: 'false',
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
+        await expect(
+          outputModel.configure({
+            'instance-type': 't2.micro',
+            location: 'USA',
+            'expected-lifespan': 4 * 365 * 24 * 60 * 60,
+            provider: 'aws',
+            verbose: 0,
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
 
-    // not providing inputs will throw a missing inputs error
-    await expect(outputModel.execute([])).rejects.toThrow();
-  });
-});
+        // configure without static params will cause improper configure error
+      });
+    });
+    describe('configure()', () => {
+      test('invalid input for location throws error', async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
+        await expect(
+          outputModel.validateLocation({location: 'SomethingFail'})
+        ).rejects.toThrow();
+      });
+      test('invalid input for instance type throws error', async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
+        await expect(
+          outputModel.validateInstanceType({'instance-type': 'SomethingFail'})
+        ).rejects.toThrow();
+      });
+      test('invalid input for provider throws error', async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
+        await expect(
+          outputModel.validateProvider({provider: 'SomethingFail'})
+        ).rejects.toThrow();
+      });
+      test('missing provider throws error', async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
+        await expect(
+          outputModel.configure({
+            'instance-type': 't2.micro',
+            location: 'USA',
+          })
+        ).rejects.toThrow();
+      });
+      test('missing `instance-type` throws error', async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
+        await expect(
+          outputModel.configure({
+            provider: 'aws',
+            location: 'USA',
+          })
+        ).rejects.toThrow();
+      });
+      test('wrong `instance-type` throws error', async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
+        await expect(
+          outputModel.configure({
+            'instance-type': 't5.micro',
+            location: 'USA',
+            provider: 'aws',
+          })
+        ).rejects.toThrow();
+      });
+    });
+    describe('execute()', () => {
+      test("correct 'instance-type': initialize with params and call usage in IMPL Format", async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
+        await expect(
+          outputModel.configure({
+            'instance-type': 't2.micro',
+            location: 'USA',
+            provider: 'aws',
+          })
+        ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
+        await expect(
+          outputModel.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 15,
+              'cpu-util': 34,
+            },
+          ])
+        ).resolves.toStrictEqual([
+          {
+            'embodied-carbon': 1.6,
+            energy: 1.6408333333333334,
+          },
+        ]);
+        await expect(
+          outputModel.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 15,
+            },
+          ])
+        ).rejects.toThrow();
+      });
+      test('without "instance-type": initialize with params and call usage in IMPL Format throws error', async () => {
+        const outputModel = new BoaviztaCloudOutputModel();
 
-describe('cpu:initialize with params', () => {
-  test('initialize with params and call multiple usages in IMPL format', async () => {
-    const outputModel = new BoaviztaCpuOutputModel();
-    await expect(
-      outputModel.configure({
-        'physical-processor': 'Intel Xeon Gold 6138f',
-        'core-units': 24,
-        location: 'USA',
-      })
-    ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
+        await expect(
+          outputModel.configure({
+            location: 'USA',
+            provider: 'aws',
+          })
+        ).rejects.toThrow();
+        await expect(
+          outputModel.configure({
+            location: 'USAF',
+            provider: 'aws',
+            'instance-type': 't2.micro',
+          })
+        ).rejects.toThrow();
 
-    // configure without static params will cause improper configure error
-    await expect(
-      outputModel.execute([
-        {
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 3600,
-          'cpu-util': 50,
-        },
-      ])
-    ).resolves.toStrictEqual([
-      {
-        'embodied-carbon': 0.8,
-        'energy-cpu': 0.575,
-      },
-    ]);
-  });
-  test('initialize with params and call multiple usages in IMPL format:verbose', async () => {
-    const outputModel = new BoaviztaCpuOutputModel();
-    // test configuration with verbose false
-    await expect(
-      outputModel.configure({
-        'physical-processor': 'Intel Xeon Gold 6138f',
-        'core-units': 24,
-        location: 'USA',
-        verbose: false,
-      })
-    ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
-    // test configuration with verbose true
-    await expect(
-      outputModel.configure({
-        'physical-processor': 'Intel Xeon Gold 6138f',
-        'core-units': 24,
-        location: 'USA',
-        verbose: true,
-      })
-    ).resolves.toBeInstanceOf(BoaviztaCpuOutputModel);
-
-    // verbose still results in same output
-    await expect(
-      outputModel.execute([
-        {
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 7200,
-          'cpu-util': 100,
-        },
-      ])
-    ).resolves.toStrictEqual([
-      {
-        'embodied-carbon': 1.6,
-        'energy-cpu': 1.6408333333333334,
-      },
-    ]);
-  });
-});
-
-describe('cloud:initialize with params', () => {
-  test('initialize with params and call usage in RAW Format', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.configure({
-        'instance-type': 't2.micro',
-        location: 'USA',
-        'expected-lifespan': 4 * 365 * 24 * 60 * 60,
-        provider: 'aws',
-        verbose: false,
-      })
-    ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
-    await expect(
-      outputModel.configure({
-        'instance-type': 't2.micro',
-        location: 'USA',
-        'expected-lifespan': 4 * 365 * 24 * 60 * 60,
-        provider: 'aws',
-        verbose: 'false',
-      })
-    ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
-    await expect(
-      outputModel.configure({
-        'instance-type': 't2.micro',
-        location: 'USA',
-        'expected-lifespan': 4 * 365 * 24 * 60 * 60,
-        provider: 'aws',
-        verbose: 0,
-      })
-    ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
-
-    // configure without static params will cause improper configure error
-  });
-  test('invalid input for location throws error', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.validateLocation({location: 'SomethingFail'})
-    ).rejects.toThrow();
-  });
-  test('invalid input for instance type throws error', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.validateInstanceType({'instance-type': 'SomethingFail'})
-    ).rejects.toThrow();
-  });
-  test('invalid input for provider throws error', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.validateProvider({provider: 'SomethingFail'})
-    ).rejects.toThrow();
-  });
-  test('missing provider throws error', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.configure({
-        'instance-type': 't2.micro',
-        location: 'USA',
-      })
-    ).rejects.toThrow();
-  });
-  test('missing `instance-type` throws error', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.configure({
-        provider: 'aws',
-        location: 'USA',
-      })
-    ).rejects.toThrow();
-  });
-
-  test('wrong `instance-type` throws error', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.configure({
-        'instance-type': 't5.micro',
-        location: 'USA',
-        provider: 'aws',
-      })
-    ).rejects.toThrow();
-  });
-  test("correct 'instance-type': initialize with params and call usage in IMPL Format", async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-    await expect(
-      outputModel.configure({
-        'instance-type': 't2.micro',
-        location: 'USA',
-        provider: 'aws',
-      })
-    ).resolves.toBeInstanceOf(BoaviztaCloudOutputModel);
-    await expect(
-      outputModel.execute([
-        {
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 15,
-          'cpu-util': 34,
-        },
-      ])
-    ).resolves.toStrictEqual([
-      {
-        'embodied-carbon': 1.6,
-        energy: 1.6408333333333334,
-      },
-    ]);
-    await expect(
-      outputModel.execute([
-        {
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 15,
-        },
-      ])
-    ).rejects.toThrow();
-  });
-
-  test('without "instance-type": initialize with params and call usage in IMPL Format throws error', async () => {
-    const outputModel = new BoaviztaCloudOutputModel();
-
-    await expect(
-      outputModel.configure({
-        location: 'USA',
-        provider: 'aws',
-      })
-    ).rejects.toThrow();
-    await expect(
-      outputModel.configure({
-        location: 'USAF',
-        provider: 'aws',
-        'instance-type': 't2.micro',
-      })
-    ).rejects.toThrow();
-
-    // configure without static params will cause improper configure error
-    await expect(
-      outputModel.execute([
-        {
-          timestamp: '2021-01-01T00:00:00Z',
-          duration: 15,
-          'cpu-util': 34,
-        },
-        {
-          timestamp: '2021-01-01T00:00:15Z',
-          duration: 15,
-          'cpu-util': 12,
-        },
-        {
-          timestamp: '2021-01-01T00:00:30Z',
-          duration: 15,
-          'cpu-util': 1,
-        },
-        {
-          timestamp: '2021-01-01T00:00:45Z',
-          duration: 15,
-          'cpu-util': 78,
-        },
-      ])
-    ).rejects.toThrow();
+        // configure without static params will cause improper configure error
+        await expect(
+          outputModel.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 15,
+              'cpu-util': 34,
+            },
+            {
+              timestamp: '2021-01-01T00:00:15Z',
+              duration: 15,
+              'cpu-util': 12,
+            },
+            {
+              timestamp: '2021-01-01T00:00:30Z',
+              duration: 15,
+              'cpu-util': 1,
+            },
+            {
+              timestamp: '2021-01-01T00:00:45Z',
+              duration: 15,
+              'cpu-util': 78,
+            },
+          ])
+        ).rejects.toThrow();
+      });
+    });
   });
 });

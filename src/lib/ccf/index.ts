@@ -15,7 +15,7 @@ import * as AZURE_EMBODIED from './azure-embodied.json';
 import {ERRORS} from '../../util/errors';
 
 import {IComputeInstance} from '../../types/ccf';
-import {KeyValuePair, Interpolation, ModelParams} from '../../types/common';
+import {Interpolation, KeyValuePair, ModelParams} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
 import {buildErrorMessage} from '../../util/helpers';
 
@@ -47,7 +47,7 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
   /**
    * Configures the CCF Plugin for IEF
    * @param {Object} staticParams static parameters for the resource
-   * @param {("aws"|"gcp"|"azure")} staticParams.vendor aws, gcp, azure
+   * @param {('aws'|'gcp'|'azure')} staticParams.vendor aws, gcp, azure
    * @param {string} staticParams.'instance-type' instance type from the list of supported instances
    * @param {number} staticParams.'expected-lifespan' expected lifespan of the instance in years
    * @param {Interpolation} staticParams.interpolation linear(All Clouds), spline (only for AWS)
@@ -142,18 +142,6 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
    * @param {number} inputs[].cpu-util percentage cpu usage
    */
   async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-    if (inputs === undefined) {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is missing'})
-      );
-    }
-
-    if (!Array.isArray(inputs)) {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is not an array'})
-      );
-    }
-
     if (this.instanceType === '' || this.vendor === '') {
       throw new InputValidationError(
         this.errorBuilder({
@@ -202,15 +190,13 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
 
     if (this.vendor === 'aws' && this.interpolation === 'spline') {
       const x = [0, 10, 50, 100];
-
-      const y: number[] = [
-        this.computeInstances['aws'][this.instanceType].consumption.idle ?? 0,
+      const y = [
+        this.computeInstances['aws'][this.instanceType].consumption.idle,
+        this.computeInstances['aws'][this.instanceType].consumption.tenPercent,
         this.computeInstances['aws'][this.instanceType].consumption
-          .tenPercent ?? 0,
+          .fiftyPercent,
         this.computeInstances['aws'][this.instanceType].consumption
-          .fiftyPercent ?? 0,
-        this.computeInstances['aws'][this.instanceType].consumption
-          .hundredPercent ?? 0,
+          .hundredPercent,
       ];
 
       const spline = new Spline(x, y);
@@ -219,10 +205,10 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
     } else {
       const idle =
         this.computeInstances[this.vendor][this.instanceType].consumption
-          .minWatts ?? 0;
+          .minWatts;
       const max =
         this.computeInstances[this.vendor][this.instanceType].consumption
-          .maxWatts ?? 0;
+          .maxWatts;
 
       // linear interpolation
       wattage = idle + (max - idle) * (cpu / 100);
@@ -264,11 +250,11 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
         minWatts +=
           this.computeInstanceUsageByArchitecture['aws'][architecture][
             'Min Watts'
-          ] ?? 0;
+          ];
         maxWatts +=
           this.computeInstanceUsageByArchitecture['aws'][architecture][
             'Max Watts'
-          ] ?? 0;
+          ];
         count += 1;
       });
       minWatts = minWatts / count;
@@ -302,6 +288,10 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
         name: instance['Machine type'],
         vCPUs: cpus,
         consumption: {
+          idle: 0,
+          tenPercent: 0,
+          fiftyPercent: 0,
+          hundredPercent: 0,
           minWatts:
             this.computeInstanceUsageByArchitecture['gcp'][architecture][
               'Min Watts'
@@ -325,6 +315,10 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       }
       this.computeInstances['azure'][instance['Virtual Machine']] = {
         consumption: {
+          idle: 0,
+          tenPercent: 0,
+          fiftyPercent: 0,
+          hundredPercent: 0,
           minWatts:
             this.computeInstanceUsageByArchitecture['azure'][architecture][
               'Min Watts'
@@ -425,14 +419,13 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
     // RR = Resources Reserved, the number of resources reserved for use by the software.
     // TR = Total Resources, the total number of resources available.
     const totalEmissions =
-      this.computeInstances[this.vendor][this.instanceType].embodiedEmission ??
-      0;
+      this.computeInstances[this.vendor][this.instanceType].embodiedEmission;
     const timeReserved = durationInHours;
     const expectedLifespan = 8760 * this.expectedLifespan;
     const reservedResources =
-      this.computeInstances[this.vendor][this.instanceType].vCPUs ?? 1.0;
+      this.computeInstances[this.vendor][this.instanceType].vCPUs;
     const totalResources =
-      this.computeInstances[this.vendor][this.instanceType].maxVCPUs ?? 1.0;
+      this.computeInstances[this.vendor][this.instanceType].maxvCPUs;
     // Multiply totalEmissions by 1000 to convert from kgCO2e to gCO2e
     return (
       totalEmissions *

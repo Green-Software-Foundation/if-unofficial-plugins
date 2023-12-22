@@ -218,7 +218,6 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
 
     inputs.forEach((input: ModelParams) => {
       const duration = input.duration;
-
       // if the input timestamp is before the current starttime, set it as the new starttime
       starttime = dayjs(input.timestamp).isBefore(starttime)
         ? dayjs(input.timestamp)
@@ -235,7 +234,9 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     if (fetchDuration > 32 * 24 * 60 * 60 /** 32 days */) {
       throw new InputValidationError(
         this.errorBuilder({
-          message: `WattTime API supports up to 32 days. Duration of ${fetchDuration} seconds is too long`,
+          message:
+            'WattTime API supports up to 32 days. Duration' +
+            ` of ${fetchDuration} seconds is too long`,
         })
       );
     }
