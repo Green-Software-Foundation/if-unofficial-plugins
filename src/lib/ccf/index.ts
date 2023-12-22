@@ -146,7 +146,7 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            'Incomplete configuration: \'instanceType\' or \'vendor\' is missing',
+            "Incomplete configuration: 'instanceType' or 'vendor' is missing",
         })
       );
     }
@@ -178,7 +178,7 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            'Required parameters \'duration\', \'cpu\', \'timestamp\' are not provided',
+            "Required parameters 'duration', 'cpu', 'timestamp' are not provided",
         })
       );
     }
@@ -193,16 +193,22 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       const y = [
         this.computeInstances['aws'][this.instanceType].consumption.idle,
         this.computeInstances['aws'][this.instanceType].consumption.tenPercent,
-        this.computeInstances['aws'][this.instanceType].consumption.fiftyPercent,
-        this.computeInstances['aws'][this.instanceType].consumption.hundredPercent,
+        this.computeInstances['aws'][this.instanceType].consumption
+          .fiftyPercent,
+        this.computeInstances['aws'][this.instanceType].consumption
+          .hundredPercent,
       ];
 
       const spline = new Spline(x, y);
 
       wattage = spline.at(cpu);
     } else {
-      const idle = this.computeInstances[this.vendor][this.instanceType].consumption.minWatts;
-      const max = this.computeInstances[this.vendor][this.instanceType].consumption.maxWatts;
+      const idle =
+        this.computeInstances[this.vendor][this.instanceType].consumption
+          .minWatts;
+      const max =
+        this.computeInstances[this.vendor][this.instanceType].consumption
+          .maxWatts;
 
       // linear interpolation
       wattage = idle + (max - idle) * (cpu / 100);
@@ -235,7 +241,7 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       const cpus = parseInt(instance['Instance vCPU'], 10);
       const architectures = INSTANCE_TYPE_COMPUTE_PROCESSOR_MAPPING[
         instance['Instance type']
-        ] ?? ['Average'];
+      ] ?? ['Average'];
       let minWatts = 0.0;
       let maxWatts = 0.0;
       let count = 0;
@@ -244,11 +250,11 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
         minWatts +=
           this.computeInstanceUsageByArchitecture['aws'][architecture][
             'Min Watts'
-            ];
+          ];
         maxWatts +=
           this.computeInstanceUsageByArchitecture['aws'][architecture][
             'Max Watts'
-            ];
+          ];
         count += 1;
       });
       minWatts = minWatts / count;
@@ -289,11 +295,11 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
           minWatts:
             this.computeInstanceUsageByArchitecture['gcp'][architecture][
               'Min Watts'
-              ] * cpus,
+            ] * cpus,
           maxWatts:
             this.computeInstanceUsageByArchitecture['gcp'][architecture][
               'Max Watts'
-              ] * cpus,
+            ] * cpus,
         },
         maxvCPUs: parseInt(
           instance['Platform vCPUs (highest vCPU possible)'],
@@ -316,11 +322,11 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
           minWatts:
             this.computeInstanceUsageByArchitecture['azure'][architecture][
               'Min Watts'
-              ] * cpus,
+            ] * cpus,
           maxWatts:
             this.computeInstanceUsageByArchitecture['azure'][architecture][
               'Max Watts'
-              ] * cpus,
+            ] * cpus,
         },
         name: instance['Virtual Machine'],
         vCPUs: instance['Instance vCPUs'],
@@ -351,7 +357,7 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
     instanceList.forEach((instance: KeyValuePair) => {
       this.computeInstanceUsageByArchitecture[vendor][
         instance['Architecture']
-        ] = instance;
+      ] = instance;
       min += parseFloat(instance['Min Watts']);
       max += parseFloat(instance['Max Watts']);
       count += 1.0;

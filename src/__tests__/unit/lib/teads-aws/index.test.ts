@@ -32,7 +32,9 @@ describe('lib/teads-aws', () => {
             timestamp: '2021-01-01T00:00:00Z',
           },
         ])
-      ).rejects.toThrowError(Error('TeadsAWS: Instance type is not provided..'));
+      ).rejects.toThrowError(
+        Error('TeadsAWS: Instance type is not provided..')
+      );
     });
   });
 });
@@ -149,7 +151,9 @@ describe('teads:configure test', () => {
           timestamp: '2021-01-01T00:00:00Z',
         },
       ])
-    ).rejects.toThrowError(Error('TeadsAWS: Required parameters \'cpu-util\' is not provided.'));
+    ).rejects.toThrowError(
+      Error("TeadsAWS: Required parameters 'cpu-util' is not provided.")
+    );
   });
   test('teads:initialize with params: linear', async () => {
     const outputModel = new TeadsAWS();

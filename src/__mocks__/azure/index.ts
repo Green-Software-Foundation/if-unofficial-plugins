@@ -163,10 +163,7 @@ export class MockMonitorClientEmptyData {
                   'The percentage of allocated compute units that are currently in use by the Virtual Machine(s)',
                 errorCode: 'Success',
                 unit: 'Percent',
-                timeseries: [
-                  {
-                  },
-                ],
+                timeseries: [{}],
               },
             ],
           };
@@ -190,10 +187,7 @@ export class MockMonitorClientEmptyData {
                   'The percentage of allocated compute units that are currently in use by the Virtual Machine(s)',
                 errorCode: 'Success',
                 unit: 'Percent',
-                timeseries: [
-                  {
-                  },
-                ],
+                timeseries: [{}],
               },
             ],
           };

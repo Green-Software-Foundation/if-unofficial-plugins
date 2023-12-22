@@ -129,7 +129,8 @@ export class TeadsAWS implements ModelPluginInterface {
       } as IComputeInstance;
     });
     AWS_EMBODIED.forEach((instance: KeyValuePair) => {
-      this.computeInstances[instance['type']].embodiedEmission = instance['total'];
+      this.computeInstances[instance['type']].embodiedEmission =
+        instance['total'];
     });
   }
 
@@ -144,13 +145,10 @@ export class TeadsAWS implements ModelPluginInterface {
    * Uses a spline method for AWS and linear interpolation for GCP and Azure
    */
   private calculateEnergy(input: ModelParams) {
-    if (
-      !('cpu-util' in input)
-    ) {
+    if (!('cpu-util' in input)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message:
-            'Required parameters \'cpu-util\' is not provided',
+          message: "Required parameters 'cpu-util' is not provided",
         })
       );
     }
@@ -177,7 +175,7 @@ export class TeadsAWS implements ModelPluginInterface {
       let base_cpu = 0;
       let ratio = 0;
       // find the base rate and ratio
-      console.log('CPU at', cpu)
+      console.log('CPU at', cpu);
       for (let i = 0; i < x.length; i++) {
         if (cpu === x[i]) {
           base_rate = y[i];
@@ -218,7 +216,8 @@ export class TeadsAWS implements ModelPluginInterface {
     // EL = Expected Lifespan, the anticipated time that the equipment will be installed
     // RR = Resources Reserved, the number of resources reserved for use by the software.
     // TR = Total Resources, the total number of resources available.
-    const totalEmissions = this.computeInstances[this.instanceType].embodiedEmission;
+    const totalEmissions =
+      this.computeInstances[this.instanceType].embodiedEmission;
     const timeReserved = durationInHours;
     const expectedLifespan = this.expectedLifespan / 3600;
     const reservedResources = this.computeInstances[this.instanceType].vCPUs;

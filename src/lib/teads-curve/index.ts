@@ -107,13 +107,10 @@ export class TeadsCurveModel implements ModelPluginInterface {
    * Uses a spline method on the teads cpu wattage data
    */
   private calculateEnergy(input: ModelParams) {
-    if (
-      !('cpu-util' in input)
-    ) {
+    if (!('cpu-util' in input)) {
       throw new InputValidationError(
         this.errorBuilder({
-          message:
-            'Required parameters \'cpu-util\' are not provided',
+          message: "Required parameters 'cpu-util' are not provided",
         })
       );
     }
@@ -125,7 +122,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            'Invalid value for \'cpu-util\'. Must be between \'0\' and \'100\'',
+            "Invalid value for 'cpu-util'. Must be between '0' and '100'",
         })
       );
     }
@@ -139,7 +136,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
       throw new InputValidationError(
         this.errorBuilder({
           message:
-            '\'thermal-design-power\' not provided. Can not compute energy.',
+            "'thermal-design-power' not provided. Can not compute energy.",
         })
       );
     }
