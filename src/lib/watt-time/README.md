@@ -79,7 +79,7 @@ config:
   password: ENV_WATT_TIME_PASSWORD
 inputs:
   - timestamp: 2021-01-01T00:00:00Z
-    location: "43.22,-80.22"
+    location: "43.22,-80.21"
     duration: 3600
 ```
 #### Static configuration for IMPL
