@@ -61,7 +61,7 @@ const env_model = await new WattTimeGridEmissions().configure('watt-time', {
 const inputs = [
   {
     timestamp: '2021-01-01T00:00:00Z',
-    latitude: "43.22,-80.22",
+    location: "43.22,-80.22",
     duration: 3600,
   },
 ];
@@ -79,7 +79,7 @@ config:
   password: ENV_WATT_TIME_PASSWORD
 inputs:
   - timestamp: 2021-01-01T00:00:00Z
-    latitude: "43.22,-80.22"
+    location: "43.22,-80.21"
     duration: 3600
 ```
 #### Static configuration for IMPL
@@ -89,7 +89,7 @@ config:
   password: password
 inputs:
   - timestamp: 2021-01-01T00:00:00Z
-    latitude: "43.22,-80.22"
+    location: "43.22,-80.22"
     duration: 3600
 ```
 
@@ -120,3 +120,6 @@ graph:
           duration: 3600
           thermal-design-power: 300
 ```
+## Position and effects in the impl:
+* Technically, WattTime model sets (or overwrites any preconfigured value of) the *grid-carbon-intensity* attribute.
+* As such, it should be positioned before the *sci-o* model, if such a model is used.
