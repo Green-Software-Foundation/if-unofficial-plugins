@@ -239,7 +239,7 @@ export class TeadsAWS implements ModelPluginInterface {
     const reservedResources =
       this.computeInstances[this.instanceType].vCPUs ?? 1.0;
     const totalResources =
-      this.computeInstances[this.instanceType].maxVCPUs ?? 1.0;
+      this.computeInstances[this.instanceType].maxvCPUs ?? 1.0;
     // Multiply totalEmissions by 1000 to convert from kgCO2e to gCO2e
     return (
       totalEmissions *
