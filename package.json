@@ -68,7 +68,7 @@
     "coverage": "jest --verbose --coverage",
     "fix:package": "fixpack",
     "lint": "gts lint",
-    "prepublish": "yarn build",
+    "prepublish": "npm run build",
     "test": "jest --verbose"
   }
 }
