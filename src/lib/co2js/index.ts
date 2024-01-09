@@ -15,10 +15,22 @@ export class Co2jsModel implements ModelPluginInterface {
       const greenhosting =
         observation['green-web-host'] !== undefined &&
         observation['green-web-host'] === true;
+      const options =
+        observation['options'] !== undefined
+          ? observation['options']
+          : undefined;
       let result;
       switch (this.staticParams.type) {
         case 'swd': {
-          result = this.model.perVisit(observation['bytes'], greenhosting);
+          if (options) {
+            result = this.model.perVisitTrace(
+              observation['bytes'],
+              greenhosting,
+              options
+            ).co2;
+          } else {
+            result = this.model.perVisit(observation['bytes'], greenhosting);
+          }
           break;
         }
         case '1byte': {
