@@ -113,15 +113,15 @@ describe('lib/co2js', () => {
             timestamp: '2021-01-01T00:00:00Z',
             duration: 3600,
             bytes: 100000,
-            'green-web-host': true,
+            'green-web-host': false,
             options: {
               dataReloadRatio: 0.6,
               firstVisitPercentage: 0.9,
               returnVisitPercentage: 0.1,
               gridIntensity: {
-                device: 565.629,
-                dataCenter: {country: 'TWN'},
-                networks: 442,
+                device: 560.98,
+                dataCenter: 50,
+                networks: 437.66,
               },
             },
           },
@@ -131,18 +131,18 @@ describe('lib/co2js', () => {
           timestamp: '2021-01-01T00:00:00Z',
           duration: 3600,
           bytes: 100000,
-          'green-web-host': true,
+          'green-web-host': false,
           options: {
             dataReloadRatio: 0.6,
             firstVisitPercentage: 0.9,
             returnVisitPercentage: 0.1,
             gridIntensity: {
-              device: 565.629,
-              dataCenter: {country: 'TWN'},
-              networks: 442,
+              device: 560.98,
+              dataCenter: 50,
+              networks: 437.66,
             },
           },
-          'operational-carbon': 0.031028774976000005,
+          'operational-carbon': 0.034497244224,
         },
       ]);
     });
