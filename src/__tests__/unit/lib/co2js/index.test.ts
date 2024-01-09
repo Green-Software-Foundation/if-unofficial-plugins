@@ -102,6 +102,50 @@ describe('lib/co2js', () => {
         },
       ]);
     });
+    test('initialize and execute swd with options', async () => {
+      const model = await new Co2jsModel().configure({
+        type: 'swd',
+      });
+      expect(model).toBeInstanceOf(Co2jsModel);
+      await expect(
+        model.execute([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            bytes: 100000,
+            'green-web-host': true,
+            options: {
+              dataReloadRatio: 0.6,
+              firstVisitPercentage: 0.9,
+              returnVisitPercentage: 0.1,
+              gridIntensity: {
+                device: 565.629,
+                dataCenter: {country: 'TWN'},
+                networks: 442,
+              },
+            },
+          },
+        ])
+      ).resolves.toStrictEqual([
+        {
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+          bytes: 100000,
+          'green-web-host': true,
+          options: {
+            dataReloadRatio: 0.6,
+            firstVisitPercentage: 0.9,
+            returnVisitPercentage: 0.1,
+            gridIntensity: {
+              device: 565.629,
+              dataCenter: {country: 'TWN'},
+              networks: 442,
+            },
+          },
+          'operational-carbon': 0.031028774976000005,
+        },
+      ]);
+    });
     test('initialize and execute without bytes input', async () => {
       const model = await new Co2jsModel().configure({
         type: '1byte',
