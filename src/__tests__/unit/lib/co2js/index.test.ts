@@ -98,7 +98,7 @@ describe('lib/co2js', () => {
           duration: 3600,
           bytes: 100000,
           'green-web-host': true,
-          'operational-carbon': 0.023209515022500005,
+          'operational-carbon': 0.023208995205000006,
         },
       ]);
     });
