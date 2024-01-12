@@ -1,6 +1,6 @@
 # CO2.JS
 
-> [!NOTE] > `CO2.JS` ([thegreenwebfoundation/co2](https://github.com/thegreenwebfoundation/co2.js)) is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+> [!NOTE] > `CO2.JS` ([thegreenwebfoundation/co2.js](https://github.com/thegreenwebfoundation/co2.js)) is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 # Parameters
 
