@@ -1,6 +1,7 @@
 const CUSTOM_ERRORS = [
   'AuthorizationError',
   'APIRequestError',
+  'IOError',
   'InputValidationError',
   'UnsupportedValueError',
 ] as const;
