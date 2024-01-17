@@ -3,58 +3,45 @@ import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
 import {ModelParams} from '../../types/common';
-import { ModelPluginInterface } from '../../interfaces';
+import {ModelPluginInterface} from '../../interfaces';
 import * as dayjs from 'dayjs';
 
 import CommonGenerator from './helpers/CommonGenerator';
 import RandIntGenerator from './helpers/RandIntGenerator';
 import Generator from './interfaces/index';
-
-const { InputValidationError } = ERRORS;
+const {InputValidationError} = ERRORS;
 
 export class MockObservations implements ModelPluginInterface {
-  // TODO PB - private members ?
-  staticParams: object | undefined;
-  errorBuilder = buildErrorMessage(MockObservations);
-  timestampFrom: dayjs.Dayjs | undefined;
-  timestampTo: dayjs.Dayjs | undefined;
-  duration: number = 0;
-  timeBuckets: dayjs.Dayjs[] = [];
-  components: Record<string, Record<string, string>> = {}
-  // components: object[] = [];
-  generatorConfigs: object = {};
-  dateList: dayjs.Dayjs[] = [];
+  private errorBuilder = buildErrorMessage(MockObservations);
+  private timestampFrom: dayjs.Dayjs | undefined;
+  private timestampTo: dayjs.Dayjs | undefined;
+  private duration = 0;
+  private timeBuckets: dayjs.Dayjs[] = [];
+  private components: Record<string, Record<string, string>> = {};
+  private generatorConfigs: object = {};
 
-  async execute(inputs: ModelParams[]): Promise<any[]> {
-    // TODO PB - remove dummy line, resolve issue of error TS6133: 'inputs' is declared but its value is never read.
-    console.log(inputs);
-    // TODO PB - consider making generators a member and creating them at config()
+  async execute(_inputs: ModelParams[]): Promise<any[]> {
     const generators = this.createGenerators(this.generatorConfigs);
-    let observations: ModelParams[] = [];
+    const observations: ModelParams[] = [];
     for (const componentKey in this.components) {
-      if (this.components.hasOwnProperty(componentKey)) {
+      if (Object.prototype.hasOwnProperty.call(this.components, componentKey)) {
         const component = this.components[componentKey];
         for (const timeBucket of this.timeBuckets) {
-          let observation: ModelParams = {
+          const observation: ModelParams = {
             timestamp: timeBucket.format('YYYY-MM-DD HH:mm:ss'),
-            // TODO PB -- this is not always true, the last timebucket might be shorter than the global duration. so duratio should be a property of timebucket (define a DTO for this)
-            duration: this.duration
+            duration: this.duration,
           };
-          // TODO PB -- consider this way to copy key-value pairs from component to observation, it looks like an overkill
-          for (const key in component) {
-            if (Object.prototype.hasOwnProperty.call(component, key)) {
-              observation[key] = component[key];
-            }
-          }
+          Object.assign(observation, component);
+          const generatorToHistory = new Map<Generator, number[]>();
+          generators.forEach(generator => {
+            generatorToHistory.set(generator, []);
+          });
           for (const generator of generators) {
-            // TODO PB - for future proofing, need to collecat historically generated data and pass it here
-            const generated: Record<string, any> = generator.next([]);
-            // TODO PB -- consider this way to copy key-value pairs from component to observation, it looks like an overkill
-            for (const key in generated) {
-              if (Object.prototype.hasOwnProperty.call(generated, key)) {
-                observation[key] = generated[key];
-              }
-            }
+            const generated: Record<string, any> = generator.next(
+              generatorToHistory.get(generator)
+            );
+            generatorToHistory.get(generator)?.push(generated.value);
+            Object.assign(observation, generated);
           }
           observations.push(observation);
         }
@@ -63,68 +50,72 @@ export class MockObservations implements ModelPluginInterface {
     return observations;
   }
 
-  // TODO PB - clean this code
   async configure(
     staticParams: object | undefined
   ): Promise<ModelPluginInterface> {
     if (staticParams === undefined) {
       throw new InputValidationError(
-        this.errorBuilder({ message: 'Input data is missing' })
+        this.errorBuilder({message: 'Input data is missing'})
       );
     }
     if ('timestamp-from' in staticParams) {
       this.timestampFrom = dayjs(staticParams['timestamp-from'] as string);
-    }
-    else {
+    } else {
       throw new InputValidationError(
-        this.errorBuilder({ message: 'timestamp-from missing from input data' })
+        this.errorBuilder({message: 'timestamp-from missing from input data'})
       );
     }
     if ('timestamp-to' in staticParams) {
       this.timestampTo = dayjs(staticParams['timestamp-to'] as string);
-    }
-    else {
+    } else {
       throw new InputValidationError(
-        this.errorBuilder({ message: 'timestamp-to missing from input data' })
+        this.errorBuilder({message: 'timestamp-to missing from input data'})
       );
     }
     if ('duration' in staticParams) {
       this.duration = staticParams['duration'] as number;
-    }
-    else {
+    } else {
       throw new InputValidationError(
-        this.errorBuilder({ message: 'duration missing from input data' })
+        this.errorBuilder({message: 'duration missing from input data'})
       );
     }
-    this.timeBuckets = this.createTimeBuckets(this.timestampFrom, this.timestampTo, this.duration);
+    this.timeBuckets = this.createTimeBuckets(
+      this.timestampFrom,
+      this.timestampTo,
+      this.duration
+    );
 
     if ('components' in staticParams) {
-      // TODO PB -- is this casting needed?
-      this.components = staticParams['components'] as Record<string, Record<string, string>>;
-    }
-    else {
+      this.components = staticParams['components'] as Record<
+        string,
+        Record<string, string>
+      >;
+    } else {
       throw new InputValidationError(
-        this.errorBuilder({ message: 'components missing from input data' })
+        this.errorBuilder({message: 'components missing from input data'})
       );
     }
     if ('generators' in staticParams) {
-      // TODO PB -- is this casting needed?
       this.generatorConfigs = staticParams['generators'] as object;
-    }
-    else {
+    } else {
       throw new InputValidationError(
-        this.errorBuilder({ message: 'generators missing from input data' })
+        this.errorBuilder({message: 'generators missing from input data'})
       );
     }
-	  // TODO PB -- remove dummy line
-	  this.staticParams = staticParams;
-	  return this;
+    return this;
   }
 
-  private createTimeBuckets(timestampFrom: dayjs.Dayjs, timestampTo: dayjs.Dayjs, duration: number): dayjs.Dayjs[] {
-    let timeBuckets: dayjs.Dayjs[] = []
+  private createTimeBuckets(
+    timestampFrom: dayjs.Dayjs,
+    timestampTo: dayjs.Dayjs,
+    duration: number
+  ): dayjs.Dayjs[] {
+    const timeBuckets: dayjs.Dayjs[] = [];
     let currTimestamp: dayjs.Dayjs = timestampFrom;
-    while (currTimestamp.isBefore(timestampTo) || currTimestamp.isSame(timestampTo, 'second')) {
+    while (
+      currTimestamp.isBefore(timestampTo) ||
+      currTimestamp.isSame(timestampTo, 'second')
+    ) {
       timeBuckets.push(currTimestamp);
       currTimestamp = currTimestamp.add(duration, 'second');
     }
@@ -132,9 +123,8 @@ export class MockObservations implements ModelPluginInterface {
   }
 
   private createGenerators(generatorsConfig: object): Generator[] {
-    let generators: Generator[] = [];
+    const generators: Generator[] = [];
     Object.entries(generatorsConfig).forEach(([key, value]) => {
-      //console.log(`generator name: ${key}, generator config: ${value}`);
       if ('common' === key) {
         const commonGenerator = new CommonGenerator();
         commonGenerator.initialise('common-generator', value);
@@ -142,9 +132,9 @@ export class MockObservations implements ModelPluginInterface {
       }
       if ('randint' === key) {
         for (const fieldToPopulate in value) {
-          const randIntGenerator = new RandIntGenerator()
+          const randIntGenerator = new RandIntGenerator();
           randIntGenerator.initialise(fieldToPopulate, value[fieldToPopulate]);
-          generators.push(randIntGenerator)
+          generators.push(randIntGenerator);
         }
       }
     });
