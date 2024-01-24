@@ -1,8 +1,6 @@
 # Azure-importer
 
-> [!NOTE]
-> `Azure Importer` is an unofficial, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
-
+> [!NOTE] > `Azure Importer` is an unofficial, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 The Azure importer model allows you to provide some basic details about an Azure virtual machine and automatically populate your `impl` with usage metrics that can then be passed along a model pipeline to calculate energy and carbon impacts.
 
@@ -16,8 +14,8 @@ You can create one using [portal.azure.com](https://portal.azure.com). You also 
 
 The Azure Importer uses [AzureDefaultCredentials](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet) method which is an abstraction for different scenarios of authentication.
 
-* When hosting the IEF Azure Importer on an Azure service, you can provide a [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview).
-* When running the Azure Importer outside of Azure, e.g. on your local machine, you can use an [App registration](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app) (an App registration is a representation of a technical service principal account; you can view it as an identity for your App on Azure).
+- When hosting the IEF Azure Importer on an Azure service, you can provide a [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview).
+- When running the Azure Importer outside of Azure, e.g. on your local machine, you can use an [App registration](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app) (an App registration is a representation of a technical service principal account; you can view it as an identity for your App on Azure).
 
 The following steps in this tutorial use a service principal. You can learn more at https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app
 
@@ -26,10 +24,8 @@ The following steps in this tutorial use a service principal. You can learn more
 On the Azure Portal, search for **App registrations**, then create a new one with default values.
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/f77fd653-4386-4f4b-9488-ea7ae521d7d1)
 
-
 Then create a credential secret for this App registration, to use it for authentication with the Azure Importer => note that secret
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/c3f380e1-2bc9-471f-b212-ce8c31a158b1)
-
 
 Then, on the Overview Tab, copy/paste the **client_id** and **tenant_id** for this App registration
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/e1615088-9ee6-41ef-a340-7ab72c1bc488)
@@ -44,22 +40,18 @@ On the IAM Tab of the Resource Group that contains the VM, add a new Role Assign
 
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/0588530c-bd67-4876-b26b-c076d5cda08d)
 
-
 We'll need 2 role Assignments:
 
-* Reader
-* Monitor Reader
+- Reader
+- Monitoring Reader
 
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/52af6111-dde3-4f99-8739-769d72fdb5d8)
 
 Then Add the service principal you created as a member for the Role assignment
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/be097243-66a7-421a-9cee-e8fe77906a82)
 
-Repeat for the role Monitor Reader
+Repeat for the role Monitoring Reader
 ![image](https://github.com/Green-Software-Foundation/if-docs/assets/966110/5bf34f7a-9a01-4eb8-b3a4-aed70db44e72)
-
-
-
 
 ### 4. Add credentials to `.env`
 
@@ -86,7 +78,7 @@ These are the required fields:
 
 These are all provided as `inputs`. You also need to instantiate an `azure-importer` model to handle the Azure-specific `input` data. Here's what a complete `impl` could look like:
 
-```
+```yaml
 name: azure-demo
 description: example impl invoking Azure model
 initialize:
@@ -113,7 +105,6 @@ graph:
 
 This will grab Azure metrics for `my_vm` in `my_group` for a one hour period beginning at 10:35 UTC on 2nd November 2023, at 5 minute resolution, aggregating data occurring more frequently than 5 minutes by averaging.
 
-
 ## Outputs
 
 The Azure importer model will enrich your `impl` with the following data:
@@ -122,10 +113,10 @@ The Azure importer model will enrich your `impl` with the following data:
 - `cpu-util`: percentage CPU utilization
 - `cloud-instance-type`: VM instance name
 - `location`: VM region
-- `mem-availableGB`: Amount of memory *not* in use by your application, in GB.
+- `mem-availableGB`: Amount of memory _not_ in use by your application, in GB.
 - `mem-usedGB`: Amount of memory being used by your application, in GB. Calculated as the difference between `total-memoryGB` and `memory-availableGB`.
 - `total-memoryGB`: The total memory allocated to your virtual machine, in GB.
-- `mem-util`: memory utilized, expressed as a percentage (`memory-usedGB`/`total-memoryGB` * 100)
+- `mem-util`: memory utilized, expressed as a percentage (`memory-usedGB`/`total-memoryGB` \* 100)
 
 These can be used as inputs in other models in the pipeline. Typically, the `instance-type` can be used to obtain `tdp` data that can then, along with `cpu-util`, feed a model such as `teads-curve`.
 
@@ -161,5 +152,14 @@ outputs:
     mem_util: 51.021015039999995
     location: uksouth
     cloud-instance-type: Standard_B1s
-...
 ```
+
+You can run this example `impl` by saving it as `./examples/impls/test/azure-importer.yml` and executing the following command from the project root:
+
+```sh
+npm i -g @grnsft/if
+npm i -g @grnsft/if-unofficial-models
+impact-engine --impl ./examples/impls/test/azure-importer.yml --ompl ./examples/ompls/azure-importer.yml
+```
+
+The results will be saved to a new `yaml` file in `./examples/ompls`.
