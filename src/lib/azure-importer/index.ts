@@ -21,7 +21,7 @@ import {TIME_UNITS_IN_SECONDS} from './config';
 const {UnsupportedValueError, InputValidationError} = ERRORS;
 
 export class AzureImporterModel implements ModelPluginInterface {
-  errorBuilder = buildErrorMessage(this.constructor.name);
+  errorBuilder = buildErrorMessage(this.constructor); // TODO: send name instead of entier class after all models are refactored
   azureAPI = new AzureAPI();
 
   /**
