@@ -11,8 +11,8 @@ const {InputValidationError} = ERRORS;
 
 export abstract class BoaviztaBaseOutputModel implements ModelPluginInterface {
   protected sharedParams?: object = undefined;
-  protected verbose: boolean = false;
-  protected allocation: string = 'LINEAR';
+  protected verbose = false;
+  protected allocation = 'LINEAR';
   protected metricType: 'cpu-util' | 'gpu-util' | 'ram-util' = 'cpu-util';
   protected expectedLifespan: number = 4 * 365 * 24 * 60 * 60;
   protected authCredentials?: object;
