@@ -2,6 +2,8 @@ import axios from 'axios';
 
 import {KeyValuePair} from '../../types/common';
 
+import {ICountryCodes} from './types';
+
 export class BoaviztaAPI {
   private baseUrl = 'https://api.boavizta.org/v1';
 
@@ -28,7 +30,6 @@ export class BoaviztaAPI {
     dataCast: KeyValuePair,
     verbose: boolean
   ): Promise<object> {
-    // Replace '-' with '_' in keys
     const updatedDataCast = this.replaceHyphensWithUnderscores(dataCast);
 
     const response = await axios.post(
@@ -42,7 +43,7 @@ export class BoaviztaAPI {
    * Gets the list of supported cloud instances for a given provider.
    */
   public async getSupportedInstancesList(provider: string) {
-    const instances = await axios.get(
+    const instances = await axios.get<string[]>(
       `${this.baseUrl}/cloud/instance/all_instances?provider=${provider}`
     );
 
@@ -53,18 +54,20 @@ export class BoaviztaAPI {
    * Gets the list of supported cloud providers.
    */
   public async getSupportedProvidersList(): Promise<string[]> {
-    const providers = await axios.get(
+    const providers = await axios.get<string[]>(
       `${this.baseUrl}/cloud/instance/all_providers`
     );
 
-    return Object.values(providers.data);
+    return providers.data;
   }
 
   /**
    * Gets the list of supported locations by the model.
    */
   public async getSupportedLocations(): Promise<string[]> {
-    const countries = await axios.get(`${this.baseUrl}/utils/country_code`);
+    const countries = await axios.get<ICountryCodes>(
+      `${this.baseUrl}/utils/country_code`
+    );
 
     return Object.values(countries.data);
   }

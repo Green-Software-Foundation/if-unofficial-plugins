@@ -7,15 +7,19 @@ import {allDefined, validate} from '../../util/validations';
 import {ERRORS} from '../../util/errors';
 
 import {BoaviztaBaseOutputModel} from './base-output-model';
-import {BoaviztaInstanceTypes} from './types';
+import {
+  BoaviztaInstanceTypes,
+  BoaviztaUsageType,
+  BoaviztaCpuOutputType,
+  BoaviztaCloudInstanceType,
+} from './types';
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
 export class BoaviztaCpuOutputModel
-  extends BoaviztaBaseOutputModel
+  extends BoaviztaBaseOutputModel<BoaviztaUsageType, BoaviztaCpuOutputType>
   implements ModelPluginInterface
 {
-  public allocation = 'LINEAR';
   private readonly componentType = 'cpu';
 
   constructor() {
@@ -35,7 +39,7 @@ export class BoaviztaCpuOutputModel
     delete staticParams.verbose;
 
     if ('expected-lifespan' in safeStaticParams) {
-      this.expectedLifespan = safeStaticParams['expected-lifespan'] as number;
+      this.expectedLifespan = safeStaticParams['expected-lifespan']!;
     }
 
     this.sharedParams = Object.assign({}, staticParams, safeStaticParams);
@@ -46,7 +50,9 @@ export class BoaviztaCpuOutputModel
   /**
    * Fetches data from the Boavizta API for the CPU model.
    */
-  protected async fetchData(usageData: object | undefined) {
+  protected async fetchData(
+    usage: BoaviztaUsageType | undefined
+  ): Promise<BoaviztaCpuOutputType> {
     if (this.sharedParams === undefined) {
       throw new InputValidationError(
         this.errorBuilder({
@@ -55,9 +61,7 @@ export class BoaviztaCpuOutputModel
       );
     }
 
-    const dataCast: object = Object.assign({}, this.sharedParams, {
-      usage: usageData,
-    });
+    const dataCast: object = Object.assign({}, this.sharedParams, {usage});
 
     const response = await this.boaviztaAPI.fetchCpuOutputData(
       dataCast,
@@ -67,10 +71,12 @@ export class BoaviztaCpuOutputModel
 
     const result = this.formatResponse(response);
 
-    return {
+    const cpuOutputData: BoaviztaCpuOutputType = {
       'energy-cpu': result.energy,
       'embodied-carbon': result['embodied-carbon'],
     };
+
+    return cpuOutputData;
   }
 
   /**
@@ -90,7 +96,7 @@ export class BoaviztaCpuOutputModel
 }
 
 export class BoaviztaCloudOutputModel
-  extends BoaviztaBaseOutputModel
+  extends BoaviztaBaseOutputModel<BoaviztaUsageType, BoaviztaCloudInstanceType>
   implements ModelPluginInterface
 {
   public instanceTypes: BoaviztaInstanceTypes = {};
@@ -114,7 +120,7 @@ export class BoaviztaCloudOutputModel
     await this.validateLocation(safeStaticParams);
 
     if ('expected-lifespan' in safeStaticParams) {
-      this.expectedLifespan = safeStaticParams['expected-lifespan'] as number;
+      this.expectedLifespan = safeStaticParams['expected-lifespan']!;
     }
 
     this.sharedParams = Object.assign({}, staticParams);
@@ -125,7 +131,9 @@ export class BoaviztaCloudOutputModel
   /**
    * Fetches data from the Boavizta API for the Cloud model.
    */
-  protected async fetchData(usageData: object | undefined): Promise<object> {
+  protected async fetchData(
+    usage: BoaviztaUsageType | undefined
+  ): Promise<BoaviztaCloudInstanceType> {
     if (this.sharedParams === undefined) {
       throw new InputValidationError(
         this.errorBuilder({
@@ -134,15 +142,13 @@ export class BoaviztaCloudOutputModel
       );
     }
 
-    const dataCast: object = Object.assign({}, this.sharedParams, {
-      usage: usageData,
-    });
+    const dataCast: object = Object.assign({}, this.sharedParams, {usage});
 
     const response = await this.boaviztaAPI.fetchCloudInstanceData(
       dataCast,
       this.verbose
     );
-    return this.formatResponse(response);
+    return this.formatResponse(response) as BoaviztaCloudInstanceType;
   }
 
   /**
@@ -168,7 +174,7 @@ export class BoaviztaCloudOutputModel
     const supportedProviders =
       await this.boaviztaAPI.getSupportedProvidersList();
 
-    if (!supportedProviders.includes(staticParamsCast.provider as string)) {
+    if (!supportedProviders.includes(staticParamsCast.provider)) {
       throw new InputValidationError(
         this.errorBuilder({
           message: `Invalid 'provider' parameter '${

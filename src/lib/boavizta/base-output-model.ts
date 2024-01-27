@@ -5,11 +5,12 @@ import {buildErrorMessage} from '../../util/helpers';
 import {ERRORS} from '../../util/errors';
 
 import {BoaviztaAPI} from './boavizta-api';
-import {IBoaviztaUsageSCI} from './types';
 
 const {InputValidationError} = ERRORS;
 
-export abstract class BoaviztaBaseOutputModel implements ModelPluginInterface {
+export abstract class BoaviztaBaseOutputModel<T extends KeyValuePair, U>
+  implements ModelPluginInterface
+{
   protected sharedParams?: object = undefined;
   protected verbose = false;
   protected allocation = 'LINEAR';
@@ -58,7 +59,7 @@ export abstract class BoaviztaBaseOutputModel implements ModelPluginInterface {
   /**
    * Fetches data from Boavizta API according to the specific endpoint of the model
    */
-  protected abstract fetchData(usageData: object | undefined): Promise<object>;
+  protected abstract fetchData(usage: T | undefined): Promise<U>;
 
   /**
    * Converts the usage from IMPL input to the format required by Boavizta API.
@@ -94,28 +95,26 @@ export abstract class BoaviztaBaseOutputModel implements ModelPluginInterface {
   protected abstract captureStaticParams(staticParams: object): Promise<object>;
 
   /**
-   * Extracts information from Boavizta API response to return the output in the format required by IMPL.
+   * Formats the response by converting units and extracting relevant data.
+   * Coverts the embodied carbon value from kgCO2eq to gCO2eq, defaulting to 0 if 'impacts' is not present.
+   * Converts the energy value from J to kWh, defaulting to 0 if 'impacts' is not present.
+   * 1,000,000 J / 3600 = 277.7777777777778 Wh.
+   * 1 MJ / 3.6 = 0.278 kWh
    */
   protected formatResponse(data: KeyValuePair) {
-    let m = 0;
-    let e = 0;
+    const impactsInData = 'impacts' in data;
+    const embodiedCarbon = impactsInData
+      ? data.impacts.gwp.embedded.value * 1000
+      : 0;
+    const energy = impactsInData ? data.impacts.pe.use.value / 3.6 : 0;
 
-    if ('impacts' in data) {
-      // embodied-carbon output is in kgCO2eq, convert to gCO2eq
-      m = data['impacts']['gwp']['embedded']['value'] * 1000;
-      // use output is in J , convert to kWh.
-      // 1,000,000 J / 3600 = 277.7777777777778 Wh.
-      // 1 MJ / 3.6 = 0.278 kWh
-      e = data['impacts']['pe']['use']['value'] / 3.6;
-    }
-
-    return {'embodied-carbon': m, energy: e};
+    return {'embodied-carbon': embodiedCarbon, energy};
   }
 
   /**
    * converts the usage to the format required by Boavizta API.
    */
-  protected async calculateUsagePerInput(input: ModelParams) {
+  private async calculateUsagePerInput(input: ModelParams) {
     if (!(this.metricType in input)) {
       throw new InputValidationError(
         this.errorBuilder({
@@ -129,6 +128,6 @@ export abstract class BoaviztaBaseOutputModel implements ModelPluginInterface {
       input[this.metricType]
     );
 
-    return (await this.fetchData(usageInput)) as IBoaviztaUsageSCI;
+    return this.fetchData(usageInput as T);
   }
 }
