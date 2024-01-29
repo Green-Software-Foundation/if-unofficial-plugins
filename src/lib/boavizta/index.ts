@@ -1,152 +1,21 @@
-import axios from 'axios';
+import {z} from 'zod';
 
+import {ModelParams} from '../../types';
+
+import {allDefined, validate} from '../../util/validations';
 import {ERRORS} from '../../util/errors';
-import {buildErrorMessage} from '../../util/helpers';
 
-import {KeyValuePair, ModelParams} from '../../types/common';
-import {ModelPluginInterface} from '../../interfaces';
-import {BoaviztaInstanceTypes, IBoaviztaUsageSCI} from '../../types/boavizta';
+import {BoaviztaBaseOutputModel} from './base-output-model';
+import {
+  BoaviztaInstanceTypes,
+  BoaviztaUsageType,
+  BoaviztaCpuOutputType,
+  BoaviztaCloudInstanceType,
+} from './types';
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
-abstract class BoaviztaOutputModel implements ModelPluginInterface {
-  name: string | undefined;
-  sharedParams: object | undefined = undefined;
-  metricType: 'cpu-util' | 'gpu-util' | 'ram-util' = 'cpu-util';
-  expectedLifespan = 4 * 365 * 24 * 60 * 60;
-  protected authCredentials: object | undefined;
-  errorBuilder = buildErrorMessage(BoaviztaOutputModel);
-
-  async authenticate(authParams: object) {
-    this.authCredentials = authParams;
-  }
-
-  async configure(staticParams: object): Promise<ModelPluginInterface> {
-    this.sharedParams = await this.captureStaticParams(staticParams);
-
-    return this;
-  }
-
-  /**
-   * Fetches data from Boavizta API according to the specific endpoint of the model
-   */
-  abstract fetchData(usageData: object | undefined): Promise<object>;
-
-  /**
-   * List of supported locations by the model.
-   */
-  async supportedLocations(): Promise<string[]> {
-    const countries = await axios.get(
-      'https://api.boavizta.org/v1/utils/country_code'
-    );
-
-    return Object.values(countries.data);
-  }
-
-  /**
-   * Converts the usage from IMPL input to the format required by Boavizta API.
-   */
-  transformToBoaviztaUsage(duration: number, metric: number) {
-    // duration is in seconds, convert to hours
-    // metric is between 0 and 1, convert to percentage
-    let usageInput: KeyValuePair = {
-      hours_use_time: duration / 3600.0,
-      time_workload: metric,
-    };
-    // convert expected lifespan from seconds to years
-    usageInput['years_life_time'] =
-      this.expectedLifespan / (365.0 * 24.0 * 60.0 * 60.0);
-    usageInput = this.addLocationToUsage(usageInput);
-
-    return usageInput;
-  }
-
-  /**
-   * Calculates the output of the given usage.
-   */
-  async execute(inputs: ModelParams[]): Promise<any[]> {
-    if (Array.isArray(inputs) && inputs.length > 0) {
-      const results: KeyValuePair[] = [];
-
-      for (const input of inputs) {
-        const usageResult = await this.calculateUsageForinput(input);
-        results.push(usageResult);
-      }
-
-      return results;
-    } else {
-      throw new InputValidationError(
-        this.errorBuilder({message: 'Input data is not an array'})
-      );
-    }
-  }
-
-  /**
-   * Adds location to usage if location is defined in sharedParams.
-   */
-  addLocationToUsage(usageRaw: KeyValuePair) {
-    if (this.sharedParams !== undefined && 'location' in this.sharedParams) {
-      usageRaw['usage_location'] = this.sharedParams['location'];
-    }
-
-    return usageRaw;
-  }
-
-  /**
-   * Abstract subs to make compatibility with base interface. allows configure to be defined in base class
-   */
-  protected abstract captureStaticParams(staticParams: object): object;
-
-  /**
-   * Extracts information from Boavizta API response to return the output in the format required by IMPL.
-   */
-  protected formatResponse(data: KeyValuePair): KeyValuePair {
-    let m = 0;
-    let e = 0;
-    if ('impacts' in data) {
-      // embodied-carbon output is in kgCO2eq, convert to gCO2eq
-      m = data['impacts']['gwp']['embedded']['value'] * 1000;
-      // use output is in J , convert to kWh.
-      // 1,000,000 J / 3600 = 277.7777777777778 Wh.
-      // 1 MJ / 3.6 = 0.278 kWh
-      e = data['impacts']['pe']['use']['value'] / 3.6;
-    }
-
-    return {'embodied-carbon': m, energy: e};
-  }
-
-  /**
-   * converts the usage to the format required by Boavizta API.
-   */
-  protected async calculateUsageForinput(
-    input: ModelParams
-  ): Promise<KeyValuePair> {
-    if (this.metricType in input) {
-      const usageInput = this.transformToBoaviztaUsage(
-        input['duration'],
-        input[this.metricType]
-      );
-      const usage = (await this.fetchData(usageInput)) as IBoaviztaUsageSCI;
-
-      return usage;
-    } else {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message: 'Invalid input parameter',
-        })
-      );
-    }
-  }
-}
-
-export class BoaviztaCpuOutputModel
-  extends BoaviztaOutputModel
-  implements ModelPluginInterface
-{
-  sharedParams: object | undefined = undefined;
-  public name: string | undefined;
-  public verbose = false;
-  public allocation = 'LINEAR';
+export class BoaviztaCpuOutputModel extends BoaviztaBaseOutputModel<BoaviztaCpuOutputType> {
   private readonly componentType = 'cpu';
 
   constructor() {
@@ -155,7 +24,31 @@ export class BoaviztaCpuOutputModel
     this.componentType = 'cpu';
   }
 
-  async fetchData(usageData: object | undefined): Promise<object> {
+  /**
+   * Captures and validates static parameters for the CPU model.
+   */
+  protected async captureStaticParams(staticParams: ModelParams) {
+    const safeStaticParams = this.validateStaticParams(staticParams);
+
+    this.verbose = !!staticParams.verbose;
+
+    delete staticParams.verbose;
+
+    if ('expected-lifespan' in safeStaticParams) {
+      this.expectedLifespan = safeStaticParams['expected-lifespan']!;
+    }
+
+    this.sharedParams = Object.assign({}, staticParams, safeStaticParams);
+
+    return this.sharedParams;
+  }
+
+  /**
+   * Fetches data from the Boavizta API for the CPU model.
+   */
+  protected async fetchData(
+    usage: BoaviztaUsageType | undefined
+  ): Promise<BoaviztaCpuOutputType> {
     if (this.sharedParams === undefined) {
       throw new InputValidationError(
         this.errorBuilder({
@@ -164,170 +57,76 @@ export class BoaviztaCpuOutputModel
       );
     }
 
-    const dataCast = this.sharedParams as KeyValuePair;
-    dataCast['usage'] = usageData;
+    const data = Object.assign({}, this.sharedParams, {usage});
 
-    const response = await axios.post(
-      `https://api.boavizta.org/v1/component/${this.componentType}?verbose=${this.verbose}&duration=${dataCast['usage']['hours_use_time']}`,
-      dataCast
+    const response = await this.boaviztaAPI.fetchCpuOutputData(
+      data,
+      this.componentType,
+      this.verbose
     );
 
-    const result = this.formatResponse(response.data);
+    const result = this.formatResponse(response);
 
-    return {
+    const cpuOutputData: BoaviztaCpuOutputType = {
       'energy-cpu': result.energy,
       'embodied-carbon': result['embodied-carbon'],
     };
+
+    return cpuOutputData;
   }
 
-  protected async captureStaticParams(staticParams: object): Promise<object> {
-    // if verbose is defined in staticParams, remove it from staticParams and set verbose to the value defined in staticParams
-    if (
-      'verbose' in staticParams &&
-      (staticParams.verbose === true || staticParams.verbose === false)
-    ) {
-      this.verbose = staticParams.verbose;
-      staticParams.verbose = undefined;
-    }
+  /**
+   * Validates static parameters for the CPU model using Zod schema.
+   */
+  private validateStaticParams(staticParams: ModelParams) {
+    const schema = z
+      .object({
+        'physical-processor': z.string(),
+        'core-units': z.number(),
+        'expected-lifespan': z.number().optional(),
+      })
+      .refine(allDefined, {message: 'All parameters are required.'});
 
-    if (!('physical-processor' in staticParams)) {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message: "Missing 'physical-processor' parameter from configuration",
-        })
-      );
-    }
+    return validate<z.infer<typeof schema>>(schema, staticParams);
+  }
+}
 
-    if (!('core-units' in staticParams)) {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message: "Missing 'core-units' parameter from configuration",
-        })
-      );
-    }
+export class BoaviztaCloudOutputModel extends BoaviztaBaseOutputModel<BoaviztaCloudInstanceType> {
+  public instanceTypes: BoaviztaInstanceTypes = {};
+  public allocation = 'LINEAR';
 
-    if ('expected-lifespan' in staticParams) {
-      this.expectedLifespan = staticParams['expected-lifespan'] as number;
+  /**
+   * Captures and validates static parameters for the Cloud model.
+   */
+  protected async captureStaticParams(staticParams: ModelParams) {
+    const safeStaticParams = Object.assign(
+      staticParams,
+      this.validateStaticParams(staticParams)
+    );
+
+    this.verbose = !!staticParams.verbose;
+
+    delete staticParams.verbose;
+
+    await this.validateProvider(safeStaticParams);
+    await this.validateInstanceType(safeStaticParams);
+    await this.validateLocation(safeStaticParams);
+
+    if ('expected-lifespan' in safeStaticParams) {
+      this.expectedLifespan = safeStaticParams['expected-lifespan']!;
     }
 
     this.sharedParams = Object.assign({}, staticParams);
 
     return this.sharedParams;
   }
-}
 
-export class BoaviztaCloudOutputModel
-  extends BoaviztaOutputModel
-  implements ModelPluginInterface
-{
-  public sharedParams: object | undefined = undefined;
-  public instanceTypes: BoaviztaInstanceTypes = {};
-  public name: string | undefined;
-  public verbose = false;
-  public allocation = 'LINEAR';
-
-  async validateLocation(staticParamsCast: object): Promise<string | void> {
-    if ('location' in staticParamsCast) {
-      const location = staticParamsCast.location as string;
-      const countries = await this.supportedLocations();
-
-      if (!countries.includes(location)) {
-        throw new InputValidationError(
-          this.errorBuilder({
-            message: `Invalid location parameter location. Valid values are ${countries.join(
-              ', '
-            )}`,
-          })
-        );
-      }
-
-      return staticParamsCast.location as string;
-    }
-  }
-
-  async validateInstanceType(staticParamsCast: object) {
-    if (!('provider' in staticParamsCast)) {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message: "Missing 'provider' parameter from configuration",
-        })
-      );
-    }
-
-    if (!('instance-type' in staticParamsCast)) {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message: "Missing 'instance-type' parameter from configuration",
-        })
-      );
-    }
-
-    const provider = staticParamsCast.provider as string;
-
-    if (
-      this.instanceTypes[provider] === undefined ||
-      this.instanceTypes[provider].length === 0
-    ) {
-      this.instanceTypes[provider] =
-        await this.supportedInstancesList(provider);
-    }
-
-    if ('instance-type' in staticParamsCast) {
-      if (
-        !this.instanceTypes[provider].includes(
-          staticParamsCast['instance-type'] as string
-        )
-      ) {
-        throw new UnsupportedValueError(
-          this.errorBuilder({
-            message: `Invalid 'instance-type' parameter: '${
-              staticParamsCast['instance-type']
-            }'. Valid values are : ${this.instanceTypes[provider].join(', ')}`,
-          })
-        );
-      }
-    }
-  }
-
-  async validateProvider(staticParamsCast: object) {
-    if (!('provider' in staticParamsCast)) {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message: "Missing 'provider' parameter from configuration",
-        })
-      );
-    } else {
-      const supportedProviders = await this.supportedProvidersList();
-
-      if (!supportedProviders.includes(staticParamsCast.provider as string)) {
-        throw new InputValidationError(
-          this.errorBuilder({
-            message: `Invalid 'provider' parameter '${
-              staticParamsCast.provider
-            }'. Valid values are ${supportedProviders.join(', ')}`,
-          })
-        );
-      }
-    }
-  }
-
-  async supportedInstancesList(provider: string) {
-    const instances = await axios.get(
-      `https://api.boavizta.org/v1/cloud/instance/all_instances?provider=${provider}`
-    );
-
-    return instances.data;
-  }
-
-  async supportedProvidersList(): Promise<string[]> {
-    const providers = await axios.get(
-      'https://api.boavizta.org/v1/cloud/instance/all_providers'
-    );
-
-    return Object.values(providers.data);
-  }
-
-  async fetchData(usageData: object | undefined): Promise<object> {
+  /**
+   * Fetches data from the Boavizta API for the Cloud model.
+   */
+  protected async fetchData(
+    usage: BoaviztaUsageType
+  ): Promise<BoaviztaCloudInstanceType> {
     if (this.sharedParams === undefined) {
       throw new InputValidationError(
         this.errorBuilder({
@@ -336,47 +135,92 @@ export class BoaviztaCloudOutputModel
       );
     }
 
-    const dataCast = this.sharedParams as KeyValuePair;
+    const data = Object.assign({}, this.sharedParams, {usage});
 
-    for (const key in dataCast) {
-      // replace - with _ in keys
-      if (key.includes('-')) {
-        const newKey = key.replace(/-/g, '_');
-        dataCast[newKey] = dataCast[key];
-        delete dataCast[key];
-      }
-    }
-
-    dataCast['usage'] = usageData;
-    const response = await axios.post(
-      `https://api.boavizta.org/v1/cloud/instance?verbose=${this.verbose}&duration=${dataCast['usage']['hours_use_time']}`,
-      dataCast
+    const response = await this.boaviztaAPI.fetchCloudInstanceData(
+      data,
+      this.verbose
     );
-    return this.formatResponse(response.data);
+    return this.formatResponse(response);
   }
 
-  protected async captureStaticParams(staticParams: object): Promise<object> {
+  /**
+   * Validates static parameters for the Cloud model using Zod schema.
+   */
+  private validateStaticParams(staticParams: ModelParams) {
+    const schema = z
+      .object({
+        provider: z.string(),
+        'instance-type': z.string(),
+        verbose: z.boolean().optional(),
+        'expected-lifespan': z.number().optional(),
+      })
+      .refine(allDefined, {message: 'All parameters are required.'});
+
+    return validate<z.infer<typeof schema>>(schema, staticParams);
+  }
+
+  /**
+   * Validates the provider parameter for the Cloud model.
+   */
+  private async validateProvider(staticParams: ModelParams) {
+    const supportedProviders =
+      await this.boaviztaAPI.getSupportedProvidersList();
+
+    if (!supportedProviders.includes(staticParams.provider)) {
+      const whiteListedProviders = supportedProviders.join(', ');
+
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: `Invalid 'provider' parameter '${staticParams.provider}'. Valid values are ${whiteListedProviders}`,
+        })
+      );
+    }
+  }
+
+  /**
+   * Validates the instance type parameter for the Cloud model.
+   */
+  private async validateInstanceType(staticParams: ModelParams) {
+    const provider = staticParams.provider;
+
     if (
-      'verbose' in staticParams &&
-      staticParams.verbose !== undefined &&
-      (staticParams.verbose === true || staticParams.verbose === false)
+      !this.instanceTypes[provider] ||
+      this.instanceTypes[provider].length === 0
     ) {
-      this.verbose = staticParams.verbose;
-      staticParams.verbose = undefined;
+      this.instanceTypes[provider] =
+        await this.boaviztaAPI.getSupportedInstancesList(provider);
     }
 
-    await this.validateProvider(staticParams); // if no valid provider found, throw error
-
-    await this.validateInstanceType(staticParams); // if no valid 'instance-type' found, throw error
-
-    await this.validateLocation(staticParams); // if no valid location found, throw error
-
-    if ('expected-lifespan' in staticParams) {
-      this.expectedLifespan = staticParams['expected-lifespan'] as number;
+    if (!this.instanceTypes[provider].includes(staticParams['instance-type'])) {
+      const whiteListedTypes = this.instanceTypes[provider].join(', ');
+      throw new UnsupportedValueError(
+        this.errorBuilder({
+          message: `Invalid 'instance-type' parameter: '${staticParams['instance-type']}'. Valid values are : ${whiteListedTypes}`,
+        })
+      );
     }
+  }
 
-    this.sharedParams = Object.assign({}, staticParams);
+  /**
+   * Validates the location parameter for the Cloud model.
+   */
+  private async validateLocation(
+    staticParams: ModelParams
+  ): Promise<string | void> {
+    if ('location' in staticParams) {
+      const countries = await this.boaviztaAPI.getSupportedLocations();
+      const whitelistedCountries = countries.join(', ');
 
-    return this.sharedParams;
+      if (!countries.includes(staticParams.location)) {
+        throw new InputValidationError(
+          this.errorBuilder({
+            message: `Invalid location parameter location. Valid values are ${whitelistedCountries}`,
+          })
+        );
+      }
+
+      return staticParams.location;
+    }
   }
 }
