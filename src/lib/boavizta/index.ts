@@ -61,10 +61,10 @@ export class BoaviztaCpuOutputModel
       );
     }
 
-    const dataCast: object = Object.assign({}, this.sharedParams, {usage});
+    const data = Object.assign({}, this.sharedParams, {usage});
 
     const response = await this.boaviztaAPI.fetchCpuOutputData(
-      dataCast,
+      data,
       this.componentType,
       this.verbose
     );
@@ -221,13 +221,12 @@ export class BoaviztaCloudOutputModel
     if ('location' in staticParamsCast) {
       const location = staticParamsCast.location as string;
       const countries = await this.boaviztaAPI.getSupportedLocations();
+      const whitelistedCountries = countries.join(', ');
 
       if (!countries.includes(location)) {
         throw new InputValidationError(
           this.errorBuilder({
-            message: `Invalid location parameter location. Valid values are ${countries.join(
-              ', '
-            )}`,
+            message: `Invalid location parameter location. Valid values are ${whitelistedCountries}`,
           })
         );
       }

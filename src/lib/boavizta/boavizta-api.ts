@@ -11,13 +11,13 @@ export class BoaviztaAPI {
    * Fetches CPU output data from Boavizta API for a specific component type.
    */
   public async fetchCpuOutputData(
-    dataCast: KeyValuePair,
+    data: KeyValuePair,
     componentType: string,
     verbose: boolean
   ): Promise<object> {
     const response = await axios.post(
-      `${this.baseUrl}/component/${componentType}?verbose=${verbose}&duration=${dataCast['usage']['hours_use_time']}`,
-      dataCast
+      `${this.baseUrl}/component/${componentType}?verbose=${verbose}&duration=${data['usage']['hours_use_time']}`,
+      data
     );
 
     return response.data;
