@@ -12,8 +12,10 @@ export type BoaviztaInstanceTypes = {
 };
 
 export type BoaviztaUsageType = {
-  duration: number;
-  metricType: 'cpu-util' | 'gpu-util' | 'ram-util';
+  hours_use_time: number;
+  time_workload: number;
+  years_life_time: number;
+  usage_location?: string;
 };
 
 export type BoaviztaCpuOutputType = {

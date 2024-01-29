@@ -1,6 +1,5 @@
 import {z} from 'zod';
 
-import {ModelPluginInterface} from '../../interfaces';
 import {ModelParams} from '../../types';
 
 import {allDefined, validate} from '../../util/validations';
@@ -16,10 +15,7 @@ import {
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
-export class BoaviztaCpuOutputModel
-  extends BoaviztaBaseOutputModel<BoaviztaUsageType, BoaviztaCpuOutputType>
-  implements ModelPluginInterface
-{
+export class BoaviztaCpuOutputModel extends BoaviztaBaseOutputModel<BoaviztaCpuOutputType> {
   private readonly componentType = 'cpu';
 
   constructor() {
@@ -95,10 +91,7 @@ export class BoaviztaCpuOutputModel
   }
 }
 
-export class BoaviztaCloudOutputModel
-  extends BoaviztaBaseOutputModel<BoaviztaUsageType, BoaviztaCloudInstanceType>
-  implements ModelPluginInterface
-{
+export class BoaviztaCloudOutputModel extends BoaviztaBaseOutputModel<BoaviztaCloudInstanceType> {
   public instanceTypes: BoaviztaInstanceTypes = {};
   public allocation = 'LINEAR';
 
@@ -132,7 +125,7 @@ export class BoaviztaCloudOutputModel
    * Fetches data from the Boavizta API for the Cloud model.
    */
   protected async fetchData(
-    usage: BoaviztaUsageType | undefined
+    usage: BoaviztaUsageType
   ): Promise<BoaviztaCloudInstanceType> {
     if (this.sharedParams === undefined) {
       throw new InputValidationError(
@@ -142,13 +135,13 @@ export class BoaviztaCloudOutputModel
       );
     }
 
-    const dataCast: object = Object.assign({}, this.sharedParams, {usage});
+    const data = Object.assign({}, this.sharedParams, {usage});
 
     const response = await this.boaviztaAPI.fetchCloudInstanceData(
-      dataCast,
+      data,
       this.verbose
     );
-    return this.formatResponse(response) as BoaviztaCloudInstanceType;
+    return this.formatResponse(response);
   }
 
   /**
@@ -219,11 +212,10 @@ export class BoaviztaCloudOutputModel
     staticParamsCast: ModelParams
   ): Promise<string | void> {
     if ('location' in staticParamsCast) {
-      const location = staticParamsCast.location as string;
       const countries = await this.boaviztaAPI.getSupportedLocations();
       const whitelistedCountries = countries.join(', ');
 
-      if (!countries.includes(location)) {
+      if (!countries.includes(staticParamsCast.location)) {
         throw new InputValidationError(
           this.errorBuilder({
             message: `Invalid location parameter location. Valid values are ${whitelistedCountries}`,

@@ -5,10 +5,11 @@ import {buildErrorMessage} from '../../util/helpers';
 import {ERRORS} from '../../util/errors';
 
 import {BoaviztaAPI} from './boavizta-api';
+import {BoaviztaUsageType} from './types';
 
 const {InputValidationError} = ERRORS;
 
-export abstract class BoaviztaBaseOutputModel<T extends KeyValuePair, U>
+export abstract class BoaviztaBaseOutputModel<U>
   implements ModelPluginInterface
 {
   protected sharedParams?: object = undefined;
@@ -59,7 +60,7 @@ export abstract class BoaviztaBaseOutputModel<T extends KeyValuePair, U>
   /**
    * Fetches data from Boavizta API according to the specific endpoint of the model
    */
-  protected abstract fetchData(usage: T | undefined): Promise<U>;
+  protected abstract fetchData(usage: BoaviztaUsageType): Promise<U>;
 
   /**
    * Converts the usage from IMPL input to the format required by Boavizta API.
@@ -90,7 +91,7 @@ export abstract class BoaviztaBaseOutputModel<T extends KeyValuePair, U>
   }
 
   /**
-   * Abstract subs to make compatibility with base interface. allows configure to be defined in base class
+   * Abstract subs to make compatibility with base interface. allows configure to be defined in base class.
    */
   protected abstract captureStaticParams(staticParams: object): Promise<object>;
 
@@ -112,7 +113,7 @@ export abstract class BoaviztaBaseOutputModel<T extends KeyValuePair, U>
   }
 
   /**
-   * converts the usage to the format required by Boavizta API.
+   * Converts the usage to the format required by Boavizta API.
    */
   private async calculateUsagePerInput(input: ModelParams) {
     if (!(this.metricType in input)) {
@@ -128,6 +129,13 @@ export abstract class BoaviztaBaseOutputModel<T extends KeyValuePair, U>
       input[this.metricType]
     );
 
-    return this.fetchData(usageInput as T);
+    const usage: BoaviztaUsageType = {
+      hours_use_time: usageInput.hours_use_time,
+      time_workload: usageInput.time_workload,
+      years_life_time: usageInput.years_life_time,
+      usage_location: usageInput.usage_location,
+    };
+
+    return this.fetchData(usage);
   }
 }
