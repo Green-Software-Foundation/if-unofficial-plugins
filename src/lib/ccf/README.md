@@ -1,7 +1,6 @@
 # Cloud Carbon Footprint
 
-> [!NOTE]
-> `CCF` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+> [!NOTE] > `CCF` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
 
 "Cloud Carbon Footprint is an open source tool that provides visibility and tooling to measure, monitor and reduce your cloud carbon emissions. We use best practice methodologies to convert cloud utilization into estimated energy usage and carbon emissions, producing metrics and carbon savings estimates that can be shared with employees, investors, and other stakeholders." - [CCF](https://www.cloudcarbonfootprint.org/)
 
@@ -22,7 +21,6 @@
 
 - `embodied-carbon`: carbon emitted in manufacturing the device, in gCO2eq
 - `energy`: energy used by CPU in kWh
-
 
 ## IEF Implementation
 
@@ -58,15 +56,15 @@ import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
 const ccf = new CloudCarbonFootprint();
 ccf.configure({
   vendor: 'aws',
-  instance_type: 'm5n.large'
-})
+  instance_type: 'm5n.large',
+});
 const results = ccf.execute([
   {
     duration: 3600, // duration institute
     'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
-  }
-])
+  },
+]);
 ```
 
 ### Azure
@@ -77,15 +75,15 @@ import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
 const ccf = new CloudCarbonFootprint();
 ccf.configure({
   vendor: 'azure',
-  instance_type: 'D4 v4'
-})
+  instance_type: 'D4 v4',
+});
 const results = ccf.execute([
   {
     duration: 3600, // duration institute
     'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
-  }
-])
+  },
+]);
 ```
 
 ### GCP
@@ -93,19 +91,18 @@ const results = ccf.execute([
 ```typescript
 import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
 
-
 const ccf = new CloudCarbonFootprint();
 ccf.configure({
   vendor: 'gcp',
-  instance_type: 'n2-standard-2'
-})
+  instance_type: 'n2-standard-2',
+});
 const results = ccf.execute([
   {
     duration: 3600, // duration institute
     'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
-  }
-])
+  },
+]);
 ```
 
 ## Example Impl
@@ -141,10 +138,10 @@ This impl is run using `impact-engine` using the following command, run from the
 
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-models
-impact-engine --impl ./examples/impls/ccf-test.yml --ompl ./examples/ompls/ccf-test.yml
+impact-engine --impl ./examples/impls/test/ccf.yml --ompl ./examples/ompls/ccf.yml
 ```
 
-This yields a result that looks like the following (saved to `/ompls/ccf-test.yml`):
+This yields a result that looks like the following (saved to `/ompls/ccf.yml`):
 
 ```yaml
 name: ccf-demo
