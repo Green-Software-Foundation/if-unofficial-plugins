@@ -163,16 +163,16 @@ export class BoaviztaCloudOutputModel extends BoaviztaBaseOutputModel<BoaviztaCl
   /**
    * Validates the provider parameter for the Cloud model.
    */
-  private async validateProvider(staticParamsCast: ModelParams) {
+  private async validateProvider(staticParams: ModelParams) {
     const supportedProviders =
       await this.boaviztaAPI.getSupportedProvidersList();
 
-    if (!supportedProviders.includes(staticParamsCast.provider)) {
+    if (!supportedProviders.includes(staticParams.provider)) {
+      const whiteListedProviders = supportedProviders.join(', ');
+
       throw new InputValidationError(
         this.errorBuilder({
-          message: `Invalid 'provider' parameter '${
-            staticParamsCast.provider
-          }'. Valid values are ${supportedProviders.join(', ')}`,
+          message: `Invalid 'provider' parameter '${staticParams.provider}'. Valid values are ${whiteListedProviders}`,
         })
       );
     }
@@ -181,8 +181,8 @@ export class BoaviztaCloudOutputModel extends BoaviztaBaseOutputModel<BoaviztaCl
   /**
    * Validates the instance type parameter for the Cloud model.
    */
-  private async validateInstanceType(staticParamsCast: ModelParams) {
-    const provider = staticParamsCast.provider;
+  private async validateInstanceType(staticParams: ModelParams) {
+    const provider = staticParams.provider;
 
     if (
       !this.instanceTypes[provider] ||
@@ -192,14 +192,11 @@ export class BoaviztaCloudOutputModel extends BoaviztaBaseOutputModel<BoaviztaCl
         await this.boaviztaAPI.getSupportedInstancesList(provider);
     }
 
-    if (
-      !this.instanceTypes[provider].includes(staticParamsCast['instance-type'])
-    ) {
+    if (!this.instanceTypes[provider].includes(staticParams['instance-type'])) {
+      const whiteListedTypes = this.instanceTypes[provider].join(', ');
       throw new UnsupportedValueError(
         this.errorBuilder({
-          message: `Invalid 'instance-type' parameter: '${
-            staticParamsCast['instance-type']
-          }'. Valid values are : ${this.instanceTypes[provider].join(', ')}`,
+          message: `Invalid 'instance-type' parameter: '${staticParams['instance-type']}'. Valid values are : ${whiteListedTypes}`,
         })
       );
     }
@@ -209,13 +206,13 @@ export class BoaviztaCloudOutputModel extends BoaviztaBaseOutputModel<BoaviztaCl
    * Validates the location parameter for the Cloud model.
    */
   private async validateLocation(
-    staticParamsCast: ModelParams
+    staticParams: ModelParams
   ): Promise<string | void> {
-    if ('location' in staticParamsCast) {
+    if ('location' in staticParams) {
       const countries = await this.boaviztaAPI.getSupportedLocations();
       const whitelistedCountries = countries.join(', ');
 
-      if (!countries.includes(staticParamsCast.location)) {
+      if (!countries.includes(staticParams.location)) {
         throw new InputValidationError(
           this.errorBuilder({
             message: `Invalid location parameter location. Valid values are ${whitelistedCountries}`,
@@ -223,7 +220,7 @@ export class BoaviztaCloudOutputModel extends BoaviztaBaseOutputModel<BoaviztaCl
         );
       }
 
-      return staticParamsCast.location;
+      return staticParams.location;
     }
   }
 }
