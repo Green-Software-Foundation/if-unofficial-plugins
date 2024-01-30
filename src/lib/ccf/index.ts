@@ -270,16 +270,16 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
    * Calculates average of all instances.
    */
   private calculateAverage(vendor: string, instanceList: KeyValuePair[]) {
-    let totalMin = 0.0;
-    let totalMax = 0.0;
-    let count = 0.0;
-
-    instanceList.forEach(instance => {
-      this.instanceUsage[vendor][instance['Architecture']] = instance;
-      totalMin += parseFloat(instance['Min Watts']);
-      totalMax += parseFloat(instance['Max Watts']);
-      count += 1.0;
-    });
+    const {totalMin, totalMax, count} = instanceList.reduce(
+      (accumulator, instance) => {
+        this.instanceUsage[vendor][instance['Architecture']] = instance;
+        accumulator.totalMin += parseFloat(instance['Min Watts']);
+        accumulator.totalMax += parseFloat(instance['Max Watts']);
+        accumulator.count += 1.0;
+        return accumulator;
+      },
+      {totalMin: 0.0, totalMax: 0.0, count: 0.0}
+    );
 
     this.instanceUsage[vendor]['Average'] = {
       'Min Watts': totalMin / count,
@@ -377,7 +377,7 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       const cpus = parseInt(instance[vCPU], 10);
       const consumption =
         vendor === 'aws'
-          ? this.calculateAWSConsumption(instance, cpus)
+          ? this.calculateAwsConsumption(instance, cpus)
           : this.calculateConsumption(instance, vendor, cpus);
 
       this.computeInstances[vendor][instance[type]] = {
@@ -405,19 +405,23 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
   /**
    * Calculates the average minimum and maximum watts consumption for AWS instances based on the provided architectures.
    */
-  private calculateAWSAverageWatts(architectures: string[]) {
+  private calculateAwsAverageWatts(architectures: string[]) {
     const awsInstance = this.instanceUsage['aws'];
-    let minWatts = 0.0;
-    let maxWatts = 0.0;
-    let count = 0;
 
-    architectures.forEach((architecture: string) => {
-      minWatts += awsInstance[architecture]['Min Watts'];
-      maxWatts += awsInstance[architecture]['Max Watts'];
-      count += 1;
-    });
+    const {minWatts, maxWatts, count} = architectures.reduce(
+      (accumulator, architecture) => {
+        accumulator.minWatts += awsInstance[architecture]['Min Watts'];
+        accumulator.maxWatts += awsInstance[architecture]['Max Watts'];
+        accumulator.count += 1;
+        return accumulator;
+      },
+      {minWatts: 0.0, maxWatts: 0.0, count: 0}
+    );
 
-    return {minWatts: minWatts / count, maxWatts: maxWatts / count};
+    return {
+      minWatts: minWatts / count,
+      maxWatts: maxWatts / count,
+    };
   }
 
   /**
@@ -446,18 +450,25 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
   /**
    * Calculates the consumption metrics (idle, 10%, 50%, 100%, minWatts, maxWatts) for a given compute instance.
    */
-  private calculateAWSConsumption(instance: KeyValuePair, cpus: number) {
+  private calculateAwsConsumption(instance: KeyValuePair, cpus: number) {
     const architectures = this.getInstanceArchitectures(instance);
-    const {minWatts, maxWatts} = this.calculateAWSAverageWatts(architectures);
+    const {minWatts, maxWatts} = this.calculateAwsAverageWatts(architectures);
 
     return {
-      idle: parseFloat(instance['Instance @ Idle'].replace(',', '.')),
-      tenPercent: parseFloat(instance['Instance @ 10%'].replace(',', '.')),
-      fiftyPercent: parseFloat(instance['Instance @ 50%'].replace(',', '.')),
-      hundredPercent: parseFloat(instance['Instance @ 100%'].replace(',', '.')),
+      idle: this.getParsedInstanceMetric(instance['Instance @ Idle']),
+      tenPercent: this.getParsedInstanceMetric(instance['Instance @ 10%']),
+      fiftyPercent: this.getParsedInstanceMetric(instance['Instance @ 50%']),
+      hundredPercent: this.getParsedInstanceMetric(instance['Instance @ 100%']),
       minWatts: minWatts * cpus,
       maxWatts: maxWatts * cpus,
     };
+  }
+
+  /**
+   * Parses a metric value to a floating-point number.
+   */
+  private getParsedInstanceMetric(metric: string) {
+    return parseFloat(metric.replace(',', '.'));
   }
 
   /**
