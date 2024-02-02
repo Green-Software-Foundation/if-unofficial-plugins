@@ -32,6 +32,8 @@ export class Co2jsModel implements ModelPluginInterface {
 
   public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
     return inputs.map(input => {
+      this.configure(input);
+
       if (!input['bytes']) {
         throw new InputValidationError(
           this.errorBuilder({
