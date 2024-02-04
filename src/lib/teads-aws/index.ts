@@ -198,7 +198,7 @@ export class TeadsAWS implements ModelPluginInterface {
   /**
    * Validates static parameters.
    */
-  private validateStaticParams(staticParams: object) {
+  private validateParams(staticParams: object) {
     const schema = z
       .object({
         'instance-type': z.string().optional(),
@@ -216,7 +216,7 @@ export class TeadsAWS implements ModelPluginInterface {
    * Sets validated parameters for the class instance.
    */
   private setValidatedParams(params: object) {
-    const safeParams = Object.assign(params, this.validateStaticParams(params));
+    const safeParams = Object.assign(params, this.validateParams(params));
 
     this.instanceType = safeParams['instance-type'] ?? this.instanceType;
     this.expectedLifespan =
