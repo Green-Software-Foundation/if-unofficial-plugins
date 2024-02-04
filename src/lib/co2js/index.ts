@@ -16,23 +16,21 @@ export class Co2jsModel implements ModelPluginInterface {
 
   errorBuilder = buildErrorMessage(this.constructor);
 
+  /**
+   * Configures the model with static parameters.
+   */
   public async configure(staticParams: object): Promise<ModelPluginInterface> {
-    if (staticParams && 'type' in staticParams) {
-      const safeStaticParams = Object.assign(
-        staticParams,
-        this.validateStaticParams(staticParams)
-      );
-
-      this.staticParams.type = safeStaticParams.type;
-      this.model = new co2({model: this.staticParams.type});
-    }
+    this.setValidatedParams(staticParams);
 
     return this;
   }
 
+  /**
+   * Executes the model for a list of input parameters.
+   */
   public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
     return inputs.map(input => {
-      this.configure(input);
+      this.setValidatedParams(input);
 
       if (!input['bytes']) {
         throw new InputValidationError(
@@ -72,6 +70,21 @@ export class Co2jsModel implements ModelPluginInterface {
     };
 
     return paramType[this.staticParams.type]();
+  }
+
+  /**
+   * Sets validated parameters for the class instance.
+   */
+  private setValidatedParams(params: object) {
+    if ('type' in params) {
+      const safeStaticParams = Object.assign(
+        params,
+        this.validateStaticParams(params)
+      );
+
+      this.staticParams.type = safeStaticParams.type;
+      this.model = new co2({model: this.staticParams.type});
+    }
   }
 
   /**
