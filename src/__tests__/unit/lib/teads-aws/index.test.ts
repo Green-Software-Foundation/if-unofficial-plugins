@@ -60,13 +60,6 @@ describe('lib/teads-aws: ', () => {
         expect(result).toBeInstanceOf(TeadsAWS);
       });
 
-      it('throws an error when the `staticParams` is an empty object.', async () => {
-        const result = await outputModel.configure({});
-
-        expect.assertions(1);
-        expect(result).toBeInstanceOf(TeadsAWS);
-      });
-
       it('throws an error when `instance-type` is an empty string.', async () => {
         expect.assertions(2);
 
@@ -276,6 +269,32 @@ describe('lib/teads-aws: ', () => {
             timestamp: '2021-01-01T00:00:00Z',
             energy: 0.016300000000000002,
             'embodied-carbon': 0.47885452340182644,
+          },
+        ]);
+      });
+
+      it('returns a result when the `instance-type` is provided in the input.', async () => {
+        await outputModel.configure({});
+
+        expect.assertions(1);
+
+        const result = await outputModel.execute([
+          {
+            duration: 3600,
+            timestamp: '2021-01-01T00:00:00Z',
+            'instance-type': 'm5n.large',
+            'cpu-util': 10,
+          },
+        ]);
+
+        expect(result).toStrictEqual([
+          {
+            duration: 3600,
+            'cpu-util': 10,
+            timestamp: '2021-01-01T00:00:00Z',
+            energy: 0.0067,
+            'embodied-carbon': 0.9577090468036529,
+            'instance-type': 'm5n.large',
           },
         ]);
       });

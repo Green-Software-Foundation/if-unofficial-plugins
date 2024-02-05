@@ -30,7 +30,7 @@ export class TeadsAWS implements ModelPluginInterface {
    * Configures the TEADS Plugin for IEF.
    */
   public async configure(staticParams: object): Promise<TeadsAWS> {
-    this.setValidatedParams(staticParams);
+    Object.keys(staticParams).length && this.setValidatedInstance(staticParams);
 
     return this;
   }
@@ -41,7 +41,7 @@ export class TeadsAWS implements ModelPluginInterface {
   public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
     return inputs.map(input => {
       if (this.instanceType === '') {
-        this.setValidatedParams(input);
+        this.setValidatedInstance(input);
       }
 
       input['energy'] = this.calculateEnergy(input);
@@ -147,24 +147,24 @@ export class TeadsAWS implements ModelPluginInterface {
     y: number[]
   ) {
     // base rate is from which level of cpu linear interpolation is applied at
-    let base_rate = 0;
-    let base_cpu = 0;
+    let baseRate = 0;
+    let baseCpu = 0;
     let ratio = 0;
 
     for (let i = 0; i < x.length; i++) {
       if (cpu === x[i]) {
-        base_rate = y[i];
-        base_cpu = x[i];
+        baseRate = y[i];
+        baseCpu = x[i];
         break;
       } else if (cpu > x[i] && cpu < x[i + 1]) {
-        base_rate = y[i];
-        base_cpu = x[i];
+        baseRate = y[i];
+        baseCpu = x[i];
         ratio = (y[i + 1] - y[i]) / (x[i + 1] - x[i]);
         break;
       }
     }
 
-    return base_rate + (cpu - base_cpu) * ratio;
+    return baseRate + (cpu - baseCpu) * ratio;
   }
 
   /**
@@ -201,7 +201,7 @@ export class TeadsAWS implements ModelPluginInterface {
   private validateParams(staticParams: object) {
     const schema = z
       .object({
-        'instance-type': z.string().optional(),
+        'instance-type': z.string(),
         'expected-lifespan': z.number().optional(),
         interpolation: z.nativeEnum(Interpolation).optional(),
       })
@@ -215,7 +215,7 @@ export class TeadsAWS implements ModelPluginInterface {
   /**
    * Sets validated parameters for the class instance.
    */
-  private setValidatedParams(params: object) {
+  private setValidatedInstance(params: object) {
     const safeParams = Object.assign(params, this.validateParams(params));
 
     this.instanceType = safeParams['instance-type'] ?? this.instanceType;
