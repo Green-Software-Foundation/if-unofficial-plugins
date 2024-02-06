@@ -2,8 +2,12 @@ import Spline from 'typescript-cubic-spline';
 import {z} from 'zod';
 
 import {ModelPluginInterface} from '../../interfaces';
-import {Interpolation, KeyValuePair, ModelParams} from '../../types/common';
-import {IComputeInstance} from '../../types';
+import {
+  Interpolation,
+  KeyValuePair,
+  ModelParams,
+  IComputeInstance,
+} from '../../types/common';
 
 import {buildErrorMessage} from '../../util/helpers';
 import {validate} from '../../util/validations';
