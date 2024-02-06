@@ -49,10 +49,11 @@ The following is an example of how CO2.JS can be invoked using an `impl`.
 ```yaml
 name: co2js-demo
 description: example impl invoking CO2.JS model
+tags:
 initialize:
   models:
     - name: co2js
-      model: Co2JsModel
+      model: Co2jsModel
       path: '@grnsft/if-unofficial-models'
 graph:
   children:
@@ -82,7 +83,7 @@ This impl is run using `impact-engine` using the following command, run from the
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-models
-impact-engine --impl ./examples/impls/co2js-test.yml --ompl ./examples/ompls/co2js-test.yml
+impact-engine --impl ./examples/impls/test/co2js-test.yml --ompl ./examples/ompls/co2js-test.yml
 ```
 
 This yields a result that looks like the following (saved to `/ompls/co2js-test.yml`):
@@ -90,10 +91,11 @@ This yields a result that looks like the following (saved to `/ompls/co2js-test.
 ```yaml
 name: co2js-demo
 description: example impl invoking CO2.JS model
+tags:
 initialize:
   models:
     - name: co2js
-      model: Co2JsModel
+      model: Co2jsModel
       path: '@grnsft/if-unofficial-models'
 graph:
   children:
