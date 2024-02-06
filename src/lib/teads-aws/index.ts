@@ -6,7 +6,7 @@ import {
   Interpolation,
   KeyValuePair,
   ModelParams,
-  IComputeInstance,
+  ComputeInstance,
 } from '../../types/common';
 
 import {buildErrorMessage} from '../../util/helpers';
@@ -19,7 +19,7 @@ import * as AWS_EMBODIED from './aws-embodied.json';
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
 export class TeadsAWS implements ModelPluginInterface {
-  private computeInstances: Record<string, IComputeInstance> = {};
+  private computeInstances: Record<string, ComputeInstance> = {};
   private instanceType = '';
   private expectedLifespan = 4 * 365 * 24 * 3600;
   private interpolation = Interpolation.LINEAR;
@@ -68,7 +68,7 @@ export class TeadsAWS implements ModelPluginInterface {
         vCPUs: cpus,
         maxvCPUs: parseInt(instance['Platform Total Number of vCPU'], 10),
         name: instance['Instance type'],
-      } as IComputeInstance;
+      } as ComputeInstance;
     });
 
     AWS_EMBODIED.forEach((instance: KeyValuePair) => {
@@ -147,28 +147,25 @@ export class TeadsAWS implements ModelPluginInterface {
    */
   private calculateLinearInterpolationWattage(
     cpu: number,
-    x: number[],
-    y: number[]
-  ) {
-    // base rate is from which level of cpu linear interpolation is applied at
-    let baseRate = 0;
-    let baseCpu = 0;
-    let ratio = 0;
+    points: number[],
+    curve: number[]
+  ): number {
+    const result = points.reduce(
+      (acc, point, i) => {
+        if (cpu === point) {
+          acc.baseRate = curve[i];
+          acc.baseCpu = point;
+        } else if (cpu > point && cpu < points[i + 1]) {
+          acc.baseRate = curve[i];
+          acc.baseCpu = point;
+          acc.ratio = (curve[i + 1] - curve[i]) / (points[i + 1] - point);
+        }
+        return acc;
+      },
+      {baseRate: 0, baseCpu: 0, ratio: 0}
+    );
 
-    for (let i = 0; i < x.length; i++) {
-      if (cpu === x[i]) {
-        baseRate = y[i];
-        baseCpu = x[i];
-        break;
-      } else if (cpu > x[i] && cpu < x[i + 1]) {
-        baseRate = y[i];
-        baseCpu = x[i];
-        ratio = (y[i + 1] - y[i]) / (x[i + 1] - x[i]);
-        break;
-      }
-    }
-
-    return baseRate + (cpu - baseCpu) * ratio;
+    return result.baseRate + (cpu - result.baseCpu) * result.ratio;
   }
 
   /**

@@ -72,13 +72,10 @@ export class TeadsCurveModel implements ModelPluginInterface {
     const points: number[] = [0, 10, 50, 100];
     const spline: any = new Spline(points, curve);
 
-    let wattage = 0.0;
-
-    if (this.interpolation === Interpolation.SPLINE) {
-      wattage = spline.at(cpu) * this.tdp;
-    } else if (this.interpolation === Interpolation.LINEAR) {
-      wattage = this.calculateLinearInterpolationWattage(cpu, points, curve);
-    }
+    const wattage =
+      this.interpolation === Interpolation.SPLINE
+        ? spline.at(cpu) * this.tdp
+        : this.calculateLinearInterpolationWattage(cpu, points, curve);
 
     return (wattage * duration) / 3600 / 1000;
   }
@@ -94,24 +91,22 @@ export class TeadsCurveModel implements ModelPluginInterface {
     points: number[],
     curve: number[]
   ) {
-    let baseRate = 0;
-    let baseCpu = 0;
-    let ratio = 0;
+    const result = points.reduce(
+      (acc, point, i) => {
+        if (cpu === point) {
+          acc.baseRate = curve[i];
+          acc.baseCpu = point;
+        } else if (cpu > point && cpu < points[i + 1]) {
+          acc.baseRate = curve[i];
+          acc.baseCpu = point;
+          acc.ratio = (curve[i + 1] - curve[i]) / (points[i + 1] - point);
+        }
+        return acc;
+      },
+      {baseRate: 0, baseCpu: 0, ratio: 0}
+    );
 
-    for (let i = 0; i < points.length; i++) {
-      if (cpu === points[i]) {
-        baseRate = curve[i];
-        baseCpu = points[i];
-        break;
-      } else if (cpu > points[i] && cpu < points[i + 1]) {
-        baseRate = curve[i];
-        baseCpu = points[i];
-        ratio = (curve[i + 1] - curve[i]) / (points[i + 1] - points[i]);
-        break;
-      }
-    }
-
-    return (baseRate + (cpu - baseCpu) * ratio) * this.tdp;
+    return (result.baseRate + (cpu - result.baseCpu) * result.ratio) * this.tdp;
   }
 
   /**

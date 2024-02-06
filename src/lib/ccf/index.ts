@@ -8,7 +8,7 @@ import {
   Interpolation,
   KeyValuePair,
   ModelParams,
-  IComputeInstance,
+  ComputeInstance,
 } from '../../types/common';
 
 import {allDefined, validate} from '../../util/validations';
@@ -28,7 +28,7 @@ import * as AZURE_EMBODIED from './azure-embodied.json';
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
 export class CloudCarbonFootprint implements ModelPluginInterface {
-  private computeInstances: Record<string, Record<string, IComputeInstance>> =
+  private computeInstances: Record<string, Record<string, ComputeInstance>> =
     {};
 
   private instanceUsage: KeyValuePair = {
@@ -385,7 +385,7 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
         vCPUs: cpus,
         consumption,
         maxvCPUs: parseInt(instance[maxvCPUs], 10),
-      } as IComputeInstance;
+      } as ComputeInstance;
     });
   }
 
