@@ -6,9 +6,13 @@ import * as AWS_EMBODIED from './aws-embodied.json';
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
-import {Interpolation, KeyValuePair, ModelParams} from '../../types/common';
+import {
+  Interpolation,
+  KeyValuePair,
+  ModelParams,
+  IComputeInstance,
+} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
-import {IComputeInstance} from '../../types';
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
