@@ -6,9 +6,10 @@ import {buildErrorMessage} from '../../util/helpers';
 
 import {KeyValuePair, ModelParams} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
-import {WattTimeAPI} from './watt-time-api';
 import {validate} from '../../util/validations';
+
 import {WattAuthType, WattTimeParams} from './types';
+import {WattTimeAPI} from './watt-time-api';
 
 const {InputValidationError} = ERRORS;
 

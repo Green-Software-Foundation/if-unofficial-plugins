@@ -95,8 +95,8 @@ export class WattTimeAPI {
   /**
    * Sorts the data based on the 'point_time' property in ascending order.
    */
-  private sortData(data: object[]) {
-    return data.sort((a: any, b: any) => {
+  private sortData<T extends {point_time: string}>(data: T[]) {
+    return data.sort((a: T, b: T) => {
       return dayjs(a.point_time).unix() > dayjs(b.point_time).unix() ? 1 : -1;
     });
   }
