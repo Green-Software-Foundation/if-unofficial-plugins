@@ -9,8 +9,8 @@ import {WattTimeParams, WattAuthType} from './types';
 const {AuthorizationError, APIRequestError} = ERRORS;
 
 export class WattTimeAPI {
-  private baseUrl: string = 'https://api2.watttime.org/v2';
-  private token: string = '';
+  private baseUrl = 'https://api2.watttime.org/v2';
+  private token = '';
 
   errorBuilder = buildErrorMessage(WattTimeAPI);
 

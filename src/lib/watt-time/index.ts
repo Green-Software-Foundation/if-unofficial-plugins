@@ -169,7 +169,7 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     startTime: string;
     fetchDuration: number;
   } {
-    let {startTime, endtime} = inputs.reduce(
+    const {startTime, endtime} = inputs.reduce(
       (acc, input) => {
         const {duration, timestamp} = input;
         const dayjsTimestamp = dayjs(timestamp);
