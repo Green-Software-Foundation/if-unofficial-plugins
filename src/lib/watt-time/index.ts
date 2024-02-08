@@ -1,118 +1,55 @@
-import axios from 'axios';
 import * as dayjs from 'dayjs';
+import {z} from 'zod';
 
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
 import {KeyValuePair, ModelParams} from '../../types/common';
 import {ModelPluginInterface} from '../../interfaces';
+import {validate} from '../../util/validations';
 
-const {AuthorizationError, InputValidationError, APIRequestError} = ERRORS;
+import {WattAuthType, WattTimeParams} from './types';
+import {WattTimeAPI} from './watt-time-api';
 
-interface WattTimeParams {
-  latitude: number;
-  longitude: number;
-  starttime: string;
-  endtime: dayjs.Dayjs;
-}
-
-interface LatitudeLongitude {
-  latitude: number;
-  longitude: number;
-}
+const {InputValidationError} = ERRORS;
 
 export class WattTimeGridEmissions implements ModelPluginInterface {
-  token = '';
-  staticParams: object | undefined;
-  baseUrl = 'https://api2.watttime.org/v2';
+  private wattTimeAPI = new WattTimeAPI();
   errorBuilder = buildErrorMessage(WattTimeGridEmissions);
 
-  async authenticate(authParams: object): Promise<void> {
-    this.token = 'token' in authParams ? (authParams['token'] as string) : '';
+  /**
+   * Configures the model with static parameters.
+   */
+  public async configure(staticParams: object): Promise<ModelPluginInterface> {
+    const extractedParams = this.extractParams(staticParams);
+    const safeStaticParams: WattAuthType = Object.assign(
+      staticParams,
+      this.validateStaticParams(extractedParams)
+    );
 
-    if (this.token.startsWith('ENV_')) {
-      this.token = process.env[this.token.slice(4)] ?? '';
-    }
+    await this.wattTimeAPI.authenticate(safeStaticParams);
 
-    if (this.token === '') {
-      // Extracting username and password from authParams
-      let username =
-        'username' in authParams ? (authParams['username'] as string) : '';
-      let password =
-        'password' in authParams ? (authParams['password'] as string) : '';
-
-      // if username or password is ENV_<env_var_name>, then extract the value from the environment variable
-      if (username.startsWith('ENV_')) {
-        username = process.env[username.slice(4)] ?? '';
-      }
-
-      if (password.startsWith('ENV_')) {
-        password = process.env[password.slice(4)] ?? '';
-      }
-
-      //  WattTime API requires username and password / token
-      if (username === '' || password === '') {
-        throw new AuthorizationError(
-          this.errorBuilder({
-            message: 'Missing username or password & token',
-            scope: 'authorization',
-          })
-        );
-      }
-
-      // Login to WattTime API to get a token
-      const tokenResponse = await axios.get(`${this.baseUrl}/login`, {
-        auth: {
-          username,
-          password,
-        },
-      });
-
-      if (
-        tokenResponse === undefined ||
-        tokenResponse.data === undefined ||
-        !('token' in tokenResponse.data)
-      ) {
-        throw new AuthorizationError(
-          this.errorBuilder({
-            message: 'Missing token in response. Invalid credentials provided.',
-            scope: 'authorization',
-          })
-        );
-      }
-
-      this.token = tokenResponse.data.token;
-    }
+    return this;
   }
 
-  async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-    // validate inputs for location data + timestamp + duration
-    this.validateinputs(inputs);
-    // determine the earliest start and total duration of all input blocks
-    const {startTime, fetchDuration} = this.determineinputStartEnd(inputs);
+  /**
+   * Calculates the average emission.
+   */
+  public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
+    this.validateInputs(inputs);
 
-    /**
-     * Fetch data from WattTime API for the entire duration
-     * @todo Check watt time data should be fetched for each input or not.
-     */
-    const wattimedata = await this.fetchData({
-      ...inputs[0],
-      timestamp: startTime.format(),
-      duration: fetchDuration,
-    });
+    const wattTimeData = await this.getWattTimeData(inputs);
 
-    // for each input block, calculate the average emission
     return inputs.map((input, index) => {
       const inputStart = dayjs(input.timestamp);
       const inputEnd = inputStart.add(input.duration, 'seconds');
-      const {datapoints, data} = this.getWattTimeDataForDuration(
-        wattimedata,
+      const data = this.getWattTimeDataForDuration(
+        wattTimeData,
         inputStart,
         inputEnd
       );
-      const emissionSum = data.reduce((a: number, b: number) => a + b, 0);
 
-      if (datapoints === 0) {
+      if (data.length === 0) {
         throw new InputValidationError(
           this.errorBuilder({
             message: `Did not receive data from WattTime API for the input[${index}] block`,
@@ -120,50 +57,46 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
         );
       }
 
-      input['grid-carbon-intensity'] = emissionSum / datapoints;
+      const totalEmission = data.reduce((a: number, b: number) => a + b, 0);
+      input['grid-carbon-intensity'] = totalEmission / data.length;
 
       return input;
     });
   }
 
+  /**
+   * lbs/MWh to Kg/MWh by dividing by 0.453592 (0.453592 Kg/lbs)
+   * (Kg/MWh == g/kWh)
+   * convert to kg/KWh by dividing by 1000. (1MWh = 1000KWh)
+   * convert to g/KWh by multiplying by 1000. (1Kg = 1000g)
+   * hence each other cancel out and g/KWh is the same as kg/MWh
+   */
   private getWattTimeDataForDuration(
-    wattimedata: KeyValuePair[],
+    wattTimeData: KeyValuePair[],
     inputStart: dayjs.Dayjs,
     inputEnd: dayjs.Dayjs
-  ): {datapoints: number; data: number[]} {
-    let datapoints = 0;
+  ) {
+    const kgMWh = 0.45359237;
 
-    const data = wattimedata.map((data: KeyValuePair) => {
-      // WattTime API returns full data for the entire duration.
-      // if the data point is before the input start, ignore it
-      if (dayjs(data.point_time).isBefore(inputStart)) {
-        return 0;
-      }
-      // if the data point is after the input end, ignore it.
-      // if the data point is exactly the same as the input end, ignore it
+    return wattTimeData.reduce((accumulator, data) => {
       if (
-        dayjs(data.point_time).isAfter(inputEnd) ||
-        dayjs(data.point_time).format() === dayjs(inputEnd).format()
+        !dayjs(data.point_time).isBefore(inputStart) &&
+        !dayjs(data.point_time).isAfter(inputEnd) &&
+        dayjs(data.point_time).format() !== dayjs(inputEnd).format()
       ) {
-        return 0;
+        accumulator.push(data.value / kgMWh);
       }
-      // lbs/MWh to Kg/MWh by dividing by 0.453592 (0.453592 Kg/lbs)
-      // (Kg/MWh == g/kWh)
-      // convert to kg/KWh by dividing by 1000. (1MWh = 1000KWh)
-      // convert to g/KWh by multiplying by 1000. (1Kg = 1000g)
-      // hence each other cancel out and g/KWh is the same as kg/MWh
-      const grid_emission = data.value / 0.45359237;
-      datapoints += 1;
-      return grid_emission;
-    });
-
-    return {datapoints, data};
+      return accumulator;
+    }, []);
   }
 
-  private validateinputs(inputs: ModelParams[]) {
-    inputs.forEach((input: ModelParams, index) => {
+  /**
+   * Validates inputs for location, latitude and longitude.
+   */
+  private validateInputs(inputs: ModelParams[]) {
+    inputs.forEach((input, index) => {
       if ('location' in input) {
-        const {latitude, longitude} = this.getLatitudeLongitudeFrominput(input);
+        const {latitude, longitude} = this.parseLocation(input);
 
         if (isNaN(latitude) || isNaN(longitude)) {
           throw new InputValidationError(
@@ -176,141 +109,134 @@ export class WattTimeGridEmissions implements ModelPluginInterface {
     });
   }
 
-  private getLatitudeLongitudeFrominput(input: ModelParams): LatitudeLongitude {
-    const location = input['location'].split(','); //split location into latitude and longitude
-    if (location.length !== 2) {
-      throw new InputValidationError(
-        this.errorBuilder({
+  /**
+   * Parses the location string from the input data to extract latitude and longitude.
+   * Throws an InputValidationError if the location string is invalid.
+   */
+  private parseLocation(input: ModelParams): {
+    latitude: number;
+    longitude: number;
+  } {
+    const safeInput = Object.assign(input, this.validateSingleInput(input));
+    const [latitude, longitude] = safeInput['location'].split(',');
+
+    return {latitude: parseFloat(latitude), longitude: parseFloat(longitude)};
+  }
+
+  /**
+   * Validates single input.
+   */
+  private validateSingleInput(input: ModelParams) {
+    const schema = z.object({
+      location: z
+        .string()
+        .regex(new RegExp('^\\d{1,3}\\.\\d+,-\\d{1,3}\\.\\d+$'), {
           message:
             "'location' should be a comma separated string of 'latitude' and 'longitude'",
-        })
-      );
-    }
-
-    if (location[0] === '' || location[1] === '') {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message: "'latitude' or 'longitude' is missing",
-        })
-      );
-    }
-
-    if (location[0] === '0' || location[1] === '0') {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message: "'latitude' or 'longitude' is missing",
-        })
-      );
-    }
-
-    const latitude = parseFloat(location[0]); //convert latitude to float
-    const longitude = parseFloat(location[1]); //convert longitude to float
-
-    return {latitude, longitude};
-  }
-
-  private determineinputStartEnd(inputs: ModelParams[]): {
-    startTime: dayjs.Dayjs;
-    fetchDuration: number;
-  } {
-    let starttime = dayjs('9999-12-31'); // largest possible start time
-    let endtime = dayjs('1970-01-01'); // smallest possible end time
-
-    inputs.forEach((input: ModelParams) => {
-      const duration = input.duration;
-      // if the input timestamp is before the current starttime, set it as the new starttime
-      starttime = dayjs(input.timestamp).isBefore(starttime)
-        ? dayjs(input.timestamp)
-        : starttime;
-      // if the input timestamp + duration is after the current endtime, set it as the new endtime
-      endtime = dayjs(input.timestamp).add(duration, 'seconds').isAfter(endtime)
-        ? dayjs(input.timestamp).add(duration, 'seconds')
-        : endtime;
+        }),
     });
 
-    const fetchDuration = endtime.diff(starttime, 'seconds');
-
-    // WattTime API only supports up to 32 days
-    if (fetchDuration > 32 * 24 * 60 * 60 /** 32 days */) {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message:
-            'WattTime API supports up to 32 days. Duration' +
-            ` of ${fetchDuration} seconds is too long`,
-        })
-      );
-    }
-
-    return {startTime: starttime, fetchDuration};
+    return validate<z.infer<typeof schema>>(schema, input);
   }
 
-  async fetchData(input: ModelParams): Promise<KeyValuePair[]> {
-    const duration = input.duration;
+  /**
+   * Retrieves data from the WattTime API based on the provided inputs.
+   * Determines the start time and fetch duration from the inputs, and parses the location.
+   * Fetches data from the WattTime API for the entire duration and returns the sorted data.
+   */
+  private async getWattTimeData(inputs: ModelParams[]) {
+    const {startTime, fetchDuration} = this.calculateStartDurationTime(inputs);
 
-    const {latitude, longitude} = this.getLatitudeLongitudeFrominput(input);
+    const {latitude, longitude} = this.parseLocation(inputs[0]);
 
     const params: WattTimeParams = {
       latitude: latitude,
       longitude: longitude,
-      starttime: dayjs(input.timestamp).format('YYYY-MM-DDTHH:mm:ssZ'),
-      endtime: dayjs(input.timestamp).add(duration, 'seconds'),
+      starttime: dayjs(startTime).format('YYYY-MM-DDTHH:mm:ssZ'),
+      endtime: dayjs(startTime).add(fetchDuration, 'seconds'),
     };
 
-    const result = await axios
-      .get(`${this.baseUrl}/data`, {
-        params,
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-        },
-      })
-      .catch(error => {
-        throw new APIRequestError(
-          this.errorBuilder({
-            message: `Error fetching data from WattTime API. ${JSON.stringify(
-              error
-            )}`,
-          })
-        );
-      });
-
-    if (result.status !== 200) {
-      throw new APIRequestError(
-        this.errorBuilder({
-          message: `Error fetching data from WattTime API: ${JSON.stringify(
-            result.status
-          )}`,
-        })
-      );
-    }
-
-    if (!('data' in result) || !Array.isArray(result.data)) {
-      throw new APIRequestError(
-        this.errorBuilder({
-          message: 'Invalid response from WattTime API',
-        })
-      );
-    }
-
-    return result.data.sort((a: any, b: any) => {
-      return dayjs(a.point_time).unix() > dayjs(b.point_time).unix() ? 1 : -1;
-    });
+    return await this.wattTimeAPI.fetchAndSortData(params);
   }
 
-  async configure(
-    staticParams: object | undefined
-  ): Promise<ModelPluginInterface> {
-    this.staticParams = staticParams;
+  /**
+   * Calculates the start time and fetch duration based on the provided inputs.
+   * Iterates through the inputs to find the earliest start time and latest end time.
+   * Calculates the fetch duration based on the time range.
+   * Throws an InputValidationError if the fetch duration exceeds the maximum supported by the WattTime API.
+   *
+   */
+  private calculateStartDurationTime(inputs: ModelParams[]): {
+    startTime: string;
+    fetchDuration: number;
+  } {
+    const {startTime, endtime} = inputs.reduce(
+      (acc, input) => {
+        const {duration, timestamp} = input;
+        const dayjsTimestamp = dayjs(timestamp);
+        const startTime = dayjsTimestamp.isBefore(acc.startTime)
+          ? dayjsTimestamp
+          : acc.startTime;
+        const durationInSeconds = dayjsTimestamp.add(duration, 'seconds');
+        const endTime = durationInSeconds.isAfter(acc.endtime)
+          ? durationInSeconds
+          : acc.endtime;
 
-    if (!staticParams) {
-      throw new Error('Missing staticParams');
+        return {startTime: startTime, endtime: endTime};
+      },
+      {startTime: dayjs('9999-12-31'), endtime: dayjs('1970-01-01')}
+    );
+
+    const fetchDuration = endtime.diff(startTime, 'seconds');
+
+    // WattTime API only supports up to 32 days
+    if (fetchDuration > 32 * 24 * 60 * 60) {
+      throw new InputValidationError(
+        this.errorBuilder({
+          message: `WattTime API supports up to 32 days. Duration of ${fetchDuration} seconds is too long`,
+        })
+      );
     }
 
-    await this.authenticate(staticParams);
+    return {startTime: startTime.format(), fetchDuration};
+  }
 
-    if ('baseUrl' in staticParams) {
-      this.baseUrl = staticParams['baseUrl'] as string;
-    }
+  /**
+   * Validates static parameters.
+   */
+  private validateStaticParams(staticParams: object) {
+    const schema = z.object({
+      username: z.string(),
+      password: z.string(),
+      token: z.string().optional(),
+      baseUrl: z.string().optional(),
+    });
 
-    return this;
+    return validate<z.infer<typeof schema>>(schema, staticParams);
+  }
+
+  /**
+   * Extracts username, password, and token from the provided static parameters.
+   * Removes the 'ENV_' prefix from the parameters if present.
+   */
+  private extractParams(staticParams: object) {
+    const username: string =
+      'username' in staticParams ? (staticParams['username'] as string) : '';
+    const password: string =
+      'password' in staticParams ? (staticParams['password'] as string) : '';
+    const token: string =
+      'token' in staticParams ? (staticParams['token'] as string) : '';
+
+    [username, password, token].map(item => this.removeENVPrefix(item));
+
+    return Object.assign(staticParams, username, password, token);
+  }
+
+  /**
+   * Removes the 'ENV_' prefix from the provided string if present and retrieves the corresponding environment variable value.
+   * If the string does not start with 'ENV_', returns an empty string.
+   */
+  private removeENVPrefix(item: string) {
+    return item.startsWith('ENV_') && (process.env[item.slice(4)] ?? '');
   }
 }
