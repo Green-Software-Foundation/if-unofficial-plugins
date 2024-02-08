@@ -16,7 +16,7 @@ export enum Interpolation {
 /**
  * Consumption information for a single instance.
  */
-type IConsumption = {
+type Consumption = {
   idle: number;
   tenPercent: number;
   fiftyPercent: number;
@@ -28,8 +28,8 @@ type IConsumption = {
 /**
  * Information about a single compute instance.
  */
-export type IComputeInstance = {
-  consumption: IConsumption;
+export type ComputeInstance = {
+  consumption: Consumption;
   embodiedEmission: number;
   name: string;
   vCPUs: number;
