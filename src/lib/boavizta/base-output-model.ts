@@ -20,7 +20,7 @@ export abstract class BoaviztaBaseOutputModel<U>
   protected authCredentials?: object;
   protected boaviztaAPI: BoaviztaAPI = new BoaviztaAPI();
 
-  errorBuilder = buildErrorMessage(this.constructor); //TODO: send name after all models are refactored
+  errorBuilder = buildErrorMessage(this.constructor.name);
 
   /**
    * Authenticates the model with provided authentication parameters.

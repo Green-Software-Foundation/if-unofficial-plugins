@@ -15,7 +15,7 @@ const {InputValidationError} = ERRORS;
 
 export class WattTimeGridEmissions implements ModelPluginInterface {
   private wattTimeAPI = new WattTimeAPI();
-  errorBuilder = buildErrorMessage(WattTimeGridEmissions);
+  errorBuilder = buildErrorMessage(this.constructor.name);
 
   /**
    * Configures the model with static parameters.

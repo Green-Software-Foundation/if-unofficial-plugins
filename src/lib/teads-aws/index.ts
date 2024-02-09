@@ -24,7 +24,7 @@ export class TeadsAWS implements ModelPluginInterface {
   private expectedLifespan = 4 * 365 * 24 * 3600;
   private interpolation = Interpolation.LINEAR;
 
-  errorBuilder = buildErrorMessage(this.constructor); //TODO: send the name
+  errorBuilder = buildErrorMessage(this.constructor.name);
 
   constructor() {
     this.standardizeInstanceMetrics();

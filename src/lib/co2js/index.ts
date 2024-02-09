@@ -14,7 +14,7 @@ export class Co2jsModel implements ModelPluginInterface {
   staticParams: KeyValuePair = {};
   model: any | undefined;
 
-  errorBuilder = buildErrorMessage(this.constructor);
+  errorBuilder = buildErrorMessage(this.constructor.name);
 
   /**
    * Configures the model with static parameters.

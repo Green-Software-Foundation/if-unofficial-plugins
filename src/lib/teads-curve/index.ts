@@ -14,7 +14,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
   private tdp = 0;
   private interpolation: Interpolation = Interpolation.SPLINE;
 
-  errorBuilder = buildErrorMessage(TeadsCurveModel);
+  errorBuilder = buildErrorMessage(this.constructor.name);
 
   /**
    * Configures the TEADS Plugin for IEF.
