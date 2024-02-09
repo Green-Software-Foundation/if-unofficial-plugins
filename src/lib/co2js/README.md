@@ -83,10 +83,10 @@ This impl is run using `impact-engine` using the following command, run from the
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-models
-impact-engine --impl ./examples/impls/test/co2js-test.yml --ompl ./examples/ompls/co2js-test.yml
+impact-engine --impl ./examples/impls/test/co2js.yml --ompl ./examples/ompls/co2js.yml
 ```
 
-This yields a result that looks like the following (saved to `/ompls/co2js-test.yml`):
+This yields a result that looks like the following (saved to `/ompls/co2js.yml`):
 
 ```yaml
 name: co2js-demo

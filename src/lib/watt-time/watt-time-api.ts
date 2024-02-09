@@ -12,7 +12,7 @@ export class WattTimeAPI {
   private baseUrl = 'https://api2.watttime.org/v2';
   private token = '';
 
-  errorBuilder = buildErrorMessage(WattTimeAPI);
+  errorBuilder = buildErrorMessage(this.constructor.name);
 
   /**
    * Authenticates the user with the WattTime API using the provided authentication parameters.

@@ -42,7 +42,7 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
   private expectedLifespan = 4;
   private interpolation = Interpolation.LINEAR;
 
-  errorBuilder = buildErrorMessage(CloudCarbonFootprint);
+  errorBuilder = buildErrorMessage(this.constructor.name);
 
   /**
    * Constructor initializes and standardizes instance metrics
