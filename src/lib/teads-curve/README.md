@@ -104,10 +104,10 @@ graph:
           cpu-util: 50
 ```
 
-You can run this by passing it to `impact-engine`. Run impact using the following command run from the project root:
+You can run this by passing it to `if`. Run impact using the following command run from the project root:
 
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-impact-engine --impl ./examples/impls/test/teads-cpu.yml --ompl ./examples/ompls/teads-cpu.yml
+if --impl ./examples/impls/test/teads-cpu.yml --ompl ./examples/ompls/teads-cpu.yml
 ```
