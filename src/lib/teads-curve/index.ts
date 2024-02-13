@@ -1,21 +1,23 @@
 import Spline from 'typescript-cubic-spline';
 import {z} from 'zod';
 
-import {ERRORS} from '../../util/errors';
-import {buildErrorMessage} from '../../util/helpers';
-
+import {PluginInterface} from '../../interfaces';
 import {Interpolation, PluginParams} from '../../types';
+import {mapPluginName} from '../../types/helpers';
 
+import {buildErrorMessage} from '../../util/helpers';
 import {validate} from '../../util/validations';
+import {ERRORS} from '../../util/errors';
 
 import {DefaultsParams} from './types';
 
 const {InputValidationError} = ERRORS;
 
-export const TeadsCurve = (defaults?: DefaultsParams) => {
+export const TeadsCurve = (): PluginInterface => {
   const CURVE: number[] = [0.12, 0.32, 0.75, 1.02];
   const POINTS: number[] = [0, 10, 50, 100];
   const errorBuilder = buildErrorMessage(TeadsCurve.name);
+  const MAPPED_NAME = mapPluginName(TeadsCurve.name);
   const metadata = {
     kind: 'execute',
   };
@@ -23,17 +25,24 @@ export const TeadsCurve = (defaults?: DefaultsParams) => {
   /**
    * Calculate the total emissions for a list of inputs.
    */
-  const execute = async (inputs: PluginParams[]): Promise<PluginParams[]> => {
-    return inputs.map((input, index) => {
-      const validatedParams: DefaultsParams = getValidatedParams(
-        defaults || input
-      );
+  const execute = async (
+    inputs: PluginParams[],
+    config?: Record<string, any>
+  ): Promise<PluginParams[]> => {
+    const mappedConfig = config && config[MAPPED_NAME];
 
-      const safeInput = Object.assign({}, input, validateInput(input));
-      const energy = calculateEnergyForInput(safeInput, validatedParams, index);
+    return inputs.map((input, index) => {
+      const inputWithConfig: PluginParams = Object.assign(
+        {},
+        input,
+        mappedConfig
+      );
+      const validatedParams: DefaultsParams =
+        getValidatedParams(inputWithConfig);
+      const energy = calculateEnergyForInput(input, validatedParams, index);
 
       return {
-        ...safeInput,
+        ...input,
         'energy-cpu': energy,
       };
     });
@@ -151,21 +160,11 @@ export const TeadsCurve = (defaults?: DefaultsParams) => {
   };
 
   /**
-   * Validate input fields.
-   */
-  const validateInput = (input: PluginParams) => {
-    const schema = z.object({
-      'cpu-util': z.number().min(0).max(100),
-    });
-
-    return validate<z.infer<typeof schema>>(schema, input);
-  };
-
-  /**
    * Validates parameters.
    */
   const validateParams = (params: object) => {
     const schema = z.object({
+      'cpu-util': z.number().min(0).max(100),
       'thermal-design-power': z.number().min(1),
       interpolation: z.nativeEnum(Interpolation).optional(),
     });

@@ -21,18 +21,23 @@ describe('lib/teads-curve: ', () => {
 
     describe('execute(): ', () => {
       it('returns a result with valid data.', async () => {
-        const teadsCurve = TeadsCurve({
-          'thermal-design-power': 200,
-        });
+        const teadsCurve = TeadsCurve();
         const inputs = [
           {
+            timestamp: '2021-01-01T00:00:00Z',
             duration: 3600,
             'cpu-util': 50.0,
-            timestamp: '2021-01-01T00:00:00Z',
           },
         ];
-        const result = await teadsCurve.execute(inputs);
+        const config = {
+          'teads-curve': {
+            'thermal-design-power': 200,
+          },
+        };
+        const result = await teadsCurve.execute(inputs, config);
+
         expect.assertions(1);
+
         expect(result).toStrictEqual([
           {
             'energy-cpu': 0.15,
@@ -43,9 +48,7 @@ describe('lib/teads-curve: ', () => {
         ]);
       });
       it('returns a result with provided `vcpus` data.', async () => {
-        const teadsCurve = TeadsCurve({
-          'thermal-design-power': 200,
-        });
+        const teadsCurve = TeadsCurve();
         const inputs = [
           {
             duration: 3600,
@@ -55,7 +58,12 @@ describe('lib/teads-curve: ', () => {
             'vcpus-total': 64,
           },
         ];
-        const result = await teadsCurve.execute(inputs);
+        const config = {
+          'teads-curve': {
+            'thermal-design-power': 200,
+          },
+        };
+        const result = await teadsCurve.execute(inputs, config);
         expect.assertions(1);
         expect(result).toStrictEqual([
           {
@@ -71,9 +79,7 @@ describe('lib/teads-curve: ', () => {
     });
 
     it('returns a result when the `interpolation` has `spline` value.', async () => {
-      const teadsCurve = TeadsCurve({
-        'thermal-design-power': 300,
-      });
+      const teadsCurve = TeadsCurve();
       const inputs = [
         {
           duration: 3600,
@@ -91,7 +97,12 @@ describe('lib/teads-curve: ', () => {
           timestamp: '2021-01-01T00:00:00Z',
         },
       ];
-      const result = await teadsCurve.execute(inputs);
+      const config = {
+        'teads-curve': {
+          'thermal-design-power': 300,
+        },
+      };
+      const result = await teadsCurve.execute(inputs, config);
 
       expect.assertions(1);
 
@@ -118,10 +129,7 @@ describe('lib/teads-curve: ', () => {
     });
 
     it('returns a result when the `interpolation` has `linear` value.', async () => {
-      const teadsCurve = TeadsCurve({
-        'thermal-design-power': 300,
-        interpolation: Interpolation.LINEAR,
-      });
+      const teadsCurve = TeadsCurve();
       const inputs = [
         {
           duration: 3600,
@@ -154,7 +162,13 @@ describe('lib/teads-curve: ', () => {
           timestamp: '2021-01-01T00:00:00Z',
         },
       ];
-      const result = await teadsCurve.execute(inputs);
+      const config = {
+        'teads-curve': {
+          'thermal-design-power': 300,
+          interpolation: Interpolation.LINEAR,
+        },
+      };
+      const result = await teadsCurve.execute(inputs, config);
 
       expect.assertions(1);
 
@@ -200,10 +214,7 @@ describe('lib/teads-curve: ', () => {
     });
 
     it('returns a result when the `vcpus-allocated` is a number.', async () => {
-      const teadsCurve = TeadsCurve({
-        'thermal-design-power': 300,
-        interpolation: Interpolation.LINEAR,
-      });
+      const teadsCurve = TeadsCurve();
 
       const inputs = [
         {
@@ -216,14 +227,20 @@ describe('lib/teads-curve: ', () => {
       ];
 
       expect.assertions(1);
-      const result = await teadsCurve.execute(inputs);
+
+      const config = {
+        'teads-curve': {
+          'thermal-design-power': 300,
+          interpolation: Interpolation.LINEAR,
+        },
+      };
+      const result = await teadsCurve.execute(inputs, config);
 
       expect(result).toStrictEqual([
         {
           duration: 3600,
           'cpu-util': 10.0,
           timestamp: '2021-01-01T00:00:00Z',
-
           'vcpus-allocated': 1,
           'vcpus-total': 64,
           'energy-cpu': 0.0015,
@@ -232,10 +249,7 @@ describe('lib/teads-curve: ', () => {
     });
 
     it('returns a result when the `vcpus-allocated` is a string.', async () => {
-      const teadsCurve = TeadsCurve({
-        'thermal-design-power': 300,
-        interpolation: Interpolation.LINEAR,
-      });
+      const teadsCurve = TeadsCurve();
 
       const inputs = [
         {
@@ -247,7 +261,13 @@ describe('lib/teads-curve: ', () => {
         },
       ];
 
-      const result = await teadsCurve.execute(inputs);
+      const config = {
+        'teads-curve': {
+          'thermal-design-power': 300,
+          interpolation: Interpolation.LINEAR,
+        },
+      };
+      const result = await teadsCurve.execute(inputs, config);
 
       expect.assertions(1);
 
@@ -293,10 +313,7 @@ describe('lib/teads-curve: ', () => {
     });
 
     it('throws an error when the `vcpus-allocated` is in wrong type.', async () => {
-      const teadsCurve = TeadsCurve({
-        'thermal-design-power': 300,
-        interpolation: Interpolation.LINEAR,
-      });
+      const teadsCurve = TeadsCurve();
 
       const inputs = [
         {
@@ -307,11 +324,17 @@ describe('lib/teads-curve: ', () => {
           timestamp: '2021-01-01T00:00:00Z',
         },
       ];
+      const config = {
+        'teads-curve': {
+          'thermal-design-power': 300,
+          interpolation: Interpolation.LINEAR,
+        },
+      };
 
       expect.assertions(2);
 
       try {
-        await teadsCurve.execute(inputs);
+        await teadsCurve.execute(inputs, config);
       } catch (error) {
         expect(error).toBeInstanceOf(InputValidationError);
         expect(error).toEqual(
@@ -325,7 +348,7 @@ describe('lib/teads-curve: ', () => {
     it('throws an error when the `thermal-design-power` is not provided in the input and config.', async () => {
       const teadsCurve = TeadsCurve();
       const errorMessage =
-        '"thermal-design-power" parameter is required. Error code: invalid_type.';
+        '"cpu-util" parameter is required. Error code: invalid_type.,"thermal-design-power" parameter is required. Error code: invalid_type.';
 
       expect.assertions(2);
 
@@ -345,19 +368,25 @@ describe('lib/teads-curve: ', () => {
     it('throws an error when the `cpu-util` is not provided in the input.', async () => {
       const errorMessage =
         '"cpu-util" parameter is required. Error code: invalid_type.';
-      const teadsCurve = TeadsCurve({
-        'thermal-design-power': 300,
-      });
+      const teadsCurve = TeadsCurve();
+      const config = {
+        'teads-curve': {
+          'thermal-design-power': 300,
+        },
+      };
 
       expect.assertions(2);
 
       try {
-        await teadsCurve.execute([
-          {
-            duration: 3600,
-            timestamp: '2021-01-01T00:00:00Z',
-          },
-        ]);
+        await teadsCurve.execute(
+          [
+            {
+              duration: 3600,
+              timestamp: '2021-01-01T00:00:00Z',
+            },
+          ],
+          config
+        );
       } catch (error) {
         expect(error).toBeInstanceOf(InputValidationError);
         expect(error).toEqual(new InputValidationError(errorMessage));
@@ -367,19 +396,25 @@ describe('lib/teads-curve: ', () => {
     it('throws an error when the `cpu-util` is out of the range 0-100.', async () => {
       const errorMessage =
         '"cpu-util" parameter is number must be less than or equal to 100. Error code: too_big.';
-      const teadsCurve = TeadsCurve({
-        'thermal-design-power': 300,
-      });
+      const teadsCurve = TeadsCurve();
+      const config = {
+        'teads-curve': {
+          'thermal-design-power': 300,
+        },
+      };
 
       expect.assertions(2);
       try {
-        await teadsCurve.execute([
-          {
-            duration: 3600,
-            timestamp: '2021-01-01T00:00:00Z',
-            'cpu-util': 105,
-          },
-        ]);
+        await teadsCurve.execute(
+          [
+            {
+              duration: 3600,
+              timestamp: '2021-01-01T00:00:00Z',
+              'cpu-util': 105,
+            },
+          ],
+          config
+        );
       } catch (error) {
         expect(error).toBeInstanceOf(InputValidationError);
         expect(error).toEqual(new InputValidationError(errorMessage));
