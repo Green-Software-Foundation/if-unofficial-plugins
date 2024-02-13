@@ -68,17 +68,22 @@ Resulting values are an estimate based on the testing done by Teads' Engineering
 ```typescript
 import {TeadsCurve, Interpolation} from '@grnsft/if-unofficial-plugins';
 
-const teads = TeadsCurve({
-  tdp: 100, // TDP of the CPU
-  interpolation: Interpolation.SPLINE,
-});
-const results = teads.execute([
+const teads = TeadsCurve();
+const results = teads.execute(
+  [
+    {
+      duration: 3600, // duration institute
+      cpu: 100, // CPU usage as a value between 0 to 100 in percentage
+      datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    },
+  ],
   {
-    duration: 3600, // duration institute
-    cpu: 100, // CPU usage as a value between 0 to 100 in percentage
-    datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
-  },
-]);
+    'teads-curve': {
+      tdp: 100, // TDP of the CPU
+      interpolation: Interpolation.SPLINE,
+    },
+  }
+);
 ```
 
 ## Example `impl`
@@ -89,7 +94,7 @@ description: simple demo invoking teads-curve
 tags:
 initialize:
   plugins:
-    - teads-curve
+    teads-curve:
       function: TeadsCurve
       path: '@grnsft/if-unofficial-plugins'
 graph:
