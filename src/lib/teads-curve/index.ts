@@ -2,22 +2,19 @@ import Spline from 'typescript-cubic-spline';
 import {z} from 'zod';
 
 import {PluginInterface} from '../../interfaces';
-import {Interpolation, PluginParams} from '../../types';
-import {mapPluginName} from '../../types/helpers';
+import {Interpolation, PluginParams, ConfigParams} from '../../types';
 
 import {buildErrorMessage} from '../../util/helpers';
 import {validate} from '../../util/validations';
 import {ERRORS} from '../../util/errors';
 
-import {DefaultsParams} from './types';
-
 const {InputValidationError} = ERRORS;
 
-export const TeadsCurve = (): PluginInterface => {
+export const TeadsCurve = (globalConfig?: ConfigParams): PluginInterface => {
   const CURVE: number[] = [0.12, 0.32, 0.75, 1.02];
   const POINTS: number[] = [0, 10, 50, 100];
   const errorBuilder = buildErrorMessage(TeadsCurve.name);
-  const MAPPED_NAME = mapPluginName(TeadsCurve.name);
+
   const metadata = {
     kind: 'execute',
   };
@@ -27,23 +24,24 @@ export const TeadsCurve = (): PluginInterface => {
    */
   const execute = async (
     inputs: PluginParams[],
-    config?: Record<string, any>
+    config?: ConfigParams
   ): Promise<PluginParams[]> => {
-    const mappedConfig = config && config[MAPPED_NAME];
+    const mergedConfig = Object.assign({}, globalConfig, config);
+    const validatedConfig = validateConfig(mergedConfig);
 
     return inputs.map((input, index) => {
+      const safeInput = getValidatedInput(input);
       const inputWithConfig: PluginParams = Object.assign(
         {},
         input,
-        mappedConfig
+        safeInput,
+        validatedConfig
       );
-      const validatedParams: DefaultsParams =
-        getValidatedParams(inputWithConfig);
-      const energy = calculateEnergyForInput(input, validatedParams, index);
+      const energy = calculateEnergyForInput(inputWithConfig, index);
 
       return {
         ...input,
-        'energy-cpu': energy,
+        'cpu/energy': energy,
       };
     });
   };
@@ -53,10 +51,9 @@ export const TeadsCurve = (): PluginInterface => {
    */
   const calculateEnergyForInput = (
     input: PluginParams,
-    validatedParams: DefaultsParams,
     index: number
   ): number => {
-    const energyWithoutAllocation = calculateEnergy(input, validatedParams);
+    const energyWithoutAllocation = calculateEnergy(input);
 
     const total = parseNumericField(input, 'vcpus-total', index);
     const allocated = parseNumericField(input, 'vcpus-allocated', index);
@@ -82,19 +79,16 @@ export const TeadsCurve = (): PluginInterface => {
    * Wh / 1000 = kWh
    * (wattage * duration) / (seconds in an hour) / 1000 = kWh
    */
-  const calculateEnergy = (
-    input: PluginParams,
-    validatedParams: DefaultsParams
-  ) => {
-    const {duration, 'cpu-util': cpu} = input;
+  const calculateEnergy = (input: PluginParams) => {
+    const {duration, 'cpu/utilization': cpu} = input;
     const spline: any = new Spline(POINTS, CURVE);
 
     const wattage =
-      validatedParams.interpolation === Interpolation.SPLINE
-        ? spline.at(cpu) * validatedParams['thermal-design-power']
+      input.interpolation === Interpolation.SPLINE
+        ? spline.at(cpu) * input['cpu/thermal-design-power']
         : calculateLinearInterpolationWattage(
             cpu,
-            validatedParams['thermal-design-power']
+            input['cpu/thermal-design-power']
           );
 
     return (wattage * duration) / 3600 / 1000;
@@ -160,13 +154,26 @@ export const TeadsCurve = (): PluginInterface => {
   };
 
   /**
+   * Validates config params.
+   */
+  const validateConfig = (config: ConfigParams) => {
+    const schema = z.object({
+      interpolation: z.nativeEnum(Interpolation).optional(),
+    });
+
+    //Manually add default value
+    config.interpolation = config.interpolation ?? Interpolation.SPLINE;
+
+    return validate<z.infer<typeof schema>>(schema, config);
+  };
+
+  /**
    * Validates parameters.
    */
   const validateParams = (params: object) => {
     const schema = z.object({
-      'cpu-util': z.number().min(0).max(100),
-      'thermal-design-power': z.number().min(1),
-      interpolation: z.nativeEnum(Interpolation).optional(),
+      'cpu/utilization': z.number().min(0).max(100),
+      'cpu/thermal-design-power': z.number().min(1),
     });
 
     return validate<z.infer<typeof schema>>(schema, params);
@@ -175,12 +182,12 @@ export const TeadsCurve = (): PluginInterface => {
   /**
    * Sets validated parameters for the class instance.
    */
-  const getValidatedParams = (params: object): DefaultsParams => {
+  const getValidatedInput = (params: object) => {
     const safeParams = Object.assign({}, params, validateParams(params));
 
     return {
-      'thermal-design-power': safeParams['thermal-design-power'] ?? 0,
-      interpolation: safeParams.interpolation ?? Interpolation.SPLINE,
+      'cpu/thermal-design-power': safeParams['cpu/thermal-design-power'] ?? 0,
+      'cpu/utilization': safeParams['cpu/utilization'],
     };
   };
 

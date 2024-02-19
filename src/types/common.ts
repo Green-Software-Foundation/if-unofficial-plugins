@@ -41,3 +41,5 @@ export type ComputeInstance = {
   vCPUs: number;
   maxvCPUs: number;
 };
+
+export type ConfigParams = Record<string, any>;

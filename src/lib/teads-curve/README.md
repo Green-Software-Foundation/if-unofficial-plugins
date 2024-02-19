@@ -12,16 +12,16 @@ IF recognizes the Teads CPU plugin as `teads-curve`.
 
 ### Plugin config
 
-- `thermal-design-power`: the TDp of the processor
+- `cpu/thermal-design-power`: the TDp of the processor
 - `interpolation`: the interpolation method to apply to the TDP data
 
 ### Inputs
 
-- `cpu-util`: percentage CPU utilization for the input
+- `cpu/utilization`: percentage CPU utilization for the input
 
 ## Returns
 
-- `energy-cpu`: The energy used by the CPU, in kWh
+- `cpu/energy`: The energy used by the CPU, in kWh
 
 > **Note** If `vcpus-allocated` and `vcpus-total` are available, these data will be used to scale the CPU energy usage. If they are not present, we assume the entire processor is being used. For example, if only 1 out of 64 available vCPUS are allocated, we scale the processor TDP by 1/64.
 
@@ -35,7 +35,7 @@ The power curve provided for `IDLE`, `10%`, `50%`, `100%` in the Teads Curve are
 
 The algorithm in linear interpolation will take the lowest possible base value + linear interpolated value. ie. 75% usage will be calculated as follows.
 `100%` and `50%` are the known values hence we are interpolating linearly between them.
-(`50%` + `(100%-50%)` `x` `(75%-50%))` `x` `thermal-design-power`.
+(`50%` + `(100%-50%)` `x` `(75%-50%))` `x` `cpu/thermal-design-power`.
 
 #### Example
 
@@ -43,12 +43,12 @@ The algorithm in linear interpolation will take the lowest possible base value +
 import {TeadsCurve} from '@grnsft/if-unofficial-plugins';
 
 const teads = TeadsCurve({
-  thermal-design-power: 100, // thermal-design-power of the CPU
+  'cpu/thermal-design-power': 100, // cpu/thermal-design-power of the CPU
 });
 const results = teads.execute([
   {
     duration: 3600, // duration institute
-    cpu: 100, // CPU usage as a value between 0 to 100 in percentage
+    'cpu/utilization': 100, // CPU usage as a value between 0 to 100 in percentage
     datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
   },
 ]);
@@ -68,20 +68,17 @@ Resulting values are an estimate based on the testing done by Teads' Engineering
 ```typescript
 import {TeadsCurve, Interpolation} from '@grnsft/if-unofficial-plugins';
 
-const teads = TeadsCurve();
+const teads = TeadsCurve({interpolation: Interpolation.SPLINE});
 const results = teads.execute(
   [
     {
       duration: 3600, // duration institute
-      cpu: 100, // CPU usage as a value between 0 to 100 in percentage
+      'cpu/utilization': 100, // CPU usage as a value between 0 to 100 in percentage
       datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
     },
   ],
   {
-    'teads-curve': {
-      tdp: 100, // TDP of the CPU
-      interpolation: Interpolation.SPLINE,
-    },
+    'cpu/thermal-design-power': 100, // TDP of the CPU
   }
 );
 ```
@@ -97,7 +94,9 @@ initialize:
     teads-curve:
       function: TeadsCurve
       path: '@grnsft/if-unofficial-plugins'
-graph:
+      global-config:
+        interpolation: spline
+tree:
   children:
     child:
       pipeline:
@@ -105,8 +104,8 @@ graph:
       inputs:
         - timestamp: 2023-07-06T00:00
           duration: 3600
-          thermal-design-power: 300
-          cpu-util: 50
+          cpu/thermal-design-power: 300
+          cpu/utilization: 50
 ```
 
 You can run this by passing it to `if`. Run impact using the following command run from the project root:
