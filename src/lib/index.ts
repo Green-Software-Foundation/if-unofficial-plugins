@@ -1,5 +1,5 @@
 export * from './azure-importer';
-export * from './boavizta';
+export {BoaviztaCloudOutput, BoaviztaCpuOutput} from './boavizta';
 export * from './ccf';
 export * from './co2js';
 export * from './teads-aws';
