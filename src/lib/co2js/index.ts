@@ -1,8 +1,8 @@
 import {co2} from '@tgwf/co2';
 import {z} from 'zod';
 
-import {ModelPluginInterface} from '../../interfaces';
-import {KeyValuePair, ModelParams} from '../../types';
+import {PluginInterface} from '../../interfaces';
+import {ConfigParams, PluginParams} from '../../types';
 
 import {allDefined, validate} from '../../util/validations';
 import {buildErrorMessage} from '../../util/helpers';
@@ -10,93 +10,102 @@ import {ERRORS} from '../../util/errors';
 
 const {InputValidationError} = ERRORS;
 
-export class Co2jsModel implements ModelPluginInterface {
-  staticParams: KeyValuePair = {};
-  model: any | undefined;
-
-  errorBuilder = buildErrorMessage(this.constructor.name);
-
-  /**
-   * Configures the model with static parameters.
-   */
-  public async configure(staticParams: object): Promise<ModelPluginInterface> {
-    this.setValidatedParams(staticParams);
-
-    return this;
-  }
+export const Co2js = (globalConfig?: ConfigParams): PluginInterface => {
+  const metadata = {kind: 'execute'};
+  const errorBuilder = buildErrorMessage(Co2js.name);
 
   /**
    * Executes the model for a list of input parameters.
    */
-  public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-    return inputs.map(input => {
-      this.setValidatedParams(input);
+  const execute = async (
+    inputs: PluginParams[],
+    config?: ConfigParams
+  ): Promise<PluginParams[]> => {
+    const mergedConfig = Object.assign({}, config, globalConfig);
 
-      if (!input['bytes']) {
+    validateConfig(mergedConfig);
+
+    const model = new co2({model: mergedConfig.type});
+
+    return inputs.map(input => {
+      const mergedWithConfig = Object.assign({}, input, mergedConfig);
+
+      if (!(input['network/data/bytes'] || input['network/data'])) {
         throw new InputValidationError(
-          this.errorBuilder({
+          errorBuilder({
             message: 'Bytes not provided',
           })
         );
       }
 
-      const result = this.calculateResultByParams(input);
+      const result = calculateResultByParams(mergedWithConfig, model);
 
       if (result) {
-        input['operational-carbon'] = result;
+        return {
+          ...input,
+          'carbon-operational': result,
+        };
       }
 
-      return input;
+      return result
+        ? {
+            ...input,
+            'carbon-operational': result,
+          }
+        : input;
     });
-  }
+  };
 
   /**
    * Calculates a result based on the provided static parameters type.
    */
-  private calculateResultByParams(input: ModelParams) {
-    const greenhosting = input['green-web-host'] === true;
-    const options = input['options'];
-    const bytes = input['bytes'];
+  const calculateResultByParams = (
+    inputWithConfig: PluginParams,
+    model: any
+  ) => {
+    const greenhosting = inputWithConfig['green-web-host'] === true;
+    const options = inputWithConfig['options'];
+    const GBinBytes = inputWithConfig['network/data'] * 1000 * 1000 * 1000;
+    const bytes = inputWithConfig['network/data/bytes'] || GBinBytes;
 
     const paramType: {[key: string]: () => string} = {
       swd: () => {
         return options
-          ? this.model.perVisitTrace(bytes, greenhosting, options).co2
-          : this.model.perVisit(bytes, greenhosting);
+          ? model.perVisitTrace(bytes, greenhosting, options).co2
+          : model.perVisit(bytes, greenhosting);
       },
       '1byte': () => {
-        return this.model.perByte(bytes, greenhosting);
+        return model.perByte(bytes, greenhosting);
       },
     };
 
-    return paramType[this.staticParams.type]();
-  }
-
-  /**
-   * Sets validated parameters for the class instance.
-   */
-  private setValidatedParams(params: object) {
-    if ('type' in params) {
-      const safeStaticParams = Object.assign(
-        params,
-        this.validateStaticParams(params)
-      );
-
-      this.staticParams.type = safeStaticParams.type;
-      this.model = new co2({model: this.staticParams.type});
-    }
-  }
+    return paramType[inputWithConfig.type]();
+  };
 
   /**
    * Validates static parameters.
    */
-  private validateStaticParams(staticParams: object) {
+  const validateConfig = (config: ConfigParams) => {
     const schema = z
       .object({
         type: z.enum(['1byte', 'swd']),
+        'green-web-host': z.boolean(),
+        options: z
+          .object({
+            dataReloadRatio: z.number().min(0).max(1).optional(),
+            firstVisitPercentage: z.number().min(0).max(1).optional(),
+            returnVisitPercentage: z.number().min(0).max(1).optional(),
+            gridIntensity: z.object({}).optional(),
+          })
+          .optional(),
       })
       .refine(allDefined);
 
-    return validate<z.infer<typeof schema>>(schema, staticParams);
-  }
-}
+    return validate<z.infer<typeof schema>>(schema, config);
+  };
+
+  return {
+    metadata,
+    execute,
+  };
+};
