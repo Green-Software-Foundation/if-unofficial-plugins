@@ -8,24 +8,24 @@ import {WattTimeParams, WattAuthType} from './types';
 
 const {AuthorizationError, APIRequestError} = ERRORS;
 
-export class WattTimeAPI {
-  private baseUrl = 'https://api2.watttime.org/v2';
-  private token = '';
+export const WattTimeAPI = () => {
+  let baseUrl = 'https://api2.watttime.org/v2';
+  let token = '';
 
-  errorBuilder = buildErrorMessage(this.constructor.name);
+  const errorBuilder = buildErrorMessage(WattTimeAPI.name);
 
   /**
    * Authenticates the user with the WattTime API using the provided authentication parameters.
    * If a token is not provided, attempts to authenticate with the provided username and password.
    * Updates the token and base URL for API requests upon successful authentication.
    */
-  public async authenticate(authParams: WattAuthType): Promise<void> {
-    this.token = authParams['token'] ?? '';
-    this.baseUrl = authParams['baseUrl'] ?? this.baseUrl;
+  const authenticate = async (authParams: WattAuthType): Promise<void> => {
+    token = authParams['token'] ?? '';
+    baseUrl = authParams['baseUrl'] ?? baseUrl;
 
-    if (this.token === '') {
+    if (token === '') {
       const {username, password} = authParams;
-      const tokenResponse = await axios.get(`${this.baseUrl}/login`, {
+      const tokenResponse = await axios.get(`${baseUrl}/login`, {
         auth: {
           username,
           password,
@@ -38,32 +38,32 @@ export class WattTimeAPI {
         !('token' in tokenResponse.data)
       ) {
         throw new AuthorizationError(
-          this.errorBuilder({
+          errorBuilder({
             message: 'Missing token in response. Invalid credentials provided',
             scope: 'authorization',
           })
         );
       }
 
-      this.token = tokenResponse.data.token;
+      token = tokenResponse.data.token;
     }
-  }
+  };
 
   /**
    * Fetches and sorts data from the WattTime API based on the provided parameters.
    * Throws an APIRequestError if an error occurs during the request or if the response is invalid.
    */
-  public async fetchAndSortData(params: WattTimeParams) {
+  const fetchAndSortData = async (params: WattTimeParams) => {
     const result = await axios
-      .get(`${this.baseUrl}/data`, {
+      .get(`${baseUrl}/data`, {
         params,
         headers: {
-          Authorization: `Bearer ${this.token}`,
+          Authorization: `Bearer ${token}`,
         },
       })
       .catch(error => {
         throw new APIRequestError(
-          this.errorBuilder({
+          errorBuilder({
             message: `Error fetching data from WattTime API. ${JSON.stringify(
               error
             )}`,
@@ -73,7 +73,7 @@ export class WattTimeAPI {
 
     if (result.status !== 200) {
       throw new APIRequestError(
-        this.errorBuilder({
+        errorBuilder({
           message: `Error fetching data from WattTime API: ${JSON.stringify(
             result.status
           )}`,
@@ -83,21 +83,26 @@ export class WattTimeAPI {
 
     if (!('data' in result) || !Array.isArray(result.data)) {
       throw new APIRequestError(
-        this.errorBuilder({
+        errorBuilder({
           message: 'Invalid response from WattTime API',
         })
       );
     }
 
-    return this.sortData(result.data);
-  }
+    return sortData(result.data);
+  };
 
   /**
    * Sorts the data based on the 'point_time' property in ascending order.
    */
-  private sortData<T extends {point_time: string}>(data: T[]) {
+  const sortData = <T extends {point_time: string}>(data: T[]) => {
     return data.sort((a: T, b: T) => {
       return dayjs(a.point_time).unix() > dayjs(b.point_time).unix() ? 1 : -1;
     });
-  }
-}
+  };
+
+  return {
+    authenticate,
+    fetchAndSortData,
+  };
+};
