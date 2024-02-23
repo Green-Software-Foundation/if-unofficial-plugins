@@ -56,7 +56,7 @@ export const BoaviztaBaseOutput = () => {
       : 0;
     const energy = impactsInData ? data.impacts.pe.use.value / 3.6 : 0;
 
-    return {'embodied-carbon': embodiedCarbon, energy};
+    return {'carbon-embodied': embodiedCarbon, energy};
   };
 
   /**

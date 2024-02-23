@@ -81,7 +81,7 @@ export const BoaviztaCpuOutput = (
     const result = baseOutput.formatResponse(response);
     const cpuOutputData: BoaviztaCpuOutputType = {
       'energy-cpu': result.energy,
-      'embodied-carbon': result['embodied-carbon'],
+      'carbon-embodied': result['carbon-embodied'],
     };
 
     return cpuOutputData;
