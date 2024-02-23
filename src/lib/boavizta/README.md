@@ -7,7 +7,7 @@
 
 ## Implementation
 
-Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` plugin is included in an IEF pipeline, IEF sends API requests to Boavizta. The request payload is generated from input data provided to IEF in an `impl` file.
+Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` plugin is included in an IEF pipeline, IEF sends API requests to Boavizta. The request payload is generated from input data provided to IEF in an `manifest` file.
 
 ## Parameters
 
@@ -26,7 +26,7 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 
 ## Returns
 
-- `embodied-carbon`: carbon emitted in manufacturing the device, in gCO2eq
+- `carbon-embodied`: carbon emitted in manufacturing the device, in gCO2eq
 - `energy-cpu`: energy used by CPU in kWh
 
 ## Usage
@@ -81,9 +81,9 @@ async function runBoavizta() {
 runBoavizta();
 ```
 
-## Example `impl`
+## Example `manifest`
 
-In IEF plugins are expected to be invoked from an `impl` file. This is a yaml containing the plugin configuration and inputs. The following `impl` initializes and runs the `boavizta-cpu` plugin:
+In IEF plugins are expected to be invoked from an `manifest` file. This is a yaml containing the plugin configuration and inputs. The following `manifest` initializes and runs the `boavizta-cpu` plugin:
 
 ```yaml
 name: boavizta-demo
@@ -92,7 +92,7 @@ tags:
 initialize:
   plugins:
     boavizta-cpu:
-      function: BoaviztaCpuOutput
+      method: BoaviztaCpuOutput
       path: '@grnsft/if-unofficial-plugins'
       global-config:
         allocation: LINEAR
@@ -119,5 +119,5 @@ You can run this by passing it to `if`. Run impact using the following command r
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --impl ./examples/impls/test/boavizta.yml --ompl ./examples/ompls/boavizta.yml
+if --manifest ./examples/manifests/test/boavizta.yml --output ./examples/outputs/boavizta.yml
 ```
