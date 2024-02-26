@@ -53,7 +53,7 @@ describe('lib/boavizta: ', () => {
         expect(result).toStrictEqual([
           {
             'carbon-embodied': 0.8,
-            'energy-cpu': 0.575,
+            'cpu/energy': 0.575,
           },
         ]);
       });
@@ -77,7 +77,7 @@ describe('lib/boavizta: ', () => {
         expect(result).toStrictEqual([
           {
             'carbon-embodied': 1.6,
-            'energy-cpu': 1.6408333333333334,
+            'cpu/energy': 1.6408333333333334,
           },
         ]);
       });

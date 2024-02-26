@@ -19,7 +19,7 @@ export type BoaviztaUsageType = {
 };
 
 export type BoaviztaCpuOutputType = {
-  'energy-cpu': number;
+  'cpu/energy': number;
   'carbon-embodied': number;
 };
 

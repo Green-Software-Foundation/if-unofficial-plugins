@@ -27,7 +27,7 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 ## Returns
 
 - `carbon-embodied`: carbon emitted in manufacturing the device, in gCO2eq
-- `energy-cpu`: energy used by CPU in kWh
+- `cpu/energy`: energy used by CPU in kWh
 
 ## Usage
 
