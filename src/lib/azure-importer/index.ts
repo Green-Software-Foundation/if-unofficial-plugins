@@ -2,8 +2,8 @@ import {MetricValue} from '@azure/arm-monitor';
 import * as dotenv from 'dotenv';
 import {z} from 'zod';
 
-import {ModelPluginInterface} from '../../interfaces';
-import {ModelParams} from '../../types/common';
+import {PluginInterface} from '../../interfaces';
+import {ConfigParams, ModelParams} from '../../types/common';
 
 import {allDefined, validate} from '../../util/validations';
 import {buildErrorMessage} from '../../util/helpers';
@@ -16,82 +16,80 @@ import {
   AzureMetadataOutputs,
 } from './types';
 import {AzureAPI} from './azure-api';
-import {TIME_UNITS_IN_SECONDS} from './config';
+import {ALIASES_OF_UNITS, TIME_UNITS_IN_SECONDS} from './config';
 
-const {UnsupportedValueError, InputValidationError} = ERRORS;
+const {UnsupportedValueError, InputValidationError, ConfigValidationError} =
+  ERRORS;
 
-export class AzureImporterModel implements ModelPluginInterface {
-  errorBuilder = buildErrorMessage(this.constructor.name);
-  azureAPI = new AzureAPI();
-
-  /**
-   * Configures the Azure Importer Plugin.
-   */
-  public async configure(): Promise<ModelPluginInterface> {
-    return this;
-  }
+export const AzureImporter = (): PluginInterface => {
+  const metadata = {kind: 'execute'};
+  const errorBuilder = buildErrorMessage(AzureImporter.name);
+  const azureAPI = new AzureAPI();
 
   /**
    * Executes the model for a list of input parameters.
    */
-  public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
+  const execute = async (inputs: ModelParams[], config?: ConfigParams) => {
     dotenv.config();
+    validateConfig(config);
 
     let enrichedOutputsArray: ModelParams[] = [];
 
     for await (const input of inputs) {
-      const safeInput = Object.assign(input, this.validateInput(input));
-      const azureInput = this.mapInputToAzureInputs(safeInput);
-      const rawResults = await this.getVmUsage(azureInput);
-      const rawMetadataResults = await this.getInstanceMetadata(
+      validateInput(input);
+
+      const mergedWithConfig = Object.assign({}, input, config);
+      const azureInput = mapInputToAzureInputs(mergedWithConfig);
+      const rawResults = await getVmUsage(azureInput);
+      const rawMetadataResults = await getInstanceMetadata(
         azureInput.vmName,
         azureInput.resourceGroupName
       );
-      safeInput['duration'] = this.calculateDurationPerInput(azureInput);
+      mergedWithConfig['duration'] = calculateDurationPerInput(azureInput);
 
-      enrichedOutputsArray = this.enrichOutputs(
+      enrichedOutputsArray = enrichOutputs(
         rawResults,
         rawMetadataResults,
-        safeInput
+        mergedWithConfig
       );
     }
 
     return enrichedOutputsArray.flat();
-  }
+  };
 
   /**
    * Enriches the raw output and metadata results with additional information
    * and maps them to a new structure based on the ModelParams input.
    */
-  private enrichOutputs(
+  const enrichOutputs = (
     rawResults: AzureOutputs,
     rawMetadataResults: AzureMetadataOutputs,
     input: ModelParams
-  ) {
+  ) => {
     return rawResults.timestamps.map((timestamp, index) => ({
-      'cloud-vendor': 'azure',
-      'cpu-util': rawResults.cpu_utils[index],
-      'mem-availableGB': parseFloat(rawResults.memAvailable[index]) * 1e-9,
-      'mem-usedGB':
+      'cloud/vendor': 'azure',
+      'cpu/utilization': rawResults.cpuUtilizations[index],
+      'memory/available/GB': parseFloat(rawResults.memAvailable[index]) * 1e-9,
+      'memory/used/GB':
         parseFloat(rawMetadataResults.totalMemoryGB) -
         parseFloat(rawResults.memAvailable[index]) * 1e-9,
-      'total-memoryGB': rawMetadataResults.totalMemoryGB,
-      'mem-util':
+      'memory/capacity/GB': rawMetadataResults.totalMemoryGB,
+      'memory/utilization':
         ((parseFloat(rawMetadataResults.totalMemoryGB) -
           parseFloat(rawResults.memAvailable[index]) * 1e-9) /
           parseFloat(rawMetadataResults.totalMemoryGB)) *
         100,
       location: rawMetadataResults.location,
-      'cloud-instance-type': rawMetadataResults.instanceType,
+      'cloud/instance-type': rawMetadataResults.instanceType,
       ...input,
       timestamp,
     }));
-  }
+  };
 
   /**
    * Maps ModelParams input to AzureInputs structure for Azure-specific queries.
    */
-  private mapInputToAzureInputs(input: ModelParams): AzureInputs {
+  const mapInputToAzureInputs = (input: ModelParams): AzureInputs => {
     return {
       aggregation: input['azure-observation-aggregation'],
       resourceGroupName: input['azure-resource-group'],
@@ -100,15 +98,18 @@ export class AzureImporterModel implements ModelPluginInterface {
       timestamp: input['timestamp'],
       duration: input['duration'].toString(),
       window: input['azure-observation-window'],
-      timespan: this.getTimeSpan(input['duration'], input['timestamp']),
-      interval: this.getInterval(input['azure-observation-window']),
+      timespan: getTimeSpan(input['duration'], input['timestamp']),
+      interval: getInterval(input['azure-observation-window']),
     };
-  }
+  };
 
-  /**
-   * Checks for required fields in input.
-   */
-  private validateInput(input: ModelParams) {
+  const validateConfig = (config?: ConfigParams) => {
+    if (!config) {
+      throw new ConfigValidationError(
+        errorBuilder({message: 'Config must be provided.'})
+      );
+    }
+
     const schema = z
       .object({
         'azure-observation-window': z.string(),
@@ -116,20 +117,34 @@ export class AzureImporterModel implements ModelPluginInterface {
         'azure-resource-group': z.string(),
         'azure-vm-name': z.string(),
         'azure-subscription-id': z.string(),
-        timestamp: z.string().datetime(),
-        duration: z.number(),
       })
       .refine(allDefined, {
         message: 'All parameters should be present.',
       });
 
+    return validate<z.infer<typeof schema>>(schema, config);
+  };
+
+  /**
+   * Checks for required fields in input.
+   */
+  const validateInput = (input: ModelParams) => {
+    const schema = z
+      .object({
+        timestamp: z.string().datetime(),
+        duration: z.number(),
+      })
+      .refine(allDefined);
+
     return validate<z.infer<typeof schema>>(schema, input);
-  }
+  };
 
   /**
    * Retrieves virtual machine usage metrics from Azure based on the provided AzureInputs.
    */
-  private async getVmUsage(metricParams: AzureInputs): Promise<AzureOutputs> {
+  const getVmUsage = async (
+    metricParams: AzureInputs
+  ): Promise<AzureOutputs> => {
     const timestamps: string[] = [];
     const cpuUtils: string[] = [];
     const memAvailable: string[] = [];
@@ -143,51 +158,51 @@ export class AzureImporterModel implements ModelPluginInterface {
       for (const data of (await timeSeriesData) ?? []) {
         if (typeof data.average !== 'undefined') {
           metricArray.push(data.average.toString());
-          if (metricName === 'cpu_utils') {
+          if (metricName === 'cpuUtilizations') {
             timestamps.push(data.timeStamp.toISOString());
           }
         }
       }
     };
 
-    parseMetrics(this.getCPUMetrics(metricParams), cpuUtils, 'cpu_utils');
-    parseMetrics(this.getRawMetrics(metricParams), memAvailable, '');
+    parseMetrics(getCPUMetrics(metricParams), cpuUtils, 'cpuUtilizations');
+    parseMetrics(getRawMetrics(metricParams), memAvailable, '');
 
-    return {timestamps, cpu_utils: cpuUtils, memAvailable};
-  }
+    return {timestamps, cpuUtilizations: cpuUtils, memAvailable};
+  };
 
   /**
    * Gets CPU metrics by calling monitor client.
    */
-  private async getCPUMetrics(metricParams: GetMetricsParams) {
-    return this.azureAPI.getMetricsTimeseries(metricParams, 'Percentage CPU');
-  }
+  const getCPUMetrics = async (metricParams: GetMetricsParams) => {
+    return azureAPI.getMetricsTimeseries(metricParams, 'Percentage CPU');
+  };
 
   /**
    * Gets RAW metrics by calling monitor client.
    */
-  private async getRawMetrics(metricParams: GetMetricsParams) {
-    return this.azureAPI.getMetricsTimeseries(
+  const getRawMetrics = async (metricParams: GetMetricsParams) => {
+    return azureAPI.getMetricsTimeseries(
       metricParams,
       'Available Memory Bytes'
     );
-  }
+  };
 
   /**
    * Takes impl `timestamp` and `duration` and returns an Azure formatted `timespan` value.
    */
-  private getTimeSpan(duration: number, timestamp: string): string {
+  const getTimeSpan = (duration: number, timestamp: string): string => {
     const start = new Date(timestamp);
     const end = new Date(start.getTime() + duration * 1000);
 
     return `${start.toISOString()}/${end.toISOString()}`;
-  }
+  };
 
   /**
    * Formats given `amountOfTime` according to given `unit`.
    * Throws error if given `unit` is not supported.
    */
-  private timeUnitConverter(amountOfTime: number, unit: string): string {
+  const timeUnitConverter = (amountOfTime: number, unit: string): string => {
     const unitsMap: {[key: string]: string} = {
       seconds: 'The minimum unit of time for azure importer is minutes',
       minutes: `T${amountOfTime}M`,
@@ -198,22 +213,13 @@ export class AzureImporterModel implements ModelPluginInterface {
       years: `${amountOfTime}Y`,
     };
 
-    const aliases: {[key: string]: string[]} = {
-      seconds: ['second', 'secs', 'sec', 's'],
-      minutes: ['m', 'min', 'mins'],
-      hours: ['hour', 'h', 'hr', 'hrs'],
-      days: ['d'],
-      weeks: ['week', 'wk', 'w', 'wks'],
-      months: ['mth'],
-      years: ['yr', 'yrs', 'y', 'ys'],
-    };
     const matchedUnit = Object.keys(unitsMap).find(key => {
-      return aliases[key].includes(unit && unit.toLowerCase());
+      return ALIASES_OF_UNITS[key].includes(unit && unit.toLowerCase());
     });
 
     if (!matchedUnit) {
       throw new UnsupportedValueError(
-        this.errorBuilder({
+        errorBuilder({
           message: 'azure-observation-window parameter is malformed',
         })
       );
@@ -221,26 +227,29 @@ export class AzureImporterModel implements ModelPluginInterface {
 
     if (matchedUnit === 'seconds') {
       throw new InputValidationError(
-        this.errorBuilder({message: unitsMap[matchedUnit]})
+        errorBuilder({message: unitsMap[matchedUnit]})
       );
     }
 
     return unitsMap[matchedUnit];
-  }
+  };
 
   /**
    * Takes granularity as e.g. "1 m", "1 hr" and translates into ISO8601 as expected by the azure API.
    */
-  private getInterval(window: string): string {
+  const getInterval = (window: string): string => {
     const [amountOfTime, unit] = window.split(' ', 2);
-    return `P${this.timeUnitConverter(parseFloat(amountOfTime), unit)}`;
-  }
+    return `P${timeUnitConverter(parseFloat(amountOfTime), unit)}`;
+  };
 
   /**
    * Caculates total memory based on data from ComputeManagementClient response.
    */
-  private async calculateTotalMemory(instanceType: string, location: string) {
-    const resourceSkusList = await this.azureAPI.getResourceSkus();
+  const calculateTotalMemory = async (
+    instanceType: string,
+    location: string
+  ) => {
+    const resourceSkusList = await azureAPI.getResourceSkus();
 
     const filteredMemData = resourceSkusList
       .filter(item => item.resourceType === 'virtualMachines')
@@ -258,17 +267,17 @@ export class AzureImporterModel implements ModelPluginInterface {
     );
 
     return totalMemory?.value || '';
-  }
+  };
 
   /**
    * Gathers instance metadata.
    */
-  private async getInstanceMetadata(
+  const getInstanceMetadata = async (
     vmName: string,
     resourceGroupName: string
-  ): Promise<AzureMetadataOutputs> {
+  ): Promise<AzureMetadataOutputs> => {
     const vmData =
-      await this.azureAPI.getVMDataByResourceGroupName(resourceGroupName);
+      await azureAPI.getVMDataByResourceGroupName(resourceGroupName);
     const [location, instanceType] = vmData
       .filter(item => item.name === vmName)
       .map(item => [
@@ -276,20 +285,22 @@ export class AzureImporterModel implements ModelPluginInterface {
         item.hardwareProfile?.vmSize ?? 'unknown',
       ])[0];
 
-    const totalMemoryGB = await this.calculateTotalMemory(
-      instanceType,
-      location
-    );
+    const totalMemoryGB = await calculateTotalMemory(instanceType, location);
 
     return {location, instanceType, totalMemoryGB};
-  }
+  };
 
   /**
    * Calculates number of seconds covered by each individual input using `azure-time-window` value
    */
-  private calculateDurationPerInput(azureInputs: AzureInputs): number {
+  const calculateDurationPerInput = (azureInputs: AzureInputs): number => {
     const [value, unit] = azureInputs.window.split(' ', 2);
 
     return parseFloat(value) * (TIME_UNITS_IN_SECONDS[unit.toLowerCase()] || 0);
-  }
-}
+  };
+
+  return {
+    metadata,
+    execute,
+  };
+};

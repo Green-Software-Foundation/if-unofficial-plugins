@@ -1,3 +1,13 @@
+export const ALIASES_OF_UNITS: {[key: string]: string[]} = {
+  seconds: ['second', 'secs', 'sec', 's'],
+  minutes: ['m', 'min', 'mins'],
+  hours: ['hour', 'h', 'hr', 'hrs'],
+  days: ['d'],
+  weeks: ['week', 'wk', 'w', 'wks'],
+  months: ['mth'],
+  years: ['yr', 'yrs', 'y', 'ys'],
+};
+
 export const TIME_UNITS_IN_SECONDS: Record<string, number> = {
   s: 1,
   second: 1,

@@ -1,6 +1,6 @@
 export type AzureOutputs = {
   timestamps: string[];
-  cpu_utils: string[];
+  cpuUtilizations: string[];
   memAvailable: string[];
 };
 
