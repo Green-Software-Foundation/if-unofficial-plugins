@@ -53,7 +53,13 @@ describe('lib/boavizta: ', () => {
         expect(result).toStrictEqual([
           {
             'carbon-embodied': 0.8,
+            country: 'USA',
             'cpu/energy': 0.575,
+            'cpu/name': 'Intel Xeon Gold 6138f',
+            'cpu/number-cores': 24,
+            'cpu/utilization': 50,
+            duration: 3600,
+            timestamp: '2021-01-01T00:00:00Z',
           },
         ]);
       });
@@ -77,7 +83,13 @@ describe('lib/boavizta: ', () => {
         expect(result).toStrictEqual([
           {
             'carbon-embodied': 1.6,
+            country: 'USA',
             'cpu/energy': 1.6408333333333334,
+            'cpu/name': 'Intel Xeon Gold 6138f',
+            'cpu/number-cores': 24,
+            'cpu/utilization': 100,
+            duration: 7200,
+            timestamp: '2021-01-01T00:00:00Z',
           },
         ]);
       });

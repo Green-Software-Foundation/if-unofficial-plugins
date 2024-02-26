@@ -43,7 +43,12 @@ export const BoaviztaCpuOutput = (
 
     for await (const input of inputs) {
       const safeInput = validateInput(input);
-      const mergedWithConfig = Object.assign(input, safeInput, globalConfig);
+      const mergedWithConfig = Object.assign(
+        {},
+        input,
+        safeInput,
+        globalConfig
+      );
 
       if (!(metricType in input)) {
         throw new InputValidationError(
@@ -58,7 +63,10 @@ export const BoaviztaCpuOutput = (
         fetchData
       );
 
-      result.push(usageResult);
+      result.push({
+        ...input,
+        ...usageResult,
+      });
     }
 
     return result;
