@@ -6,7 +6,7 @@ import {
   MockComputeManagementClientEmpty,
   MockMonitorClientEmptyData,
 } from '../../../../__mocks__/azure';
-import {AzureImporterModel} from '../../../../lib/azure-importer';
+import {AzureImporter} from '../../../../lib/azure-importer';
 import {ERRORS} from '../../../../util/errors';
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
@@ -39,28 +39,17 @@ jest.mock('@azure/arm-compute', () => ({
 }));
 
 describe('lib/azure-importer: ', () => {
-  describe('AzureImporterModel: ', () => {
-    let azureModel: AzureImporterModel;
+  describe('AzureImporter: ', () => {
+    const output = AzureImporter();
 
     beforeEach(() => {
       jest.clearAllMocks();
-      azureModel = new AzureImporterModel();
     });
 
-    describe('init AzureImporterModel: ', () => {
+    describe('init AzureImporter: ', () => {
       it('initalizes object with properties.', async () => {
-        expect(azureModel).toHaveProperty('configure');
-        expect(azureModel).toHaveProperty('execute');
-      });
-    });
-
-    describe('configure(): ', () => {
-      it('configures AzureImporterModel.', async () => {
-        const configuredModel = await azureModel.configure();
-
-        expect.assertions(1);
-
-        expect(configuredModel).toBeInstanceOf(AzureImporterModel);
+        expect(output).toHaveProperty('metadata');
+        expect(output).toHaveProperty('execute');
       });
     });
 
@@ -73,35 +62,37 @@ describe('lib/azure-importer: ', () => {
             {
               timestamp: '2023-11-02T10:35:00.000Z',
               duration: 300,
-              'azure-observation-window': '5 mins',
-              'azure-observation-aggregation': 'average',
-              'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
-              'azure-resource-group': 'vm1_group',
-              'azure-vm-name': 'vm1',
             },
           ];
+          const config = {
+            'azure-observation-window': '5 mins',
+            'azure-observation-aggregation': 'average',
+            'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
+            'azure-resource-group': 'vm1_group',
+            'azure-vm-name': 'vm1',
+          };
 
-          const result = await azureModel.execute(inputs);
+          const result = await output.execute(inputs, config);
 
           expect.assertions(1);
 
           expect(result).toStrictEqual([
             {
-              'azure-observation-aggregation': 'average',
-              'azure-observation-window': '5 mins',
-              'azure-resource-group': 'vm1_group',
-              'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
-              'azure-vm-name': 'vm1',
               timestamp: '2023-11-02T10:35:00.000Z',
               duration: 300,
-              'cpu-util': '3.14',
-              'mem-availableGB': 0.5,
-              'mem-usedGB': 0.5,
-              'total-memoryGB': 1,
-              'mem-util': 50,
+              'azure-observation-window': '5 mins',
+              'azure-observation-aggregation': 'average',
+              'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
+              'azure-resource-group': 'vm1_group',
+              'azure-vm-name': 'vm1',
+              'cpu/utilization': '3.14',
+              'memory/available/GB': 0.5,
+              'memory/used/GB': 0.5,
+              'memory/capacity/GB': 1,
+              'memory/utilization': 50,
               location: 'uksouth',
-              'cloud-instance-type': 'Standard_B1s',
-              'cloud-vendor': 'azure',
+              'cloud/instance-type': 'Standard_B1s',
+              'cloud/vendor': 'azure',
             },
           ]);
         });
@@ -114,17 +105,19 @@ describe('lib/azure-importer: ', () => {
             {
               timestamp: '2023-11-02T10:35:31.820Z',
               duration: 3600,
-              'azure-observation-aggregation': 'average',
-              'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
-              'azure-resource-group': 'vm1_group',
-              'azure-vm-name': 'vm1',
             },
           ];
+          const config = {
+            'azure-observation-aggregation': 'average',
+            'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
+            'azure-resource-group': 'vm1_group',
+            'azure-vm-name': 'vm1',
+          };
 
           expect.assertions(2);
 
           try {
-            await azureModel.execute(inputs);
+            await output.execute(inputs, config);
           } catch (error) {
             expect(error).toStrictEqual(new InputValidationError(errorMessage));
             expect(error).toBeInstanceOf(InputValidationError);
@@ -134,23 +127,25 @@ describe('lib/azure-importer: ', () => {
         it('throws an error if time is provided in seconds.', async () => {
           process.env.AZURE_TEST_SCENARIO = 'valid';
           const errorMessage =
-            'AzureImporterModel: The minimum unit of time for azure importer is minutes.';
+            'AzureImporter: The minimum unit of time for azure importer is minutes.';
           const inputs = [
             {
               timestamp: '2023-11-02T10:35:31.820Z',
               duration: 3600,
-              'azure-observation-window': '5 sec',
-              'azure-observation-aggregation': 'average',
-              'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
-              'azure-resource-group': 'vm1_group',
-              'azure-vm-name': 'vm1',
             },
           ];
+          const config = {
+            'azure-observation-window': '5 sec',
+            'azure-observation-aggregation': 'average',
+            'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
+            'azure-resource-group': 'vm1_group',
+            'azure-vm-name': 'vm1',
+          };
 
           expect.assertions(2);
 
           try {
-            await azureModel.execute(inputs);
+            await output.execute(inputs, config);
           } catch (error) {
             expect(error).toStrictEqual(new InputValidationError(errorMessage));
             expect(error).toBeInstanceOf(InputValidationError);
@@ -161,23 +156,25 @@ describe('lib/azure-importer: ', () => {
           process.env.AZURE_TEST_SCENARIO = 'valid';
 
           const errorMessage =
-            'AzureImporterModel: azure-observation-window parameter is malformed.';
+            'AzureImporter: azure-observation-window parameter is malformed.';
           const inputs = [
             {
               timestamp: '2023-11-02T10:35:00.000Z',
               duration: 300,
-              'azure-observation-aggregation': 'average',
-              'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
-              'azure-resource-group': 'vm1_group',
-              'azure-vm-name': 'vm1',
-              'azure-observation-window': 'dummy',
             },
           ];
+          const config = {
+            'azure-observation-aggregation': 'average',
+            'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
+            'azure-resource-group': 'vm1_group',
+            'azure-vm-name': 'vm1',
+            'azure-observation-window': 'dummy',
+          };
 
           expect.assertions(2);
 
           try {
-            await azureModel.execute(inputs);
+            await output.execute(inputs, config);
           } catch (error) {
             expect(error).toStrictEqual(
               new UnsupportedValueError(errorMessage)
@@ -195,15 +192,17 @@ describe('lib/azure-importer: ', () => {
             {
               timestamp: '2023-11-02T10:35:00.000Z',
               duration: 300,
-              'azure-observation-window': '5 mins',
-              'azure-observation-aggregation': 'average',
-              'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
-              'azure-resource-group': 'vm1_group',
-              'azure-vm-name': 'vm1',
             },
           ];
+          const config = {
+            'azure-observation-window': '5 mins',
+            'azure-observation-aggregation': 'average',
+            'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
+            'azure-resource-group': 'vm1_group',
+            'azure-vm-name': 'vm1',
+          };
 
-          const result = await azureModel.execute(inputs);
+          const result = await output.execute(inputs, config);
 
           expect.assertions(1);
 
@@ -219,15 +218,17 @@ describe('lib/azure-importer: ', () => {
             {
               timestamp: '2023-11-02T10:35:00.000Z',
               duration: 300,
-              'azure-observation-window': '5 mins',
-              'azure-observation-aggregation': 'average',
-              'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
-              'azure-resource-group': 'vm1_group',
-              'azure-vm-name': 'vm1',
             },
           ];
+          const config = {
+            'azure-observation-window': '5 mins',
+            'azure-observation-aggregation': 'average',
+            'azure-subscription-id': '9de7e19f-8a18-4e73-9451-45fc74e7d0d3',
+            'azure-resource-group': 'vm1_group',
+            'azure-vm-name': 'vm1',
+          };
 
-          const result = await azureModel.execute(inputs);
+          const result = await output.execute(inputs, config);
 
           expect.assertions(1);
 
