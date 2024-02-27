@@ -11,17 +11,17 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 
 ## Parameters
 
-### Plugin config
+### Plugin global config
 
 - `allocation`: manufacturing impacts can be reported with two allocation strategies: `TOTAL` is the total impact without adjusting for usage. `LINEAR` distrbutes the impact linearly over the lifespan of a device. See [Boavizta docs](https://doc.api.boavizta.org/Explanations/manufacture_methodology/#hover-a-specific-duration-allocation-linear) for more info.
+- `verbose`: determines how much information the API response contains (optional)
+
+### Inputs
+
 - `cpu/name`: the name of the physical processor being used
 - `cpu/number-cores`: number of physical cores on a CPU
-- `verbose`: determines how much information the API response contains (optional)
 - `cpu/expected-lifespan`: the lifespan of the component, in seconds
 - `country`: the country used to lookup grid carbon intensity, e.g. "USA" (optional - falls back to Boavizta default)
-
-### Observations
-
 - `cpu/utilization`: percentage CPU utilization for a given observation
 
 ## Returns
@@ -31,54 +31,48 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 
 ## Usage
 
-To run the `boavista-cpu` plugin an instance of `BoaviztaCpuImpact` must be created and its `execute()` method called, passing `duration`,`cpu/utilization`,`timestamp` arguments.
+To run the `boavista-cpu` plugin an instance of `BoaviztaCpuImpact` must be created using `BoaviztaCpuImpact()` and, if applicable, passing global configurations. Subsequently, the `execute()` function can be invoked to retrieve data on `carbon-embodied` and `cpu/energy`.
 
 This is how you could run the plugin in Typescript:
 
 ```typescript
 import {BoaviztaCpuImpact} from '@grnsft/if-unofficial-plugins';
 
-async function runBoavizta() {
-  const output = BoaviztaCpuImpact({});
-  const usage = await output.calculate([
-    {
-      timestamp: '2021-01-01T00:00:00Z',
-      duration: 1,
-      'cpu/utilization': 34,
-      'cpu/name': 'Intel Xeon Gold 6138f',
-      'cpu/number-cores': 24,
-      'cpu/expected-lifespan': 4 * 365 * 24 * 60 * 60,
-    },
-    {
-      timestamp: '2021-01-01T00:00:15Z',
-      duration: 1,
-      'cpu/utilization': 12,
-      'cpu/name': 'Intel Xeon Gold 6138f',
-      'cpu/number-cores': 24,
-      'cpu/expected-lifespan': 4 * 365 * 24 * 60 * 60,
-    },
-    {
-      timestamp: '2021-01-01T00:00:30Z',
-      duration: 1,
-      'cpu/utilization': 1,
-      'cpu/name': 'Intel Xeon Gold 6138f',
-      'cpu/number-cores': 24,
-      'cpu/expected-lifespan': 4 * 365 * 24 * 60 * 60,
-    },
-    {
-      timestamp: '2021-01-01T00:00:45Z',
-      duration: 1,
-      'cpu/utilization': 78,
-      'cpu/name': 'Intel Xeon Gold 6138f',
-      'cpu/number-cores': 24,
-      'cpu/expected-lifespan': 4 * 365 * 24 * 60 * 60,
-    },
-  ]);
-
-  console.log(usage);
-}
-
-runBoavizta();
+const output = BoaviztaCpuImpact({});
+const usage = await output.calculate([
+  {
+    timestamp: '2021-01-01T00:00:00Z',
+    duration: 1,
+    'cpu/utilization': 34,
+    'cpu/name': 'Intel Xeon Gold 6138f',
+    'cpu/number-cores': 24,
+    'cpu/expected-lifespan': 4 * 365 * 24 * 60 * 60,
+  },
+  {
+    timestamp: '2021-01-01T00:00:15Z',
+    duration: 1,
+    'cpu/utilization': 12,
+    'cpu/name': 'Intel Xeon Gold 6138f',
+    'cpu/number-cores': 24,
+    'cpu/expected-lifespan': 4 * 365 * 24 * 60 * 60,
+  },
+  {
+    timestamp: '2021-01-01T00:00:30Z',
+    duration: 1,
+    'cpu/utilization': 1,
+    'cpu/name': 'Intel Xeon Gold 6138f',
+    'cpu/number-cores': 24,
+    'cpu/expected-lifespan': 4 * 365 * 24 * 60 * 60,
+  },
+  {
+    timestamp: '2021-01-01T00:00:45Z',
+    duration: 1,
+    'cpu/utilization': 78,
+    'cpu/name': 'Intel Xeon Gold 6138f',
+    'cpu/number-cores': 24,
+    'cpu/expected-lifespan': 4 * 365 * 24 * 60 * 60,
+  },
+]);
 ```
 
 ## Example `manifest`

@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {PluginInterface} from '../../interfaces';
 import {ConfigParams, PluginParams} from '../../types';
 
-import {allDefined, validate} from '../../util/validations';
+import {validate} from '../../util/validations';
 import {buildErrorMessage} from '../../util/helpers';
 import {ERRORS} from '../../util/errors';
 
@@ -32,13 +32,7 @@ export const BoaviztaCpuOutput = (
   /**
    * Calculates the output of the given usage.
    */
-  const execute = async (inputs: PluginParams[]): Promise<any[]> => {
-    if (!Array.isArray(inputs)) {
-      throw new InputValidationError(
-        errorBuilder({message: 'Input data is not an array.'})
-      );
-    }
-
+  const execute = async (inputs: PluginParams[]) => {
     const result = [];
 
     for await (const input of inputs) {
@@ -99,13 +93,12 @@ export const BoaviztaCpuOutput = (
    * Validates static parameters for the CPU model using Zod schema.
    */
   const validateInput = (input: PluginParams) => {
-    const schema = z
-      .object({
-        'cpu/name': z.string(),
-        'cpu/number-cores': z.number(),
-        'cpu/expected-lifespan': z.number().optional(),
-      })
-      .refine(allDefined, {message: 'All parameters are required.'});
+    const schema = z.object({
+      duration: z.number().gt(0),
+      'cpu/name': z.string(),
+      'cpu/number-cores': z.number(),
+      'cpu/expected-lifespan': z.number().optional(),
+    });
 
     return validate<z.infer<typeof schema>>(schema, input);
   };
@@ -126,13 +119,7 @@ export const BoaviztaCloudOutput = (
   /**
    * Calculates the output of the given usage.
    */
-  const execute = async (inputs: PluginParams[]): Promise<any[]> => {
-    if (!Array.isArray(inputs)) {
-      throw new InputValidationError(
-        errorBuilder({message: 'Input data is not an array.'})
-      );
-    }
-
+  const execute = async (inputs: PluginParams[]) => {
     const result = [];
 
     for await (const input of inputs) {
@@ -180,14 +167,13 @@ export const BoaviztaCloudOutput = (
    * Validates static parameters for the Cloud model using Zod schema.
    */
   const validateInput = (input: PluginParams) => {
-    const schema = z
-      .object({
-        provider: z.string(),
-        'instance-type': z.string(),
-        verbose: z.boolean().optional(),
-        'cpu/expected-lifespan': z.number().optional(),
-      })
-      .refine(allDefined, {message: 'All parameters are required.'});
+    const schema = z.object({
+      duration: z.number().gt(0),
+      provider: z.string(),
+      'instance-type': z.string(),
+      verbose: z.boolean().optional(),
+      'cpu/expected-lifespan': z.number().optional(),
+    });
 
     return validate<z.infer<typeof schema>>(schema, input);
   };

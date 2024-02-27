@@ -8,7 +8,7 @@ export const BoaviztaBaseOutput = () => {
   const expectedLifespan: number = 4 * 365 * 24 * 60 * 60;
 
   /**
-   * Converts the usage from IMPL input to the format required by Boavizta API.
+   * Converts the usage from manifest input to the format required by Boavizta API.
    */
   const transformToBoaviztaUsage = (
     input: PluginParams,
