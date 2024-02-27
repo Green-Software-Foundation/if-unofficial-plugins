@@ -46,21 +46,21 @@ export const CloudCarbonFootprint = (
   /**
    * Calculate the total emissions for inputs.
    */
-  const execute = async (inputs: PluginParams[]): Promise<PluginParams[]> => {
+  const execute = async (inputs: PluginParams[]) => {
     standardizeInstanceMetrics();
 
     return inputs.map(input => {
       const mergedWithConfig = Object.assign({}, input, globalConfig);
-
-      validateInput(mergedWithConfig);
-      const interpolation =
-        mergedWithConfig.interpolation || Interpolation.LINEAR;
-      const validInput = Object.assign({}, {interpolation}, mergedWithConfig);
+      const validatedInputWithConfig = Object.assign(
+        {},
+        {interpolation: mergedWithConfig.interpolation || Interpolation.LINEAR},
+        validateInputWithConfig(mergedWithConfig)
+      );
 
       return {
         ...input,
-        energy: calculateEnergy(validInput),
-        'carbon-embodied': embodiedEmissions(validInput),
+        energy: calculateEnergy(validatedInputWithConfig),
+        'carbon-embodied': embodiedEmissions(validatedInputWithConfig),
       };
     });
   };
@@ -72,7 +72,6 @@ export const CloudCarbonFootprint = (
     interpolation: Interpolation | undefined,
     cloudVendor: string
   ) => {
-    console.log('--interpolation', interpolation);
     if (interpolation && cloudVendor !== 'aws') {
       throw new UnsupportedValueError(
         errorBuilder({
@@ -104,13 +103,12 @@ export const CloudCarbonFootprint = (
   /**
    * Validates single input fields.
    */
-  const validateInput = (input: PluginParams) => {
+  const validateInputWithConfig = (params: PluginParams) => {
     const errorMessageForVendor = `Only ${SUPPORTED_VENDORS} is currently supported`;
     const errorMessageForInterpolation = `Only ${Interpolation} is currently supported`;
 
     const schema = z
       .object({
-        timestamp: z.string(),
         duration: z.number(),
         'cpu/utilization': z.number(),
         'cloud/instance-type': z.string(),
@@ -139,11 +137,11 @@ export const CloudCarbonFootprint = (
         },
         {
           message:
-            '`timestamp`, `duration`, `cpu/utilization`, `cloud/instance-type`, and `cloud/vendor` should be present in the input',
+            '`duration`, `cpu/utilization`, `cloud/instance-type`, and `cloud/vendor` should be present in the input',
         }
       );
 
-    return validate<z.infer<typeof schema>>(schema, input);
+    return validate<z.infer<typeof schema>>(schema, params);
   };
 
   /**

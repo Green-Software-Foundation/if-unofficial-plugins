@@ -12,7 +12,6 @@
 
 ### Inputs
 
-- `timestamp`: a timestamp for the observation
 - `duration`: the amount of time the observation covers, in seconds
 - `cpu/utilization`: percentage CPU utilization for a given observation
 - `cloud/vendor`: the cloud platform provider, e.g. `aws`
@@ -45,7 +44,7 @@ You can read a detailed explanation ofn the calculations in the [CCF docs](https
 
 ## Usage
 
-In IEF, the plugin is called from a `manifest`. A `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`. The plugin input is expected to contain `timestamp` `duration`,`cpu/utilization`, `cloud/vendor` and `cloud/instance-type` fields.
+In IEF, the plugin is called from a `manifest`. A `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`. The plugin input is expected to contain `duration`,`cpu/utilization`, `cloud/vendor` and `cloud/instance-type` fields.
 
 You can see example Typescript invocations for each `cloud/vendor` below:
 
@@ -54,16 +53,14 @@ You can see example Typescript invocations for each `cloud/vendor` below:
 ```typescript
 import {CloudCarbonFootprint} from '@grnsft/if-unofficial-plugins';
 
-const ccf = new CloudCarbonFootprint();
-ccf.configure({
-  cloud/vendor: 'aws',
-  instance_type: 'm5n.large',
-});
+const ccf = CloudCarbonFootprint({interpolation: Interpolation.LINEAR});
 const results = ccf.execute([
   {
-    duration: 3600, // duration institute
-    'cpu/utilization': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    duration: 3600, // duration institute
+    'cloud/vendor': 'aws',
+    'cloud/instance-type': 'm5n.large',
+    'cpu/utilization': 10, // CPU usage as a percentage
   },
 ]);
 ```
