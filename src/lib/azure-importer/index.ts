@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import {z} from 'zod';
 
 import {PluginInterface} from '../../interfaces';
-import {ConfigParams, ModelParams} from '../../types/common';
+import {ConfigParams, PluginParams} from '../../types/common';
 
 import {allDefined, validate} from '../../util/validations';
 import {buildErrorMessage} from '../../util/helpers';
@@ -29,16 +29,18 @@ export const AzureImporter = (): PluginInterface => {
   /**
    * Executes the model for a list of input parameters.
    */
-  const execute = async (inputs: ModelParams[], config?: ConfigParams) => {
+  const execute = async (inputs: PluginParams[], config?: ConfigParams) => {
     dotenv.config();
-    validateConfig(config);
 
-    let enrichedOutputsArray: ModelParams[] = [];
+    const validatedConfig = validateConfig(config);
+    let enrichedOutputsArray: PluginParams[] = [];
 
     for await (const input of inputs) {
-      validateInput(input);
-
-      const mergedWithConfig = Object.assign({}, input, config);
+      const mergedWithConfig = Object.assign(
+        {},
+        validateInput(input),
+        validatedConfig
+      );
       const azureInput = mapInputToAzureInputs(mergedWithConfig);
       const rawResults = await getVmUsage(azureInput);
       const rawMetadataResults = await getInstanceMetadata(
@@ -59,12 +61,12 @@ export const AzureImporter = (): PluginInterface => {
 
   /**
    * Enriches the raw output and metadata results with additional information
-   * and maps them to a new structure based on the ModelParams input.
+   * and maps them to a new structure based on the PluginParams input.
    */
   const enrichOutputs = (
     rawResults: AzureOutputs,
     rawMetadataResults: AzureMetadataOutputs,
-    input: ModelParams
+    input: PluginParams
   ) => {
     return rawResults.timestamps.map((timestamp, index) => ({
       'cloud/vendor': 'azure',
@@ -87,18 +89,18 @@ export const AzureImporter = (): PluginInterface => {
   };
 
   /**
-   * Maps ModelParams input to AzureInputs structure for Azure-specific queries.
+   * Maps PluginParams input to AzureInputs structure for Azure-specific queries.
    */
-  const mapInputToAzureInputs = (input: ModelParams): AzureInputs => {
+  const mapInputToAzureInputs = (input: PluginParams): AzureInputs => {
     return {
       aggregation: input['azure-observation-aggregation'],
       resourceGroupName: input['azure-resource-group'],
       vmName: input['azure-vm-name'],
       subscriptionId: input['azure-subscription-id'],
-      timestamp: input['timestamp'],
+      timestamp: input['timestamp']!,
       duration: input['duration'].toString(),
       window: input['azure-observation-window'],
-      timespan: getTimeSpan(input['duration'], input['timestamp']),
+      timespan: getTimeSpan(input['duration'], input['timestamp']!),
       interval: getInterval(input['azure-observation-window']),
     };
   };
@@ -128,7 +130,7 @@ export const AzureImporter = (): PluginInterface => {
   /**
    * Checks for required fields in input.
    */
-  const validateInput = (input: ModelParams) => {
+  const validateInput = (input: PluginParams) => {
     const schema = z
       .object({
         timestamp: z.string().datetime(),
@@ -189,7 +191,7 @@ export const AzureImporter = (): PluginInterface => {
   };
 
   /**
-   * Takes impl `timestamp` and `duration` and returns an Azure formatted `timespan` value.
+   * Takes manifest `timestamp` and `duration` and returns an Azure formatted `timespan` value.
    */
   const getTimeSpan = (duration: number, timestamp: string): string => {
     const start = new Date(timestamp);
