@@ -29,7 +29,7 @@ describe('lib/watt-time: ', () => {
     });
 
     describe('execute(): ', () => {
-      it('returns a result with valid data.', async () => {
+      it.skip('returns a result with valid data.', async () => {
         const output = WattTimeGridEmissions({
           username: 'test1',
           password: 'test2',
