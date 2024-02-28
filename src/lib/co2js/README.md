@@ -45,7 +45,7 @@ The plugin config should define a `type` supported by the CO2.JS library (either
 
 Each input is expected to contain `network/data/bytes` or `network/data`, `duration` and `timestamp` fields.
 
-## manifest
+## Manifest
 
 The following is an example of how CO2.JS can be invoked using an `manifest`.
 
