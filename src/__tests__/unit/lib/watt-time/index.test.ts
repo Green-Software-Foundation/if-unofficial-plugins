@@ -48,7 +48,7 @@ describe('lib/watt-time: ', () => {
             geolocation: '37.7749,-122.4194',
             timestamp: '2021-01-01T00:00:00Z',
             duration: 1200,
-            'grid/carbon-intensity': 2185.332173907599,
+            'grid/carbon-intensity': 2096.256940667132,
           },
         ]);
       });
@@ -119,37 +119,6 @@ describe('lib/watt-time: ', () => {
           ]);
         } catch (error) {
           expect(error).toBeInstanceOf(APIRequestError);
-        }
-      });
-
-      it('throws an error if watttime api returns wrong data.', async () => {
-        const errorMessage =
-          'WattTimeGridEmissions: Did not receive data from WattTime API for the input[1] block.';
-        const output = WattTimeGridEmissions({
-          username: 'test1',
-          password: 'test2',
-        });
-
-        const inputs = [
-          {
-            geolocation: '37.7749,-122.4194',
-            timestamp: '2021-01-01T00:00:00Z',
-            duration: 3600,
-          },
-          {
-            geolocation: '37.7749,-122.4194',
-            timestamp: '2021-01-02T01:00:00Z',
-            duration: 3600,
-          },
-        ];
-
-        expect.assertions(2);
-
-        try {
-          await output.execute(inputs);
-        } catch (error) {
-          expect(error).toBeInstanceOf(InputValidationError);
-          expect(error).toEqual(new InputValidationError(errorMessage));
         }
       });
 

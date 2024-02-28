@@ -4,11 +4,11 @@ import {z} from 'zod';
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
-import {ConfigParams, KeyValuePair, ModelParams} from '../../types/common';
+import {ConfigParams, KeyValuePair, PluginParams} from '../../types/common';
 import {PluginInterface} from '../../interfaces';
 import {validate} from '../../util/validations';
 
-import {WattAuthType, WattTimeParams} from './types';
+import {WattTimeParams} from './types';
 import {WattTimeAPI} from './watt-time-api';
 
 const {InputValidationError} = ERRORS;
@@ -25,7 +25,7 @@ export const WattTimeGridEmissions = (
    */
   const initializeAuthentication = async () => {
     const extractedParams = extractParamsFromConfig();
-    const safeConfig: WattAuthType = validateConfig(extractedParams);
+    const safeConfig = validateConfig(extractedParams);
 
     await wattTimeAPI.authenticate(safeConfig);
   };
@@ -33,20 +33,13 @@ export const WattTimeGridEmissions = (
   /**
    * Calculates the average emission.
    */
-  const execute = async (inputs: ModelParams[]): Promise<ModelParams[]> => {
+  const execute = async (inputs: PluginParams[]) => {
     await initializeAuthentication();
-    validateInputs(inputs);
 
     const wattTimeData = await getWattTimeData(inputs);
 
     return inputs.map((input, index) => {
-      const inputStart = dayjs(input.timestamp);
-      const inputEnd = inputStart.add(input.duration, 'seconds');
-      const data = getWattTimeDataForDuration(
-        wattTimeData,
-        inputStart,
-        inputEnd
-      );
+      const data = getWattTimeDataForDuration(wattTimeData);
 
       if (data.length === 0) {
         throw new InputValidationError(
@@ -57,78 +50,18 @@ export const WattTimeGridEmissions = (
       }
 
       const totalEmission = data.reduce((a: number, b: number) => a + b, 0);
-      input['grid/carbon-intensity'] = totalEmission / data.length;
 
-      return input;
+      return {
+        ...input,
+        'grid/carbon-intensity': totalEmission / data.length,
+      };
     });
   };
 
-  /**
-   * lbs/MWh to Kg/MWh by dividing by 0.453592 (0.453592 Kg/lbs)
-   * (Kg/MWh == g/kWh)
-   * convert to kg/KWh by dividing by 1000. (1MWh = 1000KWh)
-   * convert to g/KWh by multiplying by 1000. (1Kg = 1000g)
-   * hence each other cancel out and g/KWh is the same as kg/MWh
-   */
-  const getWattTimeDataForDuration = (
-    wattTimeData: KeyValuePair[],
-    inputStart: dayjs.Dayjs,
-    inputEnd: dayjs.Dayjs
-  ) => {
-    const kgMWh = 0.45359237;
-
-    return wattTimeData.reduce((accumulator, data) => {
-      if (
-        !dayjs(data.point_time).isBefore(inputStart) &&
-        !dayjs(data.point_time).isAfter(inputEnd) &&
-        dayjs(data.point_time).format() !== dayjs(inputEnd).format()
-      ) {
-        accumulator.push(data.value / kgMWh);
-      }
-      return accumulator;
-    }, []);
-  };
-
-  /**
-   * Validates inputs for geolocation, latitude and longitude.
-   */
-  const validateInputs = (inputs: ModelParams[]) => {
-    inputs.forEach((input, index) => {
-      if ('geolocation' in input) {
-        const {latitude, longitude} = parseLocation(input);
-
-        if (isNaN(latitude) || isNaN(longitude)) {
-          throw new InputValidationError(
-            errorBuilder({
-              message: `'latitude' or 'longitude' from input[${index}] is not a number`,
-            })
-          );
-        }
-      }
-    });
-  };
-
-  /**
-   * Parses the geolocation string from the input data to extract latitude and longitude.
-   * Throws an InputValidationError if the geolocation string is invalid.
-   */
-  const parseLocation = (
-    input: ModelParams
-  ): {
-    latitude: number;
-    longitude: number;
-  } => {
-    const safeInput = Object.assign(input, validateSingleInput(input));
-    const [latitude, longitude] = safeInput['geolocation'].split(',');
-
-    return {latitude: parseFloat(latitude), longitude: parseFloat(longitude)};
-  };
-
-  /**
-   * Validates single input.
-   */
-  const validateSingleInput = (input: ModelParams) => {
+  const validateInput = (input: PluginParams) => {
     const schema = z.object({
+      duration: z.number(),
+      timestamp: z.string(),
       geolocation: z
         .string()
         .regex(new RegExp('^\\d{1,3}\\.\\d+,-\\d{1,3}\\.\\d+$'), {
@@ -141,14 +74,45 @@ export const WattTimeGridEmissions = (
   };
 
   /**
+   * lbs/MWh to Kg/MWh by dividing by 0.453592 (0.453592 Kg/lbs)
+   * (Kg/MWh == g/kWh)
+   * convert to kg/KWh by dividing by 1000. (1MWh = 1000KWh)
+   * convert to g/KWh by multiplying by 1000. (1Kg = 1000g)
+   * hence each other cancel out and g/KWh is the same as kg/MWh
+   */
+  const getWattTimeDataForDuration = (wattTimeData: KeyValuePair[]) => {
+    const kgMWh = 0.45359237;
+
+    return wattTimeData.reduce((accumulator, data) => {
+      accumulator.push(data.value / kgMWh);
+
+      return accumulator;
+    }, []);
+  };
+
+  /**
+   * Parses the geolocation string from the input data to extract latitude and longitude.
+   * Throws an InputValidationError if the geolocation string is invalid.
+   */
+  const parseLocation = (
+    geolocation: string
+  ): {
+    latitude: number;
+    longitude: number;
+  } => {
+    const [latitude, longitude] = geolocation.split(',');
+
+    return {latitude: parseFloat(latitude), longitude: parseFloat(longitude)};
+  };
+
+  /**
    * Retrieves data from the WattTime API based on the provided inputs.
    * Determines the start time and fetch duration from the inputs, and parses the geolocation.
    * Fetches data from the WattTime API for the entire duration and returns the sorted data.
    */
-  const getWattTimeData = async (inputs: ModelParams[]) => {
+  const getWattTimeData = async (inputs: PluginParams[]) => {
     const {startTime, fetchDuration} = calculateStartDurationTime(inputs);
-
-    const {latitude, longitude} = parseLocation(inputs[0]);
+    const {latitude, longitude} = parseLocation(inputs[0].geolocation);
 
     const params: WattTimeParams = {
       latitude,
@@ -168,14 +132,15 @@ export const WattTimeGridEmissions = (
    *
    */
   const calculateStartDurationTime = (
-    inputs: ModelParams[]
+    inputs: PluginParams[]
   ): {
     startTime: string;
     fetchDuration: number;
   } => {
     const {startTime, endtime} = inputs.reduce(
       (acc, input) => {
-        const {duration, timestamp} = input;
+        const safeInput = validateInput(input);
+        const {duration, timestamp} = safeInput;
         const dayjsTimestamp = dayjs(timestamp);
         const startTime = dayjsTimestamp.isBefore(acc.startTime)
           ? dayjsTimestamp
