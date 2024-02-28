@@ -4,20 +4,17 @@
 
 Teads Engineering team has built a plugin that is capable of estimating CPU usages across varying type of CPUs using a curve commonly known as Teads Curve.
 
-## Plugin name
-
-IF recognizes the Teads CPU plugin as `teads-curve`.
-
 ## Parameters
 
-### Plugin config
+### Plugin global config
 
-- `cpu/thermal-design-power`: the TDp of the processor
 - `interpolation`: the interpolation method to apply to the TDP data
 
 ### Inputs
 
+- `cpu/thermal-design-power`: the TDp of the processor
 - `cpu/utilization`: percentage CPU utilization for the input
+- `duration`: the amount of time the observation covers, in seconds
 
 ## Returns
 
@@ -48,8 +45,8 @@ const teads = TeadsCurve({
 const results = teads.execute([
   {
     duration: 3600, // duration institute
+    timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
     'cpu/utilization': 100, // CPU usage as a value between 0 to 100 in percentage
-    datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
   },
 ]);
 ```
@@ -73,8 +70,8 @@ const results = teads.execute(
   [
     {
       duration: 3600, // duration institute
+      timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
       'cpu/utilization': 100, // CPU usage as a value between 0 to 100 in percentage
-      datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
     },
   ],
   {
@@ -83,7 +80,7 @@ const results = teads.execute(
 );
 ```
 
-## Example `impl`
+## Example `manifest`
 
 ```yaml
 name: teads-curve
@@ -92,7 +89,7 @@ tags:
 initialize:
   plugins:
     teads-curve:
-      function: TeadsCurve
+      method: TeadsCurve
       path: '@grnsft/if-unofficial-plugins'
       global-config:
         interpolation: spline
@@ -100,7 +97,7 @@ tree:
   children:
     child:
       pipeline:
-        - teads-cpu
+        - teads-curve
       inputs:
         - timestamp: 2023-07-06T00:00
           duration: 3600
@@ -113,5 +110,5 @@ You can run this by passing it to `if`. Run impact using the following command r
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --impl ./examples/impls/test/teads-cpu.yml --ompl ./examples/ompls/teads-cpu.yml
+if --manifest ./examples/manifests/test/teads-curve.yml --output ./examples/outputs/teads-curve.yml
 ```

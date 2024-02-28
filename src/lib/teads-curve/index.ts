@@ -22,16 +22,12 @@ export const TeadsCurve = (globalConfig?: ConfigParams): PluginInterface => {
   /**
    * Calculate the total emissions for a list of inputs.
    */
-  const execute = async (
-    inputs: PluginParams[],
-    config?: ConfigParams
-  ): Promise<PluginParams[]> => {
-    const mergedConfig = Object.assign({}, globalConfig, config);
-    const validatedConfig = validateConfig(mergedConfig);
+  const execute = async (inputs: PluginParams[]) => {
+    const validatedConfig = validateConfig(globalConfig || {});
 
     return inputs.map((input, index) => {
-      const safeInput = getValidatedInput(input);
-      const inputWithConfig: PluginParams = Object.assign(
+      const safeInput = validateInput(input);
+      const inputWithConfig = Object.assign(
         {},
         input,
         safeInput,
@@ -80,16 +76,17 @@ export const TeadsCurve = (globalConfig?: ConfigParams): PluginInterface => {
    * (wattage * duration) / (seconds in an hour) / 1000 = kWh
    */
   const calculateEnergy = (input: PluginParams) => {
-    const {duration, 'cpu/utilization': cpu} = input;
+    const {
+      duration,
+      'cpu/utilization': cpu,
+      'cpu/thermal-design-power': cpuThermalDesignPower,
+    } = input;
     const spline: any = new Spline(POINTS, CURVE);
 
     const wattage =
       input.interpolation === Interpolation.SPLINE
-        ? spline.at(cpu) * input['cpu/thermal-design-power']
-        : calculateLinearInterpolationWattage(
-            cpu,
-            input['cpu/thermal-design-power']
-          );
+        ? spline.at(cpu) * cpuThermalDesignPower
+        : calculateLinearInterpolationWattage(cpu, cpuThermalDesignPower);
 
     return (wattage * duration) / 3600 / 1000;
   };
@@ -161,34 +158,26 @@ export const TeadsCurve = (globalConfig?: ConfigParams): PluginInterface => {
       interpolation: z.nativeEnum(Interpolation).optional(),
     });
 
-    //Manually add default value
-    config.interpolation = config.interpolation ?? Interpolation.SPLINE;
+    // Manually set default value
+    const interpolation = config.interpolation ?? Interpolation.SPLINE;
 
-    return validate<z.infer<typeof schema>>(schema, config);
+    return validate<z.infer<typeof schema>>(schema, {...config, interpolation});
   };
 
   /**
    * Validates parameters.
    */
-  const validateParams = (params: object) => {
+  const validateInput = (input: PluginParams) => {
     const schema = z.object({
+      duration: z.number().gt(0),
       'cpu/utilization': z.number().min(0).max(100),
       'cpu/thermal-design-power': z.number().min(1),
     });
 
-    return validate<z.infer<typeof schema>>(schema, params);
-  };
+    // Manually set default value if the property is missing.
+    const cpuTDP = input['cpu/thermal-design-power'] ?? 0;
 
-  /**
-   * Sets validated parameters for the class instance.
-   */
-  const getValidatedInput = (params: object) => {
-    const safeParams = Object.assign({}, params, validateParams(params));
-
-    return {
-      'cpu/thermal-design-power': safeParams['cpu/thermal-design-power'] ?? 0,
-      'cpu/utilization': safeParams['cpu/utilization'],
-    };
+    return validate<z.infer<typeof schema>>(schema, {...input, cpuTDP});
   };
 
   return {
