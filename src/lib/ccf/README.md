@@ -1,6 +1,6 @@
 # Cloud Carbon Footprint
 
-> [!NOTE] > `CCF` is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before manifestementing them!
+> [!NOTE] > `CCF` is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
 
 "Cloud Carbon Footprint is an open source tool that provides visibility and tooling to measure, monitor and reduce your cloud carbon emissions. We use best practice methodologies to convert cloud utilization into estimated energy usage and carbon emissions, producing metrics and carbon savings estimates that can be shared with employees, investors, and other stakeholders." - [CCF](https://www.cloudcarbonfootprint.org/)
 
@@ -22,9 +22,9 @@
 - `carbon-embodied`: carbon emitted in manufacturing the device, in gCO2eq
 - `energy`: energy used by CPU in kWh
 
-## IEF manifestementation
+## IF Implementation
 
-IEF remanifestements the Cloud Carbon Footprint methodology from scratch conforming to the IEF specification. This means the CCF plugins can be run inside IEF without any external API calls and can be invoked as part of a plugin pipeline defined in an `manifest`.
+IF reimplements the Cloud Carbon Footprint methodology from scratch conforming to the IF specification. This means the CCF plugins can be run inside IF without any external API calls and can be invoked as part of a plugin pipeline defined in an `manifest`.
 
 Cloud Carbon Footprint includes calculations for three cloud vendors: AWS, Azure and GCP.
 
@@ -40,11 +40,11 @@ And:
 
 `Embodied Emissions = estimated metric tons CO2e emissions from the manufacturing of datacenter servers, for compute usage`
 
-You can read a detailed explanation ofn the calculations in the [CCF docs](https://www.cloudcarbonfootprint.org/docs/methodology/) and see the code for our manifestementation in [this repository](../../src/lib/ccf/).
+You can read a detailed explanation ofn the calculations in the [CCF docs](https://www.cloudcarbonfootprint.org/docs/methodology/) and see the code for our implementing in [this repository](../../src/lib/ccf/).
 
 ## Usage
 
-In IEF, the plugin is called from a `manifest`. A `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`. The plugin input is expected to contain `duration`,`cpu/utilization`, `cloud/vendor` and `cloud/instance-type` fields.
+In IF, the plugin is called from a `manifest`. A `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`. The plugin input is expected to contain `duration`,`cpu/utilization`, `cloud/vendor` and `cloud/instance-type` fields.
 
 You can see example Typescript invocations for each `cloud/vendor` below:
 
