@@ -1,4 +1,4 @@
-# Teads' AWS Estimation Model
+# Teads' AWS Estimation Plugin
 
 > [!NOTE] > `Teads-AWS` is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
 
@@ -6,13 +6,9 @@ Teads Engineering Team built a plugin for estimating AWS instances energy usage.
 
 The main benefit of this plugin is that it accounts for all the components involved in an instance's compute capacity.
 
-## Model name
-
-IF recognizes the Teads AWS plugin as `teads-aws`
-
 ## Parameters
 
-### Model global config
+### Plugin global config
 
 - `interpolation`: the interpolation method to apply to the TDP curve
 
@@ -30,7 +26,7 @@ IF recognizes the Teads AWS plugin as `teads-aws`
 
 ## Implementation
 
-IEF implements this plugin based on the data gathered from the CCF (Cloud Carbon Footprint) dataset.
+IF implements this plugin based on the data gathered from the CCF (Cloud Carbon Footprint) dataset.
 
 Spline interpolation is implemented as the default method of estimating the usage using the power curve provided by `IDLE`, `10%`, `50%`, `100%` values in the dataset.
 
@@ -55,7 +51,7 @@ const results = teads.execute([
 ]);
 ```
 
-## Example `impl`
+## Example `manifest`
 
 ```yaml
 name: teads-aws
@@ -64,7 +60,7 @@ tags:
 initialize:
   plugins:
     teads-aws:
-      plugin: TeadsAWS
+      method: TeadsAWS
       path: '@grnsft/if-unofficial-plugins'
       global-config:
         interpolation: linear
@@ -88,5 +84,5 @@ You can run this by passing it to `if`. Run impact using the following command r
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --impl ./examples/impls/test/teads-aws.yml --ompl ./examples/ompls/teads-aws.yml
+if --manifest ./examples/manifests/test/teads-aws.yml --output ./examples/outputs/teads-aws.yml
 ```

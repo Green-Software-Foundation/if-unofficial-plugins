@@ -3,11 +3,11 @@
 > [!NOTE]
 > Boavizta is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
 
-[Boavizta](https://boavizta.org/) is an environmental impact calculator that exposes an API we use in IEF to retrieve energy and embodied carbon estimates.
+[Boavizta](https://boavizta.org/) is an environmental impact calculator that exposes an API we use in IF to retrieve energy and embodied carbon estimates.
 
 ## Implementation
 
-Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` plugin is included in an IEF pipeline, IEF sends API requests to Boavizta. The request payload is generated from input data provided to IEF in an `manifest` file.
+Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` plugin is included in an IF pipeline, IF sends API requests to Boavizta. The request payload is generated from input data provided to IF in an `manifest` file.
 
 ## Parameters
 
@@ -77,7 +77,7 @@ const usage = await output.calculate([
 
 ## Example `manifest`
 
-In IEF plugins are expected to be invoked from an `manifest` file. This is a yaml containing the plugin configuration and inputs. The following `manifest` initializes and runs the `boavizta-cpu` plugin:
+In IF plugins are expected to be invoked from an `manifest` file. This is a yaml containing the plugin configuration and inputs. The following `manifest` initializes and runs the `boavizta-cpu` plugin:
 
 ```yaml
 name: boavizta-demo

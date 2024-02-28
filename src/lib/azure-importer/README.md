@@ -14,7 +14,7 @@ You can create one using [portal.azure.com](https://portal.azure.com). You also 
 
 The Azure Importer uses [AzureDefaultCredentials](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet) method which is an abstraction for different scenarios of authentication.
 
-- When hosting the IEF Azure Importer on an Azure service, you can provide a [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview).
+- When hosting the IF Azure Importer on an Azure service, you can provide a [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview).
 - When running the Azure Importer outside of Azure, e.g. on your local machine, you can use an [App registration](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app) (an App registration is a representation of a technical service principal account; you can view it as an identity for your App on Azure).
 
 The following steps in this tutorial use a service principal. You can learn more at https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app

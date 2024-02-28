@@ -30,7 +30,7 @@ export const TeadsAWS = (globalConfig: ConfigParams): PluginInterface => {
   /**
    * Calculate the total emissions for a list of inputs.
    */
-  const execute = async (inputs: PluginParams[]): Promise<PluginParams[]> => {
+  const execute = async (inputs: PluginParams[]) => {
     standardizeInstanceMetrics();
 
     return inputs.map(input => {
@@ -40,14 +40,15 @@ export const TeadsAWS = (globalConfig: ConfigParams): PluginInterface => {
       const validExpectedLifespan =
         input['cpu/expected-lifespan'] ?? expectedLifespan;
 
-      input['energy'] = calculateEnergy(safeInput, instanceType);
-      input['carbon-embodied'] = embodiedEmissions(
-        safeInput,
-        instanceType,
-        validExpectedLifespan
-      );
-
-      return input;
+      return {
+        ...input,
+        energy: calculateEnergy(safeInput, instanceType),
+        'carbon-embodied': embodiedEmissions(
+          safeInput,
+          instanceType,
+          validExpectedLifespan
+        ),
+      };
     });
   };
 
@@ -209,6 +210,7 @@ export const TeadsAWS = (globalConfig: ConfigParams): PluginInterface => {
         validateInstanceType(param['cloud/instance-type']);
         return true;
       });
+
     return validate(schema, input);
   };
 

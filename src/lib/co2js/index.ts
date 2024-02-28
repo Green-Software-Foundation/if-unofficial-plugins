@@ -15,37 +15,23 @@ export const Co2js = (globalConfig?: ConfigParams): PluginInterface => {
   const errorBuilder = buildErrorMessage(Co2js.name);
 
   /**
-   * Executes the model for a list of input parameters.
+   * Executes the plugin for a list of input parameters.
    */
-  const execute = async (
-    inputs: PluginParams[],
-    config?: ConfigParams
-  ): Promise<PluginParams[]> => {
-    const mergedConfig = Object.assign({}, config, globalConfig);
-
-    validateConfig(mergedConfig);
-
-    const model = new co2({model: mergedConfig.type});
+  const execute = async (inputs: PluginParams[], config?: ConfigParams) => {
+    const mergedValidatedConfig = Object.assign(
+      {},
+      validateConfig(config),
+      validateGlobalConfig()
+    );
+    const model = new co2({model: mergedValidatedConfig.type});
 
     return inputs.map(input => {
-      const mergedWithConfig = Object.assign({}, input, mergedConfig);
-
-      if (!(input['network/data/bytes'] || input['network/data'])) {
-        throw new InputValidationError(
-          errorBuilder({
-            message: 'Bytes not provided',
-          })
-        );
-      }
-
+      const mergedWithConfig = Object.assign(
+        {},
+        validateInput(input),
+        mergedValidatedConfig
+      );
       const result = calculateResultByParams(mergedWithConfig, model);
-
-      if (result) {
-        return {
-          ...input,
-          'carbon-operational': result,
-        };
-      }
 
       return result
         ? {
@@ -83,23 +69,76 @@ export const Co2js = (globalConfig?: ConfigParams): PluginInterface => {
   };
 
   /**
-   * Validates static parameters.
+   * Validates input parameters.
    */
-  const validateConfig = (config: ConfigParams) => {
+  const validateInput = (input: PluginParams) => {
+    const schema = z
+      .object({
+        'network/data/bytes': z.number(),
+        'network/data': z.number(),
+      })
+      .partial()
+      .refine(data => !!data['network/data/bytes'] || !!data['network/data'], {
+        message:
+          'Either `network/data/bytes` or `network/data` should be provided in the input.',
+      });
+
+    return validate<z.infer<typeof schema>>(schema, input);
+  };
+
+  /**
+   * Validates Global config parameters.
+   */
+  const validateGlobalConfig = () => {
+    const schema = z.object({
+      options: z
+        .object({
+          dataReloadRatio: z.number().min(0).max(1).optional(),
+          firstVisitPercentage: z.number().min(0).max(1).optional(),
+          returnVisitPercentage: z.number().min(0).max(1).optional(),
+          gridIntensity: z
+            .object({
+              device: z
+                .number()
+                .or(z.object({country: z.string()}))
+                .optional(),
+              dataCenter: z
+                .number()
+                .or(z.object({country: z.string()}))
+                .optional(),
+              networks: z
+                .number()
+                .or(z.object({country: z.string()}))
+                .optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+    });
+
+    return validate<z.infer<typeof schema>>(schema, globalConfig || {});
+  };
+
+  /**
+   * Validates node config parameters.
+   */
+  const validateConfig = (config?: ConfigParams) => {
+    if (!config) {
+      throw new InputValidationError(
+        errorBuilder({
+          message: 'Config is not provided',
+        })
+      );
+    }
+
     const schema = z
       .object({
         type: z.enum(['1byte', 'swd']),
         'green-web-host': z.boolean(),
-        options: z
-          .object({
-            dataReloadRatio: z.number().min(0).max(1).optional(),
-            firstVisitPercentage: z.number().min(0).max(1).optional(),
-            returnVisitPercentage: z.number().min(0).max(1).optional(),
-            gridIntensity: z.object({}).optional(),
-          })
-          .optional(),
       })
-      .refine(allDefined);
+      .refine(allDefined, {
+        message: '`type` and `green-web-host` are not provided in node config',
+      });
 
     return validate<z.infer<typeof schema>>(schema, config);
   };

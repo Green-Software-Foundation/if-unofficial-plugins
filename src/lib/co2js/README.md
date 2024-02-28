@@ -10,9 +10,9 @@
   - `dataReloadRatio` - a value between 0 and 1 representing the percentage of data that is downloaded by return visitors. -`firstVisitPercentage` - a value between 0 and 1 representing the percentage of new visitors.
   - `returnVisitPercentage` - a value between 0 and 1 representing the percentage of returning visitors.
   - `gridIntensity` - an object that can contain the following optional keys:
-    - `device`
-    - `dataCenter`
-    - `networks`
+    - `device` - a number representing the carbon intensity for the given segment (in grams per kilowatt-hour). Or, an object, which contains a key of country and a value that is an Alpha-3 ISO country code.
+    - `dataCenter` - a number representing the carbon intensity for the given segment (in grams per kilowatt-hour). Or, an object, which contains a key of country and a value that is an Alpha-3 ISO country code.
+    - `networks` - A number representing the carbon intensity for the given segment (in grams per kilowatt-hour). Or, an object, which contains a key of country and a value that is an Alpha-3 ISO country code.
 
 The value for `device`, `dataCenter`, or `networks` can be a number representing the carbon intensity for the given segment (in grams per kilowatt-hour). Or, an object, which contains a key of country and a value that is an Alpha-3 ISO country code.
 
@@ -39,24 +39,24 @@ The CO2JS Framework is a community plugin, not part of the IF standard library. 
 
 ## Usage
 
-In IEF the plugin is called from an `impl`. An `impl` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`. There, the plugin's `configure` method is called first.
+In IF the plugin is called from an `manifest`. An `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`.
 
 The plugin config should define a `type` supported by the CO2.JS library (either `swd` or `1byte`). These are different ways to calculate the operational carbon associated with a web application; `swd` is shorthand for 'sustainable web design' plugin and `1byte` refers to the OneByte mdoel. You can read about the details of these plugins and how they differ at the [Green Web Foundation website](https://developers.thegreenwebfoundation.org/co2js/explainer/methodologies-for-calculating-website-carbon/).
 
 Each input is expected to contain `network/data/bytes` or `network/data`, `duration` and `timestamp` fields.
 
-## IMPL
+## Manifest
 
-The following is an example of how CO2.JS can be invoked using an `impl`.
+The following is an example of how CO2.JS can be invoked using an `manifest`.
 
 ```yaml
 name: co2js-demo
-description: example impl invoking CO2.JS plugin
+description: example manifest invoking CO2.JS plugin
 tags:
 initialize:
   plugins:
     co2js:
-      function: Co2js
+      method: Co2js
       path: '@grnsft/if-unofficial-plugins'
       global-config:
         options:
@@ -82,19 +82,19 @@ tree:
           network/data/bytes: 1000000
 ```
 
-This impl is run using `if` using the following command, run from the project root:
+This manifest is run using `if` using the following command, run from the project root:
 
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --impl ./examples/impls/test/co2js.yml --ompl ./examples/ompls/co2js.yml
+if --manifest ./examples/manifests/test/co2js.yml --output ./examples/outputs/co2js.yml
 ```
 
-This yields a result that looks like the following (saved to `/ompls/co2js.yml`):
+This yields a result that looks like the following (saved to `/outputs/co2js.yml`):
 
 ```yaml
 name: co2js-demo
-description: example impl invoking CO2.JS model
+description: example manifest invoking CO2.JS model
 tags: null
 initialize:
   plugins:

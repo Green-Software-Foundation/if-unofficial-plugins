@@ -86,7 +86,7 @@ describe('lib/co2js: ', () => {
         ]);
       });
 
-      it('returns a result when provided `options` in the input.', async () => {
+      it('returns a result when provided `options` in the global config.', async () => {
         const config = {type: 'swd', 'green-web-host': false};
         const output = Co2js({
           options: {
@@ -161,7 +161,9 @@ describe('lib/co2js: ', () => {
           await output.execute(inputs, config);
         } catch (error) {
           expect(error).toEqual(
-            new InputValidationError('Co2js: Bytes not provided.')
+            new InputValidationError(
+              'Either `network/data/bytes` or `network/data` should be provided in the input.'
+            )
           );
           expect(error).toBeInstanceOf(InputValidationError);
         }
