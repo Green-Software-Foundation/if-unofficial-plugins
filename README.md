@@ -1,5 +1,4 @@
-# Impact Framework - Unofficial Models
-
+# Impact Framework - Unofficial Plugins
 
 ## Implementations
 
