@@ -12,9 +12,9 @@ WattTime plugin provides a way to calculate emissions for a given time in a spec
 
 The plugin is based on the WattTime API. The plugin uses the following inputs:
 
-- geolocation: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
-- timestamp: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
-- duration: Duration of the recorded event in seconds (3600)
+- `geolocation`: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
+- `timestamp`: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
+- `duration`: Duration of the recorded event in seconds (3600)
 
 ## Implementation
 
@@ -44,9 +44,9 @@ WattTime API requires activation of subscription before usage. Please refer to t
 
 **Required Parameters:**
 
-- timestamp: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
-- geolocation: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
-- duration: Duration of the recorded event in seconds (3600)
+- `timestamp`: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
+- `geolocation`: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
+- `duration`: Duration of the recorded event in seconds (3600)
 
 ### Typescript Usage
 
@@ -69,9 +69,9 @@ const inputs = [
 const results = output.execute(inputs);
 ```
 
-### IMPL Usage
+### manifest Usage
 
-#### Environment Variable based configuration for IMPL
+#### Environment Variable based configuration for manifest
 
 ```yaml
 # environment variable config , prefix the environment variables with "ENV" to load them inside the plugin.
@@ -82,7 +82,7 @@ global-config:
   password: ENV_WATT_TIME_PASSWORD
 ```
 
-#### Static configuration for IMPL
+#### Static configuration for manifest
 
 ```yaml
 inputs:
@@ -91,7 +91,7 @@ inputs:
     duration: 3600
 ```
 
-## Example impl
+## Example manifest
 
 ```yaml
 name: watt-time
@@ -100,7 +100,7 @@ tags:
 initialize:
   plugins:
     watt-time:
-      plugin: WattTimeGridEmissions
+      method: WattTimeGridEmissions
       path: '@grnsft/if-unofficial-plugins'
       global-config:
         username: username
@@ -121,10 +121,10 @@ You can run this by passing it to `if`. Run impact using the following command r
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --impl ./examples/impls/test/watt-time.yml --ompl ./examples/ompls/watt-time.yml
+if --manifest ./examples/manifests/test/watt-time.yml --output ./examples/outputs/watt-time.yml
 ```
 
-## Position and effects in the impl:
+## Position and effects in the manifest:
 
-- Technically, WattTime plugin sets (or overwrites any preconfigured value of) the _grid/carbon-intensity_ attribute.
+- Technically, WattTime plugin sets (or overwrites any preconfigured value of) the `grid/carbon-intensity` attribute.
 - As such, it should be positioned before the _sci-o_ plugin, if such a plugin is used.
