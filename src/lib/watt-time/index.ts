@@ -39,15 +39,7 @@ export const WattTimeGridEmissions = (
     const wattTimeData = await getWattTimeData(inputs);
 
     return inputs.map((input, index) => {
-      const safeInput = Object.assign({}, input, validateInput(input));
-      const inputStart = dayjs(safeInput.timestamp);
-      const inputEnd = inputStart.add(safeInput.duration, 'seconds');
-
-      const data = getWattTimeDataForDuration(
-        wattTimeData,
-        inputStart,
-        inputEnd
-      );
+      const data = getWattTimeDataForDuration(wattTimeData);
 
       if (data.length === 0) {
         throw new InputValidationError(
@@ -88,25 +80,12 @@ export const WattTimeGridEmissions = (
    * convert to g/KWh by multiplying by 1000. (1Kg = 1000g)
    * hence each other cancel out and g/KWh is the same as kg/MWh
    */
-  const getWattTimeDataForDuration = (
-    wattTimeData: KeyValuePair[],
-    _inputStart: dayjs.Dayjs,
-    _inputEnd: dayjs.Dayjs
-  ) => {
+  const getWattTimeDataForDuration = (wattTimeData: KeyValuePair[]) => {
     const kgMWh = 0.45359237;
 
     return wattTimeData.reduce((accumulator, data) => {
-      // WattTime API returns full data for the entire duration.
-      // if the data point is before the input start, ignore it.
-      // if the data point is after the input end, ignore it.
-      // if the data point is exactly the same as the input end, ignore it
-      // if (
-      //   !dayjs(data.point_time).isBefore(inputStart) &&
-      //   !dayjs(data.point_time).isAfter(inputEnd) &&
-      //   dayjs(data.point_time).format() !== dayjs(inputEnd).format()
-      // ) {
       accumulator.push(data.value / kgMWh);
-      // }
+
       return accumulator;
     }, []);
   };
@@ -121,7 +100,7 @@ export const WattTimeGridEmissions = (
     latitude: number;
     longitude: number;
   } => {
-    const [latitude, longitude] = geolocation.toString().split(',');
+    const [latitude, longitude] = geolocation.split(',');
 
     return {latitude: parseFloat(latitude), longitude: parseFloat(longitude)};
   };
@@ -133,7 +112,6 @@ export const WattTimeGridEmissions = (
    */
   const getWattTimeData = async (inputs: PluginParams[]) => {
     const {startTime, fetchDuration} = calculateStartDurationTime(inputs);
-
     const {latitude, longitude} = parseLocation(inputs[0].geolocation);
 
     const params: WattTimeParams = {
@@ -161,7 +139,8 @@ export const WattTimeGridEmissions = (
   } => {
     const {startTime, endtime} = inputs.reduce(
       (acc, input) => {
-        const {duration, timestamp} = input;
+        const safeInput = validateInput(input);
+        const {duration, timestamp} = safeInput;
         const dayjsTimestamp = dayjs(timestamp);
         const startTime = dayjsTimestamp.isBefore(acc.startTime)
           ? dayjsTimestamp
