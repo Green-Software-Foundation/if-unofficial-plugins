@@ -67,7 +67,7 @@ export const BoaviztaCpuOutput = (
   };
 
   /**
-   * Fetches data from the Boavizta API for the CPU model.
+   * Fetches data from the Boavizta API for the CPU plugin.
    */
   const fetchData = async (
     input: PluginParams,
@@ -90,7 +90,7 @@ export const BoaviztaCpuOutput = (
   };
 
   /**
-   * Validates static parameters for the CPU model using Zod schema.
+   * Validates static parameters for the CPU plugin using Zod schema.
    */
   const validateInput = (input: PluginParams) => {
     const schema = z.object({
@@ -124,7 +124,12 @@ export const BoaviztaCloudOutput = (
 
     for await (const input of inputs) {
       const safeInput = Object.assign({}, input, validateInput(input));
-      const mergedWithConfig = Object.assign(input, safeInput, globalConfig);
+      const mergedWithConfig = Object.assign(
+        {},
+        input,
+        safeInput,
+        globalConfig
+      );
 
       await validateProvider(safeInput);
       await validateInstanceType(safeInput);
@@ -150,7 +155,7 @@ export const BoaviztaCloudOutput = (
   };
 
   /**
-   * Fetches data from the Boavizta API for the Cloud model.
+   * Fetches data from the Boavizta API for the Cloud plugin.
    */
   const fetchData = async (
     input: PluginParams,
@@ -164,7 +169,7 @@ export const BoaviztaCloudOutput = (
   };
 
   /**
-   * Validates static parameters for the Cloud model using Zod schema.
+   * Validates static parameters for the Cloud plugin using Zod schema.
    */
   const validateInput = (input: PluginParams) => {
     const schema = z.object({
@@ -179,7 +184,7 @@ export const BoaviztaCloudOutput = (
   };
 
   /**
-   * Validates the provider parameter for the Cloud model.
+   * Validates the provider parameter for the Cloud plugin.
    */
   const validateProvider = async (staticParams: PluginParams) => {
     const supportedProviders = await boaviztaAPI.getSupportedProvidersList();
@@ -196,7 +201,7 @@ export const BoaviztaCloudOutput = (
   };
 
   /**
-   * Validates the instance type parameter for the Cloud model.
+   * Validates the instance type parameter for the Cloud plugin.
    */
   const validateInstanceType = async (staticParams: PluginParams) => {
     const provider = staticParams.provider;
@@ -218,7 +223,7 @@ export const BoaviztaCloudOutput = (
   };
 
   /**
-   * Validates the country parameter for the Cloud model.
+   * Validates the country parameter for the Cloud plugin.
    */
   const validateLocation = async (
     staticParams: PluginParams

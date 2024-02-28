@@ -20,8 +20,8 @@ mockAxios.get.mockImplementation(mockGet);
 mockAxios.post.mockImplementation(mockPost);
 
 describe('lib/boavizta: ', () => {
-  describe('CpuOutputModel: ', () => {
-    const outputModel = BoaviztaCpuOutput({});
+  describe('CpuOutput: ', () => {
+    const output = BoaviztaCpuOutput({});
 
     beforeEach(() => {
       jest.clearAllMocks();
@@ -29,8 +29,8 @@ describe('lib/boavizta: ', () => {
 
     describe('init BoaviztaCpuOutput: ', () => {
       it('initalizes object with properties.', async () => {
-        expect(outputModel).toHaveProperty('metadata');
-        expect(outputModel).toHaveProperty('execute');
+        expect(output).toHaveProperty('metadata');
+        expect(output).toHaveProperty('execute');
       });
     });
 
@@ -38,8 +38,8 @@ describe('lib/boavizta: ', () => {
       it('returns a result when provided a valid data.', async () => {
         expect.assertions(1);
 
-        const outputModel = BoaviztaCpuOutput({});
-        const result = await outputModel.execute([
+        const output = BoaviztaCpuOutput({});
+        const result = await output.execute([
           {
             timestamp: '2021-01-01T00:00:00Z',
             duration: 3600,
@@ -67,9 +67,9 @@ describe('lib/boavizta: ', () => {
       it('returns a result when `verbose` is provided in the global config.', async () => {
         expect.assertions(1);
 
-        const outputModel = BoaviztaCpuOutput({verbose: true});
+        const output = BoaviztaCpuOutput({verbose: true});
 
-        const result = await outputModel.execute([
+        const result = await output.execute([
           {
             timestamp: '2021-01-01T00:00:00Z',
             duration: 7200,
@@ -97,7 +97,7 @@ describe('lib/boavizta: ', () => {
       it('returns an empty array when the input is an empty array.', async () => {
         expect.assertions(1);
 
-        expect(await outputModel.execute([])).toEqual([]);
+        expect(await output.execute([])).toEqual([]);
       });
 
       it('throws an error when the metric type is missing from the input.', async () => {
@@ -114,7 +114,7 @@ describe('lib/boavizta: ', () => {
         expect.assertions(1);
 
         try {
-          await outputModel.execute(inputs);
+          await output.execute(inputs);
         } catch (error) {
           expect(error).toBeInstanceOf(InputValidationError);
         }
@@ -122,8 +122,8 @@ describe('lib/boavizta: ', () => {
     });
   });
 
-  describe('CloudOutputModel', () => {
-    const outputModel = BoaviztaCloudOutput({});
+  describe('Cloudoutput', () => {
+    const output = BoaviztaCloudOutput({});
 
     beforeEach(() => {
       jest.clearAllMocks();
@@ -131,8 +131,8 @@ describe('lib/boavizta: ', () => {
 
     describe('init BoaviztaCloudOutput: ', () => {
       it('initalizes object with properties.', async () => {
-        expect(outputModel).toHaveProperty('metadata');
-        expect(outputModel).toHaveProperty('execute');
+        expect(output).toHaveProperty('metadata');
+        expect(output).toHaveProperty('execute');
       });
     });
 
@@ -141,7 +141,7 @@ describe('lib/boavizta: ', () => {
         expect.assertions(1);
 
         expect(
-          await outputModel.execute([
+          await output.execute([
             {
               timestamp: '2021-01-01T00:00:00Z',
               duration: 15,
@@ -162,14 +162,14 @@ describe('lib/boavizta: ', () => {
       it('returns an empty array when the input is an empty array.', async () => {
         expect.assertions(1);
 
-        expect(await outputModel.execute([])).toEqual([]);
+        expect(await output.execute([])).toEqual([]);
       });
 
       it('throws an error when the metric type is missing from the input.', async () => {
         expect.assertions(1);
 
         try {
-          await outputModel.execute([
+          await output.execute([
             {
               timestamp: '2021-01-01T00:00:00Z',
               duration: 15,
