@@ -6,7 +6,7 @@
 
 ## Plugin global config
 
-- `options`: **SWD Model Only** an object containing any Sustainable Web Design specific variables to the changed. All keys are optional.
+- `options`: **SWD Plugin Only** an object containing any Sustainable Web Design specific variables to the changed. All keys are optional.
   - `dataReloadRatio` - a value between 0 and 1 representing the percentage of data that is downloaded by return visitors. -`firstVisitPercentage` - a value between 0 and 1 representing the percentage of new visitors.
   - `returnVisitPercentage` - a value between 0 and 1 representing the percentage of returning visitors.
   - `gridIntensity` - an object that can contain the following optional keys:
@@ -94,13 +94,13 @@ This yields a result that looks like the following (saved to `/outputs/co2js.yml
 
 ```yaml
 name: co2js-demo
-description: example manifest invoking CO2.JS model
+description: example manifest invoking CO2.JS plugin
 tags: null
 initialize:
   plugins:
     co2js:
-      path: '@grnsft/if-unofficial-models'
-      model: Co2js
+      path: '@grnsft/if-unofficial-plugins'
+      method: Co2js
       global-config:
         options:
           dataReloadRatio: 0.6
@@ -153,7 +153,7 @@ const globalConfig = {
   },
 };
 const co2js = Co2js(globalConfig);
-const results = co2js.execute(
+const results = await co2js.execute(
   [
     {
       duration: 3600, // duration institute
@@ -174,7 +174,7 @@ const results = co2js.execute(
 import {Co2js} from '@grnsft/if-unofficial-plugins';
 
 const co2js = Co2js();
-const results = co2js.execute(
+const results = await co2js.execute(
   [
     {
       duration: 3600, // duration institute

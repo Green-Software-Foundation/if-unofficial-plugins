@@ -41,7 +41,7 @@ Resulting values are an estimate based on the testing done by Teads' Engineering
 import {TeadsAWS} from '@grnsft/if-unofficial-plugins';
 
 const teads = TeadsAWS({});
-const results = teads.execute([
+const results = await teads.execute([
   {
     duration: 3600, // duration institute
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp

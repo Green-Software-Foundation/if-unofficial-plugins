@@ -42,7 +42,7 @@ import {TeadsCurve} from '@grnsft/if-unofficial-plugins';
 const teads = TeadsCurve({
   'cpu/thermal-design-power': 100, // cpu/thermal-design-power of the CPU
 });
-const results = teads.execute([
+const results = await teads.execute([
   {
     duration: 3600, // duration institute
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
@@ -66,7 +66,7 @@ Resulting values are an estimate based on the testing done by Teads' Engineering
 import {TeadsCurve, Interpolation} from '@grnsft/if-unofficial-plugins';
 
 const teads = TeadsCurve({interpolation: Interpolation.SPLINE});
-const results = teads.execute(
+const results = await teads.execute(
   [
     {
       duration: 3600, // duration institute

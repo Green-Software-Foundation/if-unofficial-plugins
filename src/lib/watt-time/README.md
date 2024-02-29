@@ -55,18 +55,17 @@ WattTime API requires activation of subscription before usage. Please refer to t
 // export WATT_TIME_USERNAME=test1
 // export WATT_TIME_PASSWORD=test2
 // use environment variables to configure the plugin
-const output = await WattTimeGridEmissions({
+const output = WattTimeGridEmissions({
   username: process.env.WATT_TIME_USERNAME,
   password: process.env.WATT_TIME_PASSWORD,
 });
-const inputs = [
+const result = await output.execute([
   {
     timestamp: '2021-01-01T00:00:00Z',
     geolocation: '43.22,-80.22',
     duration: 3600,
   },
-];
-const results = output.execute(inputs);
+]);
 ```
 
 ### manifest Usage

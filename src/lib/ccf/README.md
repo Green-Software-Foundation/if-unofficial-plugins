@@ -54,7 +54,7 @@ You can see example Typescript invocations for each `cloud/vendor` below:
 import {CloudCarbonFootprint} from '@grnsft/if-unofficial-plugins';
 
 const ccf = CloudCarbonFootprint({interpolation: Interpolation.LINEAR});
-const results = ccf.execute([
+const results = await ccf.execute([
   {
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
     duration: 3600, // duration institute
@@ -70,8 +70,8 @@ const results = ccf.execute([
 ```typescript
 import {CloudCarbonFootprint} from '@grnsft/if-unofficial-plugins';
 
-const ccf = new CloudCarbonFootprint();
-const results = ccf.execute([
+const ccf = CloudCarbonFootprint();
+const results = await ccf.execute([
   {
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
     duration: 3600, // duration institute
@@ -87,8 +87,8 @@ const results = ccf.execute([
 ```typescript
 import {CloudCarbonFootprint} from '@grnsft/if-unofficial-plugins';
 
-const ccf = new CloudCarbonFootprint();
-const results = ccf.execute([
+const ccf = CloudCarbonFootprint();
+const results = await ccf.execute([
   {
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
     duration: 3600, // duration institute
