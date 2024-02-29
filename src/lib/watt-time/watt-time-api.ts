@@ -65,7 +65,10 @@ export const WattTimeAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching data from WattTime API. ${JSON.stringify(
-              error
+              (error.response &&
+                error.response.data &&
+                error.response.data.message) ||
+                error
             )}`,
           })
         );
