@@ -25,7 +25,7 @@ Limitations:
 
 ### Authentication
 
-WattTime API requires activation of subscription before usage. Please refer to the [WattTime website](https://www.watttime.org/get-the-data/data-plans/) for more information.
+WattTime API requires activation of subscription before usage. Please refer to the [WattTime website](https://watttime.org/docs-dev/data-plans/) for more information.
 
 **Required Parameters:**
 
