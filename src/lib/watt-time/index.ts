@@ -14,7 +14,7 @@ import {WattTimeAPI} from './watt-time-api';
 const {InputValidationError} = ERRORS;
 
 export const WattTimeGridEmissions = (
-  globalConfig: ConfigParams
+  globalConfig?: ConfigParams
 ): PluginInterface => {
   const metadata = {kind: 'execute'};
   const wattTimeAPI = WattTimeAPI();
@@ -24,8 +24,7 @@ export const WattTimeGridEmissions = (
    * Initialize authentication with global config.
    */
   const initializeAuthentication = async () => {
-    const extractedParams = extractParamsFromConfig();
-    const safeConfig = validateConfig(extractedParams);
+    const safeConfig = validateConfig();
 
     await wattTimeAPI.authenticate(safeConfig);
   };
@@ -175,40 +174,25 @@ export const WattTimeGridEmissions = (
   /**
    * Validates static parameters.
    */
-  const validateConfig = (config: ConfigParams) => {
+  const validateConfig = () => {
+    const WATT_TIME_USERNAME = process.env.WATT_TIME_USERNAME;
+    const WATT_TIME_PASSWORD = process.env.WATT_TIME_PASSWORD;
+
     const schema = z.object({
-      username: z.string(),
-      password: z.string(),
-      token: z.string().optional(),
+      WATT_TIME_USERNAME: z.string({
+        required_error: 'must be provided in .env file of `IF` root directory',
+      }),
+      WATT_TIME_PASSWORD: z.string().min(1, {
+        message: 'must be provided in .env file of `IF` root directory',
+      }),
       baseUrl: z.string().optional(),
     });
 
-    return validate<z.infer<typeof schema>>(schema, config);
-  };
-
-  /**
-   * Extracts username, password, and token from the provided static parameters.
-   * Removes the 'ENV_' prefix from the parameters if present.
-   */
-  const extractParamsFromConfig = () => {
-    const username: string =
-      'username' in globalConfig ? (globalConfig['username'] as string) : '';
-    const password: string =
-      'password' in globalConfig ? (globalConfig['password'] as string) : '';
-    const token: string =
-      'token' in globalConfig ? (globalConfig['token'] as string) : '';
-
-    [username, password, token].map(item => removeENVPrefix(item));
-
-    return Object.assign({}, globalConfig, username, password, token);
-  };
-
-  /**
-   * Removes the 'ENV_' prefix from the provided string if present and retrieves the corresponding environment variable value.
-   * If the string does not start with 'ENV_', returns an empty string.
-   */
-  const removeENVPrefix = (item: string) => {
-    return item.startsWith('ENV_') && (process.env[item.slice(4)] ?? '');
+    return validate<z.infer<typeof schema>>(schema, {
+      ...(globalConfig || {}),
+      WATT_TIME_USERNAME,
+      WATT_TIME_PASSWORD,
+    });
   };
 
   return {

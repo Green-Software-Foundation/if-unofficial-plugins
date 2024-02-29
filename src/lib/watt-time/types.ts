@@ -13,8 +13,5 @@ export interface LatitudeLongitude {
 }
 
 export type WattAuthType = {
-  username: string;
-  password: string;
-  token?: string;
   baseUrl?: string;
 };

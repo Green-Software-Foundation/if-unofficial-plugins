@@ -30,11 +30,10 @@ describe('lib/watt-time: ', () => {
 
     describe('execute(): ', () => {
       it('returns a result with valid data.', async () => {
-        const output = WattTimeGridEmissions({
-          username: 'test1',
-          password: 'test2',
-        });
+        process.env.WATT_TIME_USERNAME = 'test1';
+        process.env.WATT_TIME_PASSWORD = 'test2';
 
+        const output = WattTimeGridEmissions();
         const result = await output.execute([
           {
             geolocation: '37.7749,-122.4194',
@@ -56,14 +55,13 @@ describe('lib/watt-time: ', () => {
       it('throws an error when `token` is missing.', async () => {
         const errorMessage =
           'WattTimeAPI(authorization): Missing token in response. Invalid credentials provided.';
+        process.env.WATT_TIME_USERNAME = 'ENV_WATT_USERNAME';
+        process.env.WATT_TIME_PASSWORD = 'ENV_WATT_PASSWORD';
 
         expect.assertions(2);
 
         try {
-          const output = WattTimeGridEmissions({
-            username: 'ENV_WATT_USERNAME',
-            password: 'ENV_WATT_PASSWORD',
-          });
+          const output = WattTimeGridEmissions();
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
@@ -79,14 +77,11 @@ describe('lib/watt-time: ', () => {
 
       it('throws an error when credentials are missing.', async () => {
         const errorMessage =
-          '"username" parameter is required. Error code: invalid_type.,"password" parameter is required. Error code: invalid_type.';
-
+          'WattTimeAPI(authorization): Missing token in response. Invalid credentials provided.';
         expect.assertions(2);
 
         try {
-          const output = WattTimeGridEmissions({
-            token: 'ENV_WATT_TOKEN',
-          });
+          const output = WattTimeGridEmissions();
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
@@ -95,16 +90,16 @@ describe('lib/watt-time: ', () => {
             },
           ]);
         } catch (error) {
-          expect(error).toBeInstanceOf(InputValidationError);
-          expect(error).toEqual(new InputValidationError(errorMessage));
+          expect(error).toBeInstanceOf(AuthorizationError);
+          expect(error).toEqual(new AuthorizationError(errorMessage));
         }
       });
 
       it('throws an error when initialize with wrong username / password.', async () => {
+        process.env.WATT_TIME_USERNAME = 'test1';
+        process.env.WATT_TIME_PASSWORD = 'test2';
         const output = WattTimeGridEmissions({
           baseUrl: 'https://apifail.watttime.org/v2',
-          username: 'test1',
-          password: 'test2',
         });
 
         expect.assertions(1);
@@ -125,10 +120,10 @@ describe('lib/watt-time: ', () => {
       it('throws an error when wrong `geolocation` is provided.', async () => {
         const errorMessage =
           '"geolocation" parameter is should be a comma-separated string consisting of `latitude` and `longitude`. Error code: invalid_string.';
-        const output = WattTimeGridEmissions({
-          username: 'test1',
-          password: 'test2',
-        });
+        process.env.WATT_TIME_USERNAME = 'test1';
+        process.env.WATT_TIME_PASSWORD = 'test2';
+
+        const output = WattTimeGridEmissions();
 
         expect.assertions(6);
 
@@ -174,9 +169,10 @@ describe('lib/watt-time: ', () => {
 
       it('throws an error when no data is returned by API.', async () => {
         const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
+        process.env.WATT_TIME_USERNAME = 'test1';
+        process.env.WATT_TIME_PASSWORD = 'test2';
+
         const output = WattTimeGridEmissions({
-          username: 'test1',
-          password: 'test2',
           baseUrl: 'https://apifail2.watttime.org/v2',
         });
 
@@ -203,9 +199,10 @@ describe('lib/watt-time: ', () => {
       it('throws an error when an unauthorized error occurs during data fetch.', async () => {
         const errorMessage =
           'WattTimeAPI: Error fetching data from WattTime API. {"status":401,"data":{"none":{}}}.';
+        process.env.WATT_TIME_USERNAME = 'test1';
+        process.env.WATT_TIME_PASSWORD = 'test2';
+
         const output = WattTimeGridEmissions({
-          username: 'test1',
-          password: 'test2',
           baseUrl: 'https://apifail3.watttime.org/v2',
         });
 
@@ -231,11 +228,10 @@ describe('lib/watt-time: ', () => {
       it('throws an error when span is more than 32 days.', async () => {
         const errorMessage =
           'WattTimeGridEmissions: WattTime API supports up to 32 days. Duration of 31537200 seconds is too long.';
+        process.env.WATT_TIME_USERNAME = 'test1';
+        process.env.WATT_TIME_PASSWORD = 'test2';
 
-        const output = WattTimeGridEmissions({
-          username: 'test1',
-          password: 'test2',
-        });
+        const output = WattTimeGridEmissions();
 
         try {
           await output.execute([

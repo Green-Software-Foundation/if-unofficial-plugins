@@ -1,3 +1,4 @@
+import * as dotenv from 'dotenv';
 import * as dayjs from 'dayjs';
 import axios from 'axios';
 
@@ -20,15 +21,16 @@ export const WattTimeAPI = () => {
    * Updates the token and base URL for API requests upon successful authentication.
    */
   const authenticate = async (authParams: WattAuthType): Promise<void> => {
-    token = authParams['token'] ?? '';
+    dotenv.config();
+
+    token = process.env.WATT_TIME_TOKEN ?? '';
     baseUrl = authParams['baseUrl'] ?? baseUrl;
 
     if (token === '') {
-      const {username, password} = authParams;
       const tokenResponse = await axios.get(`${baseUrl}/login`, {
         auth: {
-          username,
-          password,
+          username: process.env.WATT_TIME_USERNAME || '',
+          password: process.env.WATT_TIME_PASSWORD || '',
         },
       });
 
