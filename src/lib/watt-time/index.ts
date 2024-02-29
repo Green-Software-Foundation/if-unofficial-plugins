@@ -58,15 +58,18 @@ export const WattTimeGridEmissions = (
     });
   };
 
+  /**
+   * Validates input parameters.
+   */
   const validateInput = (input: PluginParams) => {
     const schema = z.object({
       duration: z.number(),
       timestamp: z.string(),
       geolocation: z
         .string()
-        .regex(new RegExp('^\\d{1,3}\\.\\d+,-\\d{1,3}\\.\\d+$'), {
+        .regex(new RegExp('^\\-?\\d{1,3}\\.\\d+,-?\\d{1,3}\\.\\d+$'), {
           message:
-            "'geolocation' should be a comma separated string of 'latitude' and 'longitude'",
+            'should be a comma-separated string consisting of `latitude` and `longitude`',
         }),
     });
 

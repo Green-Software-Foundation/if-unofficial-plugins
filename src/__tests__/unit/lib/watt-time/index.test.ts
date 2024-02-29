@@ -124,7 +124,7 @@ describe('lib/watt-time: ', () => {
 
       it('throws an error when wrong `geolocation` is provided.', async () => {
         const errorMessage =
-          "\"geolocation\" parameter is 'geolocation' should be a comma separated string of 'latitude' and 'longitude'. Error code: invalid_string.";
+          '"geolocation" parameter is should be a comma-separated string consisting of `latitude` and `longitude`. Error code: invalid_string.';
         const output = WattTimeGridEmissions({
           username: 'test1',
           password: 'test2',
