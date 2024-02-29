@@ -27,20 +27,26 @@ Limitations:
 
 WattTime API requires activation of subscription before usage. Please refer to the [WattTime website](https://watttime.org/docs-dev/data-plans/) for more information.
 
+Create a `.env` file in the IF project root directory. This is where you can store your WattTime authentication details. Your `.env` file should look as follows:
+
 **Required Parameters:**
 
-```
-# example environment variable config , prefix the environment variables with "ENV" to load them inside the plugin.
-# export WATT_TIME_USERNAME=test1
-# export WATT_TIME_PASSWORD=test2
+```txt
+WATT_TIME_USERNAME: <your-username>
+WATT_TIME_PASSWORD: <your-password>
 ```
 
-- username: Username for the WattTime API
-  - ENV_WATT_TIME_USERNAME - specifying this value enables the Impact to load the value from the environment variable `WATT_TIME_USERNAME`
-- password: Password for the WattTime API
-  - ENV_WATT_TIME_PASSWORD - specifying this value enables the Impact to load the value from the environment variable `WATT_TIME_PASSWORD`
+**Optional Parameter:**
 
-### inputs
+```txt
+WATT_TIME_TOKEN: <your-token>
+```
+
+### Plugin global config
+
+- `base-url`: The URL for the WattTime API endpoint.
+
+### Inputs
 
 **Required Parameters:**
 
@@ -55,10 +61,7 @@ WattTime API requires activation of subscription before usage. Please refer to t
 // export WATT_TIME_USERNAME=test1
 // export WATT_TIME_PASSWORD=test2
 // use environment variables to configure the plugin
-const output = WattTimeGridEmissions({
-  username: process.env.WATT_TIME_USERNAME,
-  password: process.env.WATT_TIME_PASSWORD,
-});
+const output = WattTimeGridEmissions();
 const result = await output.execute([
   {
     timestamp: '2021-01-01T00:00:00Z',
@@ -68,20 +71,9 @@ const result = await output.execute([
 ]);
 ```
 
-### manifest Usage
+### Manifest Usage
 
-#### Environment Variable based configuration for manifest
-
-```yaml
-# environment variable config , prefix the environment variables with "ENV" to load them inside the plugin.
-# export WATT_TIME_USERNAME=test1
-# export WATT_TIME_PASSWORD=test2
-global-config:
-  username: ENV_WATT_TIME_USERNAME
-  password: ENV_WATT_TIME_PASSWORD
-```
-
-#### Static configuration for manifest
+#### Input for manifest
 
 ```yaml
 inputs:
@@ -101,9 +93,6 @@ initialize:
     watt-time:
       method: WattTimeGridEmissions
       path: '@grnsft/if-unofficial-plugins'
-      global-config:
-        username: username
-        password: password
 tree:
   children:
     child:
