@@ -180,10 +180,10 @@ export const WattTimeGridEmissions = (
 
     const schema = z.object({
       WATT_TIME_USERNAME: z.string({
-        required_error: 'must be provided in .env file of `IF` root directory',
+        required_error: 'not provided in .env file of `IF` root directory',
       }),
       WATT_TIME_PASSWORD: z.string().min(1, {
-        message: 'must be provided in .env file of `IF` root directory',
+        message: 'not provided in .env file of `IF` root directory',
       }),
       baseUrl: z.string().optional(),
     });
