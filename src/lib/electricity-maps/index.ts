@@ -24,7 +24,9 @@ export class ElectricityMapsModel implements ModelPluginInterface {
     async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
             return inputs.map((model_param)=>{
                 let unit = 'gCO2eq/kWh';
+                let power_consumption = model_param.power_consumption;
                 if (!model_param.power_consumption) {
+                    power_consumption = 1;
                     unit = 'gCO2eq';
                 }
                 const start = dayjs(model_param.timestamp);
@@ -53,7 +55,7 @@ export class ElectricityMapsModel implements ModelPluginInterface {
                 ));
                 return {
                     ...model_param,
-                    carbon_intensity: total_carbon_intensity,
+                    carbon_intensity: total_carbon_intensity * power_consumption,
                     unit: unit
                 }
             });
