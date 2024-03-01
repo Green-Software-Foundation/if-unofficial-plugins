@@ -68,7 +68,7 @@ export const WattTimeGridEmissions = (
         .string()
         .regex(new RegExp('^\\-?\\d{1,3}\\.\\d+,-?\\d{1,3}\\.\\d+$'), {
           message:
-            'should be a comma-separated string consisting of `latitude` and `longitude`',
+            'not a comma-separated string consisting of `latitude` and `longitude`',
         }),
     });
 
