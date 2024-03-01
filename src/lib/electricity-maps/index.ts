@@ -22,7 +22,6 @@ export class ElectricityMapsModel implements ModelPluginInterface {
             return this;
     }
     async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-            const outputs: ModelParams[] = [];
             return inputs.map((model_param)=>{
                 let unit = 'gCO2eq/kWh';
                 if (!model_param.power_consumption) {
@@ -46,11 +45,12 @@ export class ElectricityMapsModel implements ModelPluginInterface {
                     return 1;
                 });
                 let total_carbon_intensity = 0;
-                carbon_intensities.forEach(
+                carbon_intensities.then((test) =>
+                    test.forEach(
                     (carbon_intensity, index)=>{
                         total_carbon_intensity += carbon_intensity.value * hourly_ratios[index];
                     }
-                )
+                ));
                 return {
                     ...model_param,
                     carbon_intensity: total_carbon_intensity,
@@ -71,7 +71,7 @@ export class ElectricityMapsModel implements ModelPluginInterface {
         }
         this.authorizationHeader = `auth-token: ${token}`;
     }
-    private get_carbon_intensity(longitude: number, latitude: number, start: dayjs.Dayjs, end: dayjs.Dayjs): KeyValuePair[] {
+    private async get_carbon_intensity(longitude: number, latitude: number, start: dayjs.Dayjs, end: dayjs.Dayjs): Promise<KeyValuePair[]> {
         const parameters = {
             lon: longitude,
             lat: latitude,
@@ -87,7 +87,7 @@ export class ElectricityMapsModel implements ModelPluginInterface {
             )
         }
         const url = `${BASE_URL}/carbon-intensity/past-range`;
-        const response = axios.get(
+        return axios.get(
             url,
             {
                 params: parameters,
@@ -95,8 +95,7 @@ export class ElectricityMapsModel implements ModelPluginInterface {
                     'auth-token': this.authorizationHeader,
                 }
             }
-        )
-        response.then(
+        ).then(
             (response)=>{
                 if (response.status !== 200) {
                     throw new APIRequestError(
