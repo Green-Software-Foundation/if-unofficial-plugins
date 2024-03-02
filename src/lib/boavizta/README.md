@@ -13,7 +13,6 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 
 ### Plugin global config
 
-- `allocation`: manufacturing impacts can be reported with two allocation strategies: `TOTAL` is the total impact without adjusting for usage. `LINEAR` distrbutes the impact linearly over the lifespan of a device. See [Boavizta docs](https://doc.api.boavizta.org/Explanations/manufacture_methodology/#hover-a-specific-duration-allocation-linear) for more info.
 - `verbose`: determines how much information the API response contains (optional)
 
 ### Inputs
@@ -23,6 +22,7 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 - `cpu/expected-lifespan`: the lifespan of the component, in seconds
 - `country`: the country used to lookup grid carbon intensity, e.g. "USA" (optional - falls back to Boavizta default)
 - `cpu/utilization`: percentage CPU utilization for a given observation
+- `instance-type`: the name of the specific instance
 
 ## Returns
 
