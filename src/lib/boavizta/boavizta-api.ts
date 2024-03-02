@@ -2,10 +2,17 @@ import axios from 'axios';
 
 import {KeyValuePair} from '../../types/common';
 
+import {ERRORS} from '../../util/errors';
+import {buildErrorMessage} from '../../util/helpers';
+
 import {ICountryCodes} from './types';
+
+const {APIRequestError} = ERRORS;
 
 export const BoaviztaAPI = () => {
   const BASE_URL = 'https://api.boavizta.org/v1';
+
+  const errorBuilder = buildErrorMessage(BoaviztaAPI.name);
 
   /**
    * Fetches CPU output data from Boavizta API for a specific component type.
@@ -27,16 +34,34 @@ export const BoaviztaAPI = () => {
    * Fetches cloud instance data from Boavizta API.
    */
   const fetchCloudInstanceData = async (
-    dataCast: KeyValuePair,
+    data: KeyValuePair,
     verbose: boolean
   ): Promise<object> => {
-    const updatedDataCast = replaceHyphensWithUnderscores(dataCast);
+    const updatedDataCast = replaceHyphensWithUnderscores(data);
 
-    const response = await axios.post(
-      `${BASE_URL}/cloud/instance?verbose=${verbose}&duration=${updatedDataCast['usage']['hours_use_time']}`,
-      dataCast
-    );
-    return response.data;
+    const response = await axios
+      .post(
+        `${BASE_URL}/cloud/instance?verbose=${verbose}&duration=${updatedDataCast['usage']['hours_use_time']}`,
+        {
+          provider: data.provider,
+          instance_type: data['instance-type'],
+          usage: data.usage,
+        }
+      )
+      .catch(error => {
+        throw new APIRequestError(
+          errorBuilder({
+            message: `Error fetching data from Boavizta API. ${JSON.stringify(
+              (error.response &&
+                error.response.data &&
+                error.response.data.detail) ||
+                error
+            )}`,
+          })
+        );
+      });
+
+    return response?.data;
   };
 
   /**
