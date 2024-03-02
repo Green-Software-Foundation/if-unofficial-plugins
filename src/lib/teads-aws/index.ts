@@ -1,12 +1,13 @@
 import Spline from 'typescript-cubic-spline';
 import {z} from 'zod';
 
-import {ModelPluginInterface} from '../../interfaces';
+import {PluginInterface} from '../../interfaces';
 import {
   Interpolation,
   KeyValuePair,
-  ModelParams,
+  PluginParams,
   ComputeInstance,
+  ConfigParams,
 } from '../../types/common';
 
 import {buildErrorMessage} from '../../util/helpers';
@@ -18,52 +19,49 @@ import * as AWS_EMBODIED from './aws-embodied.json';
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
-export class TeadsAWS implements ModelPluginInterface {
-  private computeInstances: Record<string, ComputeInstance> = {};
-  private instanceType = '';
-  private expectedLifespan = 4 * 365 * 24 * 3600;
-  private interpolation = Interpolation.LINEAR;
+export const TeadsAWS = (globalConfig: ConfigParams): PluginInterface => {
+  const metadata = {kind: 'execute'};
+  const computeInstances: Record<string, ComputeInstance> = {};
+  const expectedLifespan = 4 * 365 * 24 * 3600;
+  const interpolation = globalConfig.interpolation || Interpolation.LINEAR;
 
-  errorBuilder = buildErrorMessage(this.constructor.name);
-
-  constructor() {
-    this.standardizeInstanceMetrics();
-  }
-
-  /**
-   * Configures the TEADS Plugin for IEF.
-   */
-  public async configure(staticParams: object): Promise<TeadsAWS> {
-    Object.keys(staticParams).length && this.setValidatedInstance(staticParams);
-
-    return this;
-  }
+  const errorBuilder = buildErrorMessage(TeadsAWS.name);
 
   /**
    * Calculate the total emissions for a list of inputs.
    */
-  public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-    return inputs.map(input => {
-      if (this.instanceType === '') {
-        this.setValidatedInstance(input);
-      }
+  const execute = async (inputs: PluginParams[]) => {
+    standardizeInstanceMetrics();
 
-      input['energy'] = this.calculateEnergy(input);
-      input['embodied-carbon'] = this.embodiedEmissions(input);
-      return input;
+    return inputs.map(input => {
+      const safeInput = Object.assign({}, input, validateInput(input));
+
+      const instanceType = safeInput['cloud/instance-type'];
+      const validExpectedLifespan =
+        input['cpu/expected-lifespan'] ?? expectedLifespan;
+
+      return {
+        ...input,
+        energy: calculateEnergy(safeInput, instanceType),
+        'carbon-embodied': embodiedEmissions(
+          safeInput,
+          instanceType,
+          validExpectedLifespan
+        ),
+      };
     });
-  }
+  };
 
   /**
    * Standardize the instance metrics for all the vendors.
    * Maps the instance metrics to a standard format (min, max, idle, 10%, 50%, 100%) for all the vendors.
    */
-  private standardizeInstanceMetrics() {
+  const standardizeInstanceMetrics = () => {
     AWS_INSTANCES.forEach((instance: KeyValuePair) => {
       const cpus = parseInt(instance['Instance vCPU'], 10);
-      const consumption = this.parseConsumptionValues(instance);
+      const consumption = parseConsumptionValues(instance);
 
-      this.computeInstances[instance['Instance type']] = {
+      computeInstances[instance['Instance type']] = {
         consumption,
         vCPUs: cpus,
         maxvCPUs: parseInt(instance['Platform Total Number of vCPU'], 10),
@@ -72,29 +70,28 @@ export class TeadsAWS implements ModelPluginInterface {
     });
 
     AWS_EMBODIED.forEach((instance: KeyValuePair) => {
-      this.computeInstances[instance['type']].embodiedEmission =
-        instance['total'];
+      computeInstances[instance['type']].embodiedEmission = instance['total'];
     });
-  }
+  };
 
   /**
    * Calculates the consumption metrics (idle, 10%, 50%, 100%) for a given compute instance.
    */
-  private parseConsumptionValues(instance: KeyValuePair) {
+  const parseConsumptionValues = (instance: KeyValuePair) => {
     return {
-      idle: this.getParsedInstanceMetric(instance['Instance @ Idle']),
-      tenPercent: this.getParsedInstanceMetric(instance['Instance @ 10%']),
-      fiftyPercent: this.getParsedInstanceMetric(instance['Instance @ 50%']),
-      hundredPercent: this.getParsedInstanceMetric(instance['Instance @ 100%']),
+      idle: getParsedInstanceMetric(instance['Instance @ Idle']),
+      tenPercent: getParsedInstanceMetric(instance['Instance @ 10%']),
+      fiftyPercent: getParsedInstanceMetric(instance['Instance @ 50%']),
+      hundredPercent: getParsedInstanceMetric(instance['Instance @ 100%']),
     };
-  }
+  };
 
   /**
    * Parses a metric value to a floating-point number.
    */
-  private getParsedInstanceMetric(metric: string) {
+  const getParsedInstanceMetric = (metric: string) => {
     return parseFloat(metric.replace(',', '.'));
-  }
+  };
 
   /**
    * Calculates the energy consumption for a single input
@@ -109,23 +106,23 @@ export class TeadsAWS implements ModelPluginInterface {
    * Wh / 1000 = kWh
    * (wattage * duration) / (seconds in an hour) / 1000 = kWh
    */
-  private calculateEnergy(input: ModelParams) {
-    if (!('cpu-util' in input)) {
+  const calculateEnergy = (input: PluginParams, instanceType: string) => {
+    if (!('cpu/utilization' in input)) {
       throw new InputValidationError(
-        this.errorBuilder({
-          message: "Required parameters 'cpu-util' is not provided",
+        errorBuilder({
+          message: "Required parameters 'cpu/utilization' is not provided",
         })
       );
     }
 
-    const {duration, 'cpu-util': cpu} = input;
-    const wattage = this.calculateWattage(cpu);
+    const {duration, 'cpu/utilization': cpu} = input;
+    const wattage = calculateWattage(cpu, instanceType);
 
     return (wattage * duration) / 3600 / 1000;
-  }
+  };
 
-  private calculateWattage(cpu: number) {
-    const consumption = this.computeInstances[this.instanceType].consumption;
+  const calculateWattage = (cpu: number, instanceType: string) => {
+    const consumption = computeInstances[instanceType].consumption;
     const x = [0, 10, 50, 100]; // Get the wattage for the instance type.
     const y: number[] = [
       consumption.idle,
@@ -135,21 +132,21 @@ export class TeadsAWS implements ModelPluginInterface {
     ];
     const spline = new Spline(x, y);
 
-    if (this.interpolation === Interpolation.SPLINE) {
+    if (interpolation === Interpolation.SPLINE) {
       return spline.at(cpu);
     }
 
-    return this.calculateLinearInterpolationWattage(cpu, x, y);
-  }
+    return calculateLinearInterpolationWattage(cpu, x, y);
+  };
 
   /**
    * Calculates the linear interpolation wattage.
    */
-  private calculateLinearInterpolationWattage(
+  const calculateLinearInterpolationWattage = (
     cpu: number,
     points: number[],
     curve: number[]
-  ): number {
+  ): number => {
     const result = points.reduce(
       (acc, point, i) => {
         if (cpu === point) {
@@ -166,7 +163,7 @@ export class TeadsAWS implements ModelPluginInterface {
     );
 
     return result.baseRate + (cpu - result.baseCpu) * result.ratio;
-  }
+  };
 
   /**
    * Calculates the embodied emissions for a given input.
@@ -179,11 +176,15 @@ export class TeadsAWS implements ModelPluginInterface {
    *  RR = Resources Reserved, the number of resources reserved for use by the software.
    *  TR = Total Resources, the total number of resources available.
    */
-  private embodiedEmissions(input: ModelParams): number {
-    const instance = this.computeInstances[this.instanceType];
+  const embodiedEmissions = (
+    input: PluginParams,
+    instanceType: string,
+    expectedLifespan: number
+  ): number => {
+    const instance = computeInstances[instanceType];
     const totalEmissions = instance.embodiedEmission;
     const timeReserved = input['duration'] / 3600;
-    const expectedLifespan = this.expectedLifespan / 3600;
+    const expectedLifespanInSeconds = expectedLifespan / 3600;
     const reservedResources = instance.vCPUs;
     const totalResources = instance.maxvCPUs;
 
@@ -191,54 +192,46 @@ export class TeadsAWS implements ModelPluginInterface {
     return (
       totalEmissions *
       1000 *
-      (timeReserved / expectedLifespan) *
+      (timeReserved / expectedLifespanInSeconds) *
       (reservedResources / totalResources)
     );
-  }
+  };
 
   /**
    * Validates static parameters.
    */
-  private validateParams(staticParams: object) {
+  const validateInput = (input: PluginParams) => {
     const schema = z
       .object({
-        'instance-type': z.string(),
-        'expected-lifespan': z.number().optional(),
-        interpolation: z.nativeEnum(Interpolation).optional(),
+        'cloud/instance-type': z.string(),
+        'cpu/expected-lifespan': z.number().optional(),
       })
       .refine(param => {
-        this.validateInstanceType(param['instance-type']);
+        validateInstanceType(param['cloud/instance-type']);
         return true;
       });
-    return validate(schema, staticParams);
-  }
 
-  /**
-   * Sets validated parameters for the class instance.
-   */
-  private setValidatedInstance(params: object) {
-    const safeParams = Object.assign(params, this.validateParams(params));
-
-    this.instanceType = safeParams['instance-type'] ?? this.instanceType;
-    this.expectedLifespan =
-      safeParams['expected-lifespan'] ?? this.expectedLifespan;
-    this.interpolation = safeParams.interpolation ?? this.interpolation;
-  }
+    return validate(schema, input);
+  };
 
   /**
    * Validates an instance type.
    */
-  private validateInstanceType(instanceType: string | undefined) {
+  const validateInstanceType = (instanceType: string | undefined) => {
     if (
       instanceType !== undefined &&
-      (!(instanceType in this.computeInstances) || instanceType === '')
+      (!(instanceType in computeInstances) || instanceType === '')
     ) {
       throw new UnsupportedValueError(
-        this.errorBuilder({
+        errorBuilder({
           message: `Instance type ${instanceType} is not supported`,
-          scope: 'configure',
         })
       );
     }
-  }
-}
+  };
+
+  return {
+    metadata,
+    execute,
+  };
+};

@@ -1,11 +1,11 @@
 import * as DATA from './data.json';
 
-export function getMockResponse(url: string, data: any) {
+export function getMockResponse(url: string) {
   switch (url) {
     case 'https://api2.watttime.org/v2/login':
       if (
-        data?.auth?.username === 'test1' &&
-        data?.auth?.password === 'test2'
+        process.env.WATT_TIME_USERNAME === 'test1' &&
+        process.env.WATT_TIME_PASSWORD === 'test2'
       ) {
         return Promise.resolve({
           status: 200,
@@ -21,8 +21,8 @@ export function getMockResponse(url: string, data: any) {
 
     case 'https://apifail.watttime.org/v2/login': {
       if (
-        data?.auth?.username === 'test1' &&
-        data?.auth?.password === 'test2'
+        process.env.WATT_TIME_USERNAME === 'test1' &&
+        process.env.WATT_TIME_PASSWORD === 'test2'
       ) {
         return Promise.resolve({
           status: 200,

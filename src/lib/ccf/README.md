@@ -1,30 +1,30 @@
 # Cloud Carbon Footprint
 
-> [!NOTE] > `CCF` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+> [!NOTE] > `CCF` is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
 
 "Cloud Carbon Footprint is an open source tool that provides visibility and tooling to measure, monitor and reduce your cloud carbon emissions. We use best practice methodologies to convert cloud utilization into estimated energy usage and carbon emissions, producing metrics and carbon savings estimates that can be shared with employees, investors, and other stakeholders." - [CCF](https://www.cloudcarbonfootprint.org/)
 
 ## Parameters
 
-### model config
+### Plugin global config
 
-- `vendor`: the cloud platform provider, e.g. `aws`
-- `instance-type`: the name of the specific instance being used, e.g. `m5n.large`
+- `interpolation`: the interpolation method to apply to the CCF data
 
-### observations
+### Inputs
 
-- `cpu-util`: percentage CPU utilization for a given observation
 - `duration`: the amount of time the observation covers, in seconds
-- `timestamp`: a timestamp for the observation
+- `cpu/utilization`: percentage CPU utilization for a given observation
+- `cloud/vendor`: the cloud platform provider, e.g. `aws`
+- `cloud/instance-type`: the name of the specific instance being used, e.g. `m5n.large`
 
 ## Returns
 
-- `embodied-carbon`: carbon emitted in manufacturing the device, in gCO2eq
+- `carbon-embodied`: carbon emitted in manufacturing the device, in gCO2eq
 - `energy`: energy used by CPU in kWh
 
-## IEF Implementation
+## IF Implementation
 
-IEF reimplements the Cloud Carbon Footprint methodology from scratch conforming to the IEF specification. This means the CCF models can be run inside IEF without any external API calls and can be invoked as part of a model pipeline defined in an `impl`.
+IF reimplements the Cloud Carbon Footprint methodology from scratch conforming to the IF specification. This means the CCF plugins can be run inside IF without any external API calls and can be invoked as part of a plugin pipeline defined in an `manifest`.
 
 Cloud Carbon Footprint includes calculations for three cloud vendors: AWS, Azure and GCP.
 
@@ -34,35 +34,33 @@ The general methodology is as follows:
 
 Where:
 
-`Operational emissions = (Cloud vendor service usage) x (Cloud energy conversion factors [kWh]) x (Cloud vendor Power Usage Effectiveness (PUE)) x (grid emissions factors [metric tons CO2e])`
+`Operational emissions = (Cloud cloud/vendor service usage) x (Cloud energy conversion factors [kWh]) x (Cloud cloud/vendor Power Usage Effectiveness (PUE)) x (grid emissions factors [metric tons CO2e])`
 
 And:
 
 `Embodied Emissions = estimated metric tons CO2e emissions from the manufacturing of datacenter servers, for compute usage`
 
-You can read a detailed explanation ofn the calculations in the [CCF docs](https://www.cloudcarbonfootprint.org/docs/methodology/) and see the code for our implementation in [this repository](../../src/lib/ccf/).
+You can read a detailed explanation ofn the calculations in the [CCF docs](https://www.cloudcarbonfootprint.org/docs/methodology/) and see the code for our implementing in [this repository](../../src/lib/ccf/).
 
 ## Usage
 
-In IEF, the model is called from an `impl`. An `impl` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `impact-engine`. There, the model's `configure` method is called first. The model config should define a `vendor` and `instance-type`. Each input is expected to contain `duration`,`cpu-util` and `timestamp` fields.
+In IF, the plugin is called from a `manifest`. A `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`. The plugin input is expected to contain `duration`,`cpu/utilization`, `cloud/vendor` and `cloud/instance-type` fields.
 
-You can see example Typescript invocations for each vendor below:
+You can see example Typescript invocations for each `cloud/vendor` below:
 
 ### AWS
 
 ```typescript
-import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
+import {CloudCarbonFootprint} from '@grnsft/if-unofficial-plugins';
 
-const ccf = new CloudCarbonFootprint();
-ccf.configure({
-  vendor: 'aws',
-  instance_type: 'm5n.large',
-});
-const results = ccf.execute([
+const ccf = CloudCarbonFootprint({interpolation: Interpolation.LINEAR});
+const results = await ccf.execute([
   {
-    duration: 3600, // duration institute
-    'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    duration: 3600, // duration institute
+    'cloud/vendor': 'aws',
+    'cloud/instance-type': 'm5n.large',
+    'cpu/utilization': 10, // CPU usage as a percentage
   },
 ]);
 ```
@@ -70,18 +68,16 @@ const results = ccf.execute([
 ### Azure
 
 ```typescript
-import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
+import {CloudCarbonFootprint} from '@grnsft/if-unofficial-plugins';
 
-const ccf = new CloudCarbonFootprint();
-ccf.configure({
-  vendor: 'azure',
-  instance_type: 'D4 v4',
-});
-const results = ccf.execute([
+const ccf = CloudCarbonFootprint();
+const results = await ccf.execute([
   {
-    duration: 3600, // duration institute
-    'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    duration: 3600, // duration institute
+    'cpu/utilization': 10, // CPU usage as a percentage
+    'cloud/vendor': 'azure',
+    'cloud/instance-type': 'D4 v4',
   },
 ]);
 ```
@@ -89,87 +85,83 @@ const results = ccf.execute([
 ### GCP
 
 ```typescript
-import {CloudCarbonFootprint} from '@grnsft/if-unofficial-models';
+import {CloudCarbonFootprint} from '@grnsft/if-unofficial-plugins';
 
-const ccf = new CloudCarbonFootprint();
-ccf.configure({
-  vendor: 'gcp',
-  instance_type: 'n2-standard-2',
-});
-const results = ccf.execute([
+const ccf = CloudCarbonFootprint();
+const results = await ccf.execute([
   {
-    duration: 3600, // duration institute
-    'cpu-util': 10, // CPU usage as a percentage
     timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    duration: 3600, // duration institute
+    'cpu/utilization': 10, // CPU usage as a percentage
+    'cloud/vendor': 'gcp',
+    'cloud/instance-type': 'n2-standard-2',
   },
 ]);
 ```
 
-## Example Impl
+## Example manifest
 
-The following is an example of how CCF can be invoked using an `impl`.
+The following is an example of how CCF can be invoked using a `manifest`.
 
 ```yaml
 name: ccf-demo
-description: example impl invoking CCF model
+description: example manifest invoking CCF plugin
 initialize:
-  models:
-    - name: ccf
-      model: CloudCarbonFootprint
-      path: '@grnsft/if-unofficial-models'
-graph:
+  plugins:
+    ccf:
+      method: CloudCarbonFootprint
+      path: '@grnsft/if-unofficial-plugins'
+tree:
   children:
     child:
       pipeline:
         - ccf
-      config:
-        ccf:
-          vendor: aws
-          instance_type: m5n.large
+      defaults:
+        cloud/vendor: aws
+        cloud/instance-type: m5n.large
       inputs:
         - timestamp: 2023-07-06T00:00 # [KEYWORD] [NO-SUBFIELDS] time when measurement occurred
           duration: 1
-          cpu-util: 10
+          cpu/utilization: 10
 ```
 
-This impl is run using `impact-engine` using the following command, run from the project root:
+This manifest is run using `if` using the following command, run from the project root:
 
 ```sh
 
 npm i -g @grnsft/if
-npm i -g @grnsft/if-unofficial-models
-impact-engine --impl ./examples/impls/test/ccf.yml --ompl ./examples/ompls/ccf.yml
+npm i -g @grnsft/if-unofficial-plugins
+if --manifest ./examples/manifests/test/ccf.yml --output ./examples/outputs/ccf.yml
 ```
 
-This yields a result that looks like the following (saved to `/ompls/ccf.yml`):
+This yields a result that looks like the following (saved to `/outputs/ccf.yml`):
 
 ```yaml
 name: ccf-demo
-description: example impl invoking CCF model
+description: example manifest invoking CCF plugin
 initialize:
-  models:
-    - name: ccf
-      model: CloudCarbonFootprint
-      path: '@grnsft/if-unofficial-models'
-graph:
+  plugins:
+    ccf:
+      method: CloudCarbonFootprint
+      path: '@grnsft/if-unofficial-plugins'
+tree:
   children:
     front-end:
       pipeline:
         - ccf
-      config:
-        ccf:
-          vendor: aws
-          instance_type: m5n.large
+      defaults:
+        cloud/vendor: aws
+        cloud/instance-type: m5n.large
       inputs:
         - timestamp: 2023-07-06T00:00
           duration: 1
-          cpu: 10
+          cpu/utilization: 10
       outputs:
         - timestamp: 2023-07-06T00:00
           duration: 1
-          cpu-util: 10
-          vendor: aws
-          instance_type: m5n.large
+          cpu/utilization: 10
+          cloud/vendor: aws
+          cloud/instance-type: m5n.large
           energy: 0.000018845835066981333
-          embodied_emissions: 0.02553890791476408
+          carbon-embodied: 0.02553890791476408
 ```

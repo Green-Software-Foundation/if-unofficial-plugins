@@ -1,56 +1,65 @@
 import Spline from 'typescript-cubic-spline';
 import {z} from 'zod';
 
-import {ERRORS} from '../../util/errors';
-import {buildErrorMessage} from '../../util/helpers';
+import {PluginInterface} from '../../interfaces';
+import {Interpolation, PluginParams, ConfigParams} from '../../types';
 
-import {Interpolation, ModelParams} from '../../types';
-import {ModelPluginInterface} from '../../interfaces';
+import {buildErrorMessage} from '../../util/helpers';
 import {validate} from '../../util/validations';
+import {ERRORS} from '../../util/errors';
 
 const {InputValidationError} = ERRORS;
 
-export class TeadsCurveModel implements ModelPluginInterface {
-  private tdp = 0;
-  private interpolation: Interpolation = Interpolation.SPLINE;
+export const TeadsCurve = (globalConfig?: ConfigParams): PluginInterface => {
+  const CURVE: number[] = [0.12, 0.32, 0.75, 1.02];
+  const POINTS: number[] = [0, 10, 50, 100];
+  const errorBuilder = buildErrorMessage(TeadsCurve.name);
 
-  errorBuilder = buildErrorMessage(this.constructor.name);
-
-  /**
-   * Configures the TEADS Plugin for IEF.
-   */
-  public async configure(staticParams: object): Promise<ModelPluginInterface> {
-    Object.keys(staticParams).length && this.setValidatedInstance(staticParams);
-
-    return this;
-  }
+  const metadata = {
+    kind: 'execute',
+  };
 
   /**
    * Calculate the total emissions for a list of inputs.
    */
-  public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
+  const execute = async (inputs: PluginParams[]) => {
+    const validatedConfig = validateConfig(globalConfig || {});
+
     return inputs.map((input, index) => {
-      if (this.tdp === 0) {
-        this.setValidatedInstance(input);
-      }
-
-      const safeInput = Object.assign(input, this.validateInput(input));
-      const total = this.parseNumericField(safeInput, 'vcpus-total', index);
-      const allocated = this.parseNumericField(
+      const safeInput = validateInput(input);
+      const inputWithConfig = Object.assign(
+        {},
+        input,
         safeInput,
-        'vcpus-allocated',
-        index
+        validatedConfig
       );
-      let energy = this.calculateEnergy(safeInput);
+      const energy = calculateEnergyForInput(inputWithConfig, index);
 
-      if (allocated !== undefined && total !== undefined && total !== 0) {
-        energy = energy * (allocated / total);
-      }
-      safeInput['energy-cpu'] = energy;
-
-      return safeInput;
+      return {
+        ...input,
+        'cpu/energy': energy,
+      };
     });
-  }
+  };
+
+  /**
+   * Calculates the energy for a given input, taking into account allocation if available.
+   */
+  const calculateEnergyForInput = (
+    input: PluginParams,
+    index: number
+  ): number => {
+    const energyWithoutAllocation = calculateEnergy(input);
+
+    const total = parseNumericField(input, 'vcpus-total', index);
+    const allocated = parseNumericField(input, 'vcpus-allocated', index);
+
+    if (allocated !== undefined && total !== undefined && total !== 0) {
+      return energyWithoutAllocation * (allocated / total);
+    }
+
+    return energyWithoutAllocation;
+  };
 
   /**
    * Calculates the energy consumption for a single input.
@@ -66,19 +75,21 @@ export class TeadsCurveModel implements ModelPluginInterface {
    * Wh / 1000 = kWh
    * (wattage * duration) / (seconds in an hour) / 1000 = kWh
    */
-  private calculateEnergy(input: ModelParams) {
-    const {duration, 'cpu-util': cpu} = input;
-    const curve: number[] = [0.12, 0.32, 0.75, 1.02];
-    const points: number[] = [0, 10, 50, 100];
-    const spline: any = new Spline(points, curve);
+  const calculateEnergy = (input: PluginParams) => {
+    const {
+      duration,
+      'cpu/utilization': cpu,
+      'cpu/thermal-design-power': cpuThermalDesignPower,
+    } = input;
+    const spline: any = new Spline(POINTS, CURVE);
 
     const wattage =
-      this.interpolation === Interpolation.SPLINE
-        ? spline.at(cpu) * this.tdp
-        : this.calculateLinearInterpolationWattage(cpu, points, curve);
+      input.interpolation === Interpolation.SPLINE
+        ? spline.at(cpu) * cpuThermalDesignPower
+        : calculateLinearInterpolationWattage(cpu, cpuThermalDesignPower);
 
     return (wattage * duration) / 3600 / 1000;
-  }
+  };
 
   /**
    * Calculates the linear interpolation wattage.
@@ -86,37 +97,39 @@ export class TeadsCurveModel implements ModelPluginInterface {
    * sum of base_rate + (cpu - base_cpu) * ratio = total rate of cpu usage
    * total rate * tdp = wattage
    */
-  private calculateLinearInterpolationWattage(
+  const calculateLinearInterpolationWattage = (
     cpu: number,
-    points: number[],
-    curve: number[]
-  ) {
-    const result = points.reduce(
+    thermalDesignPower: number
+  ) => {
+    const result = POINTS.reduce(
       (acc, point, i) => {
         if (cpu === point) {
-          acc.baseRate = curve[i];
+          acc.baseRate = CURVE[i];
           acc.baseCpu = point;
-        } else if (cpu > point && cpu < points[i + 1]) {
-          acc.baseRate = curve[i];
+        } else if (cpu > point && cpu < POINTS[i + 1]) {
+          acc.baseRate = CURVE[i];
           acc.baseCpu = point;
-          acc.ratio = (curve[i + 1] - curve[i]) / (points[i + 1] - point);
+          acc.ratio = (CURVE[i + 1] - CURVE[i]) / (POINTS[i + 1] - point);
         }
         return acc;
       },
       {baseRate: 0, baseCpu: 0, ratio: 0}
     );
 
-    return (result.baseRate + (cpu - result.baseCpu) * result.ratio) * this.tdp;
-  }
+    return (
+      (result.baseRate + (cpu - result.baseCpu) * result.ratio) *
+      thermalDesignPower
+    );
+  };
 
   /**
    * Parse a numeric field from the input and handle type validation.
    */
-  private parseNumericField(
-    input: ModelParams,
+  const parseNumericField = (
+    input: PluginParams,
     field: string,
     index: number
-  ): number | undefined {
+  ): number | undefined => {
     if (field in input) {
       const fieldValue = input[field];
 
@@ -127,7 +140,7 @@ export class TeadsCurveModel implements ModelPluginInterface {
           return fieldValue;
         default:
           throw new InputValidationError(
-            this.errorBuilder({
+            errorBuilder({
               message: `Invalid type for '${field}' in input[${index}]`,
             })
           );
@@ -135,38 +148,40 @@ export class TeadsCurveModel implements ModelPluginInterface {
     }
 
     return undefined;
-  }
+  };
 
   /**
-   * Validate input fields.
+   * Validates config params.
    */
-  private validateInput(input: ModelParams) {
+  const validateConfig = (config: ConfigParams) => {
     const schema = z.object({
-      'cpu-util': z.number().min(0).max(100),
+      interpolation: z.nativeEnum(Interpolation).optional(),
     });
 
-    return validate<z.infer<typeof schema>>(schema, input);
-  }
+    // Manually set default value
+    const interpolation = config.interpolation ?? Interpolation.SPLINE;
+
+    return validate<z.infer<typeof schema>>(schema, {...config, interpolation});
+  };
 
   /**
    * Validates parameters.
    */
-  private validateParams(params: object) {
+  const validateInput = (input: PluginParams) => {
     const schema = z.object({
-      'thermal-design-power': z.number().min(1),
-      interpolation: z.nativeEnum(Interpolation).optional(),
+      duration: z.number().gt(0),
+      'cpu/utilization': z.number().min(0).max(100),
+      'cpu/thermal-design-power': z.number().min(1),
     });
 
-    return validate<z.infer<typeof schema>>(schema, params);
-  }
+    // Manually set default value if the property is missing.
+    const cpuTDP = input['cpu/thermal-design-power'] ?? 0;
 
-  /**
-   * Sets validated parameters for the class instance.
-   */
-  private setValidatedInstance(params: object) {
-    const safeParams = Object.assign(params, this.validateParams(params));
+    return validate<z.infer<typeof schema>>(schema, {...input, cpuTDP});
+  };
 
-    this.tdp = safeParams['thermal-design-power'] ?? this.tdp;
-    this.interpolation = safeParams.interpolation ?? this.interpolation;
-  }
-}
+  return {
+    metadata,
+    execute,
+  };
+};

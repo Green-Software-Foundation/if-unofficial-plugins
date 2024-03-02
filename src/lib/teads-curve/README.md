@@ -1,27 +1,24 @@
-# Teads' CPU Estimation Model
+# Teads' CPU Estimation Plugin
 
-> [!NOTE] > `Teads-Curve` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+> [!NOTE] > `Teads-Curve` is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
 
-Teads Engineering team has built a model that is capable of estimating CPU usages across varying type of CPUs using a curve commonly known as Teads Curve.
-
-## Model name
-
-IF recognizes the Teads CPU model as `teads-curve`.
+Teads Engineering team has built a plugin that is capable of estimating CPU usages across varying type of CPUs using a curve commonly known as Teads Curve.
 
 ## Parameters
 
-### Model config
+### Plugin global config
 
-- `thermal-design-power`: the TDp of the processor
 - `interpolation`: the interpolation method to apply to the TDP data
 
 ### Inputs
 
-- `cpu-util`: percentage CPU utilization for the input
+- `cpu/thermal-design-power`: the TDp of the processor
+- `cpu/utilization`: percentage CPU utilization for the input
+- `duration`: the amount of time the observation covers, in seconds
 
 ## Returns
 
-- `energy-cpu`: The energy used by the CPU, in kWh
+- `cpu/energy`: The energy used by the CPU, in kWh
 
 > **Note** If `vcpus-allocated` and `vcpus-total` are available, these data will be used to scale the CPU energy usage. If they are not present, we assume the entire processor is being used. For example, if only 1 out of 64 available vCPUS are allocated, we scale the processor TDP by 1/64.
 
@@ -29,28 +26,27 @@ IF recognizes the Teads CPU model as `teads-curve`.
 
 ### Linear Interpolation
 
-This model implements linear interpolation by default for estimating energy consumption using the TDP of a chip.
+This plugin implements linear interpolation by default for estimating energy consumption using the TDP of a chip.
 
 The power curve provided for `IDLE`, `10%`, `50%`, `100%` in the Teads Curve are used by default.
 
 The algorithm in linear interpolation will take the lowest possible base value + linear interpolated value. ie. 75% usage will be calculated as follows.
 `100%` and `50%` are the known values hence we are interpolating linearly between them.
-(`50%` + `(100%-50%)` `x` `(75%-50%))` `x` `thermal-design-power`.
+(`50%` + `(100%-50%)` `x` `(75%-50%))` `x` `cpu/thermal-design-power`.
 
 #### Example
 
 ```typescript
-import {TeadsCurveModel} from 'ief';
+import {TeadsCurve} from '@grnsft/if-unofficial-plugins';
 
-const teads = new TeadsCurveModel();
-teads.configure({
-  thermal-design-power: 100, // thermal-design-power of the CPU
+const teads = TeadsCurve({
+  'cpu/thermal-design-power': 100, // cpu/thermal-design-power of the CPU
 });
-const results = teads.execute([
+const results = await teads.execute([
   {
     duration: 3600, // duration institute
-    cpu: 100, // CPU usage as a value between 0 to 100 in percentage
-    datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    'cpu/utilization': 100, // CPU usage as a value between 0 to 100 in percentage
   },
 ]);
 ```
@@ -67,49 +63,52 @@ Resulting values are an estimate based on the testing done by Teads' Engineering
 #### Example
 
 ```typescript
-import {TeadsCurveModel, Interpolation} from '@grnsft/if-unofficial-models';
+import {TeadsCurve, Interpolation} from '@grnsft/if-unofficial-plugins';
 
-const teads = new TeadsCurveModel();
-teads.configure({
-  tdp: 100, // TDP of the CPU
-  interpolation: Interpolation.SPLINE,
-});
-const results = teads.execute([
+const teads = TeadsCurve({interpolation: Interpolation.SPLINE});
+const results = await teads.execute(
+  [
+    {
+      duration: 3600, // duration institute
+      timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+      'cpu/utilization': 100, // CPU usage as a value between 0 to 100 in percentage
+    },
+  ],
   {
-    duration: 3600, // duration institute
-    cpu: 100, // CPU usage as a value between 0 to 100 in percentage
-    datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
-  },
-]);
+    'cpu/thermal-design-power': 100, // TDP of the CPU
+  }
+);
 ```
 
-## Example `impl`
+## Example `manifest`
 
 ```yaml
-name: teads-cpu
-description: simple demo invoking teads-cpu
+name: teads-curve
+description: simple demo invoking teads-curve
 tags:
 initialize:
-  models:
-    - name: teads-cpu
-      model: TeadsCurveModel
-      path: '@grnsft/if-unofficial-models'
-graph:
+  plugins:
+    teads-curve:
+      method: TeadsCurve
+      path: '@grnsft/if-unofficial-plugins'
+      global-config:
+        interpolation: spline
+tree:
   children:
     child:
       pipeline:
-        - teads-cpu
+        - teads-curve
       inputs:
         - timestamp: 2023-07-06T00:00
           duration: 3600
-          thermal-design-power: 300
-          cpu-util: 50
+          cpu/thermal-design-power: 300
+          cpu/utilization: 50
 ```
 
-You can run this by passing it to `impact-engine`. Run impact using the following command run from the project root:
+You can run this by passing it to `if`. Run impact using the following command run from the project root:
 
 ```sh
 npm i -g @grnsft/if
-npm i -g @grnsft/if-unofficial-models
-impact-engine --impl ./examples/impls/test/teads-cpu.yml --ompl ./examples/ompls/teads-cpu.yml
+npm i -g @grnsft/if-unofficial-plugins
+if --manifest ./examples/manifests/test/teads-curve.yml --output ./examples/outputs/teads-curve.yml
 ```

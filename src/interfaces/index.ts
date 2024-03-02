@@ -1,16 +1,15 @@
-import {ModelParams} from '../types/common';
+import {PluginParams} from '../types/common';
 
 /**
- * Base interface for models.
+ * Base interface for plugins.
  */
-export interface ModelPluginInterface {
-  /**
-   * Configures instance with given params.
-   */
-  configure(params: object | undefined): Promise<ModelPluginInterface>;
-
-  /**
-   * Calculates `output` based on given model's `input`.
-   */
-  execute(inputs: ModelParams[]): Promise<ModelParams[]>;
+export interface PluginInterface {
+  execute: (
+    inputs: PluginParams[],
+    config?: Record<string, any>
+  ) => Promise<PluginParams[]>;
+  metadata: {
+    kind: string;
+  };
+  [key: string]: any;
 }

@@ -2,9 +2,7 @@ export type KeyValuePair = {
   [key: string]: any;
 };
 
-export type ModelParams = {
-  timestamp: string;
-  duration: number;
+export type PluginParams = {
   [key: string]: any;
 };
 
@@ -35,3 +33,5 @@ export type ComputeInstance = {
   vCPUs: number;
   maxvCPUs: number;
 };
+
+export type ConfigParams = Record<string, any>;

@@ -19,11 +19,11 @@ export type BoaviztaUsageType = {
 };
 
 export type BoaviztaCpuOutputType = {
-  'energy-cpu': number;
-  'embodied-carbon': number;
+  'cpu/energy': number;
+  'carbon-embodied': number;
 };
 
 export type BoaviztaCloudInstanceType = {
   energy: number;
-  'embodied-carbon': number;
+  'carbon-embodied': number;
 };

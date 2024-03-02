@@ -1,36 +1,32 @@
-# Teads' AWS Estimation Model
+# Teads' AWS Estimation Plugin
 
-> [!NOTE] > `Teads-AWS` is a community model, not part of the IF standard library. This means the IF core team are not closely monitoring these models to keep them up to date. You should do your own research before implementing them!
+> [!NOTE] > `Teads-AWS` is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
 
-Teads Engineering Team built a model for estimating AWS instances energy usage. This model creates a power curve on a correlation to SPEC Power database. This allows the model to generate a power curve for any AWS EC2 instance type based on publicly available AWS EC2 Instance CPU data.
+Teads Engineering Team built a plugin for estimating AWS instances energy usage. This plugin creates a power curve on a correlation to SPEC Power database. This allows the plugin to generate a power curve for any AWS EC2 instance type based on publicly available AWS EC2 Instance CPU data.
 
-The main benefit of this model is that it accounts for all the components involved in an instance's compute capacity.
-
-## Model name
-
-IF recognizes the Teads AWS model as `teads-aws`
+The main benefit of this plugin is that it accounts for all the components involved in an instance's compute capacity.
 
 ## Parameters
 
-### Model config
+### Plugin global config
 
 - `interpolation`: the interpolation method to apply to the TDP curve
-- `instance-type`: the name of the instance type, e.g. `t2.micro`
 
 ### Inputs
 
-- `cpu-util`: percentage CPU usage for the given time period
+- `cloud/instance-type`: the name of the instance type, e.g. `t2.micro`
+- `cpu/utilization`: percentage CPU usage for the given time period
 - `timestamp`: a timestamp for the input
 - `duration`: the amount of time, in seconds, that the input covers.
 
 ## Returns
 
 - `energy`: The energy used in operating the application, in kWh
-- `embodied-carbon`: The carbon used in manufacturing and disposing of the device
+- `carbon-embodied`: The carbon used in manufacturing and disposing of the device
 
 ## Implementation
 
-IEF implements this plugin based on the data gathered from the CCF (Cloud Carbon Footprint) dataset.
+IF implements this plugin based on the data gathered from the CCF (Cloud Carbon Footprint) dataset.
 
 Spline interpolation is implemented as the default method of estimating the usage using the power curve provided by `IDLE`, `10%`, `50%`, `100%` values in the dataset.
 
@@ -42,52 +38,51 @@ Resulting values are an estimate based on the testing done by Teads' Engineering
 ## Example
 
 ```typescript
-import {TeadsAWS} from '@grnsft/if-unofficial-models';
+import {TeadsAWS} from '@grnsft/if-unofficial-plugins';
 
-const teads = new TeadsAWS();
-teads.configure({
-  instance_type: 'c6i.large',
-});
-const results = teads.execute([
+const teads = TeadsAWS({});
+const results = await teads.execute([
   {
     duration: 3600, // duration institute
-    cpu: 0.1, // CPU usage as a value between 0 and 1 in floating point number
-    datetime: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
+    'cloud/instance-type': 'c6i.large',
+    'cpu/utilization: 0.1, // CPU usage as a value between 0 and 1 in floating point number
   },
 ]);
 ```
 
-## Example `impl`
+## Example `manifest`
 
 ```yaml
 name: teads-aws
-description: simple demo invoking TeadsAWS model
+description: simple demo invoking TeadsAWS plugin
 tags:
 initialize:
-  models:
-    - name: teads-aws
-      model: TeadsAWS
-      path: '@grnsft/if-unofficial-models'
-graph:
+  plugins:
+    teads-aws:
+      method: TeadsAWS
+      path: '@grnsft/if-unofficial-plugins'
+      global-config:
+        interpolation: linear
+tree:
   children:
     child:
       pipeline:
         - teads-aws # duration & config -> embodied
-      config:
-        teads-aws:
-          instance-type: m5n.large
-          interpolation: linear
-          expected-lifespan: 252288000
+      defaults:
+        cloud/instance-type: m5n.large
+        interpolation: linear
+        cpu/expected-lifespan: 252288000
       inputs:
         - timestamp: 2023-07-06T00:00
           duration: 3600
-          cpu-util: 10
+          cpu/utilization: 10
 ```
 
-You can run this by passing it to `impact-engine`. Run impact using the following command run from the project root:
+You can run this by passing it to `if`. Run impact using the following command run from the project root:
 
 ```sh
 npm i -g @grnsft/if
-npm i -g @grnsft/if-unofficial-models
-impact-engine --impl ./examples/impls/test/teads-aws.yml --ompl ./examples/ompls/teads-aws.yml
+npm i -g @grnsft/if-unofficial-plugins
+if --manifest ./examples/manifests/test/teads-aws.yml --output ./examples/outputs/teads-aws.yml
 ```

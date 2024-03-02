@@ -3,15 +3,16 @@ import {INSTANCE_TYPE_COMPUTE_PROCESSOR_MAPPING} from '@cloud-carbon-footprint/a
 import Spline from 'typescript-cubic-spline';
 import {z} from 'zod';
 
-import {ModelPluginInterface} from '../../interfaces';
+import {PluginInterface} from '../../interfaces';
 import {
   Interpolation,
   KeyValuePair,
-  ModelParams,
+  PluginParams,
   ComputeInstance,
+  ConfigParams,
 } from '../../types/common';
 
-import {allDefined, validate} from '../../util/validations';
+import {validate} from '../../util/validations';
 import {buildErrorMessage} from '../../util/helpers';
 import {ERRORS} from '../../util/errors';
 
@@ -25,176 +26,149 @@ import * as GCP_EMBODIED from './gcp-embodied.json';
 import * as AWS_EMBODIED from './aws-embodied.json';
 import * as AZURE_EMBODIED from './azure-embodied.json';
 
-const {InputValidationError, UnsupportedValueError} = ERRORS;
+const {UnsupportedValueError} = ERRORS;
 
-export class CloudCarbonFootprint implements ModelPluginInterface {
-  private computeInstances: Record<string, Record<string, ComputeInstance>> =
-    {};
+export const CloudCarbonFootprint = (
+  globalConfig?: ConfigParams
+): PluginInterface => {
+  const metadata = {kind: 'execute'};
+  const computeInstances: Record<string, Record<string, ComputeInstance>> = {};
 
-  private instanceUsage: KeyValuePair = {
+  const instanceUsage: KeyValuePair = {
     gcp: {},
     aws: {},
     azure: {},
   };
-  private SUPPORTED_VENDORS = ['aws', 'gcp', 'azure'] as const;
-  private vendor = '';
-  private instanceType = '';
-  private expectedLifespan = 4;
-  private interpolation = Interpolation.LINEAR;
-
-  errorBuilder = buildErrorMessage(this.constructor.name);
-
-  /**
-   * Constructor initializes and standardizes instance metrics
-   */
-  constructor() {
-    this.standardizeInstanceMetrics();
-  }
-
-  /**
-   * Configures the CCF Plugin.
-   */
-  public async configure(staticParams: object): Promise<ModelPluginInterface> {
-    const safeStaticParams = Object.assign(
-      staticParams,
-      this.validateStaticParams(staticParams)
-    );
-
-    this.vendor = safeStaticParams.vendor;
-    this.instanceType = safeStaticParams['instance-type'];
-    this.expectedLifespan =
-      safeStaticParams['expected-lifespan'] ?? this.expectedLifespan;
-    this.interpolation = safeStaticParams.interpolation ?? this.interpolation;
-
-    return this;
-  }
+  const SUPPORTED_VENDORS = ['aws', 'gcp', 'azure'] as const;
+  const deafultExpectedLifespan = 4;
+  const errorBuilder = buildErrorMessage(CloudCarbonFootprint.name);
 
   /**
    * Calculate the total emissions for inputs.
    */
-  public async execute(inputs: ModelParams[]): Promise<ModelParams[]> {
-    if (this.instanceType === '' || this.vendor === '') {
-      throw new InputValidationError(
-        this.errorBuilder({
-          message:
-            "Incomplete configuration: 'instanceType' or 'vendor' is missing",
-        })
-      );
-    }
+  const execute = async (inputs: PluginParams[]) => {
+    standardizeInstanceMetrics();
 
     return inputs.map(input => {
-      const safeInput = Object.assign(input, this.validateInput(input));
+      const mergedWithConfig = Object.assign({}, input, globalConfig);
+      const validatedInputWithConfig = Object.assign(
+        {},
+        {interpolation: mergedWithConfig.interpolation || Interpolation.LINEAR},
+        validateInputWithConfig(mergedWithConfig)
+      );
 
-      safeInput['energy'] = this.calculateEnergy(safeInput);
-      safeInput['embodied-carbon'] = this.embodiedEmissions(safeInput);
-
-      return safeInput;
+      return {
+        ...input,
+        energy: calculateEnergy(validatedInputWithConfig),
+        'carbon-embodied': embodiedEmissions(validatedInputWithConfig),
+      };
     });
-  }
+  };
 
   /**
-   * Validates single input fields
+   * Validates the interpolation method for AWS cloud/vendor.
    */
-  private validateStaticParams(staticParams: object) {
-    const errorMessageForVendor = `Only ${this.SUPPORTED_VENDORS} is currently supported`;
-    const errorMessageForInterpolation = `Only ${Interpolation} is currently supported`;
-
-    const schema = z
-      .object({
-        'instance-type': z.string(),
-        vendor: z.enum(this.SUPPORTED_VENDORS, {
-          required_error: errorMessageForVendor,
-        }),
-        'expected-lifespan': z.number().optional(),
-        interpolation: z
-          .nativeEnum(Interpolation, {
-            required_error: errorMessageForInterpolation,
-          })
-          .optional(),
-      })
-      .refine(param => {
-        this.validateInterpolationForAws(param.interpolation, param.vendor);
-        this.validateInstanceTypeForVendor(
-          param['instance-type'],
-          param.vendor
-        );
-
-        return true;
-      });
-
-    return validate<z.infer<typeof schema>>(schema, staticParams);
-  }
-
-  /**
-   * Validates the interpolation method for AWS vendor.
-   */
-  private validateInterpolationForAws(
+  const validateInterpolationForAws = (
     interpolation: Interpolation | undefined,
-    vendor: string
-  ) {
-    if (interpolation && vendor !== 'aws') {
+    cloudVendor: string
+  ) => {
+    if (interpolation && cloudVendor !== 'aws') {
       throw new UnsupportedValueError(
-        this.errorBuilder({
+        errorBuilder({
           message: `Interpolation ${interpolation} method is not supported`,
         })
       );
     }
 
     return true;
-  }
+  };
 
   /**
-   * Validates the instance type for a specified vendor.
+   * Validates the instance type for a specified cloud/vendor.
    */
-  private validateInstanceTypeForVendor(instanceType: string, vendor: string) {
-    if (!(instanceType in this.computeInstances[vendor])) {
+  const validateInstanceTypeForVendor = (
+    instanceType: string,
+    cloudVendor: string
+  ) => {
+    if (!(instanceType in computeInstances[cloudVendor])) {
       throw new UnsupportedValueError(
-        this.errorBuilder({
+        errorBuilder({
           message: `Instance type ${instanceType} is not supported`,
         })
       );
     }
     return true;
-  }
+  };
 
   /**
    * Validates single input fields.
    */
-  private validateInput(input: ModelParams) {
+  const validateInputWithConfig = (params: PluginParams) => {
+    const errorMessageForVendor = `Only ${SUPPORTED_VENDORS} is currently supported`;
+    const errorMessageForInterpolation = `Only ${Interpolation} is currently supported`;
+
     const schema = z
       .object({
         duration: z.number(),
-        'cpu-util': z.number(),
-        timestamp: z.string(),
+        'cpu/utilization': z.number(),
+        'cloud/instance-type': z.string(),
+        'cloud/vendor': z.enum(SUPPORTED_VENDORS, {
+          required_error: errorMessageForVendor,
+        }),
+        'cpu/expected-lifespan': z.number().optional(),
+        interpolation: z
+          .nativeEnum(Interpolation, {
+            required_error: errorMessageForInterpolation,
+          })
+          .optional(),
       })
-      .refine(allDefined, {
-        message:
-          '`duration`, `cpu-util` and `timestamp` should be present in the input',
-      });
-    return validate<z.infer<typeof schema>>(schema, input);
-  }
+      .refine(
+        param => {
+          validateInterpolationForAws(
+            param.interpolation,
+            param['cloud/vendor']
+          );
+          validateInstanceTypeForVendor(
+            param['cloud/instance-type'],
+            param['cloud/vendor']
+          );
+
+          return true;
+        },
+        {
+          message:
+            '`duration`, `cpu/utilization`, `cloud/instance-type`, and `cloud/vendor` should be present in the input',
+        }
+      );
+
+    return validate<z.infer<typeof schema>>(schema, params);
+  };
 
   /**
    * Calculates the energy consumption for a single input
    * (wattage * duration) / (seconds in an hour) / 1000 = kWh
    */
-  private calculateEnergy(input: KeyValuePair) {
-    const {duration, 'cpu-util': cpu} = input;
+  const calculateEnergy = (input: PluginParams) => {
+    const {
+      duration,
+      'cpu/utilization': cpu,
+      'cloud/instance-type': instanceType,
+      'cloud/vendor': cloudVendor,
+    } = input;
 
     const wattage =
-      this.vendor === 'aws' && this.interpolation === 'spline'
-        ? this.getAWSSplineWattage(cpu)
-        : this.getLinerInterpolationWattage(cpu);
+      cloudVendor === 'aws' && input.interpolation === 'spline'
+        ? getAWSSplineWattage(cpu, instanceType)
+        : getLinerInterpolationWattage(cpu, input);
 
     return (wattage * duration) / 3600 / 1000;
-  }
+  };
 
   /**
    * Uses a spline method for AWS to get wattages.
    */
-  private getAWSSplineWattage(cpu: number) {
-    const consumption =
-      this.computeInstances['aws'][this.instanceType].consumption;
+  const getAWSSplineWattage = (cpu: number, instanceType: string) => {
+    const consumption = computeInstances['aws'][instanceType].consumption;
     const x = [0, 10, 50, 100];
     const y = [
       consumption.idle,
@@ -206,73 +180,76 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
     const spline = new Spline(x, y);
 
     return spline.at(cpu);
-  }
+  };
 
   /**
    *  Gets Liner interpolation wattages for GCP and Azure.
    */
-  private getLinerInterpolationWattage(cpu: number) {
+  const getLinerInterpolationWattage = (cpu: number, input: PluginParams) => {
+    const {'cloud/vendor': cloudVendor, 'cloud/instance-type': instanceType} =
+      input;
     const idle =
-      this.computeInstances[this.vendor][this.instanceType].consumption
-        .minWatts;
+      computeInstances[cloudVendor][instanceType].consumption.minWatts;
     const max =
-      this.computeInstances[this.vendor][this.instanceType].consumption
-        .maxWatts;
+      computeInstances[cloudVendor][instanceType].consumption.maxWatts;
 
     return idle + (max - idle) * (cpu / 100);
-  }
+  };
 
   /**
    * Standardize the instance metrics for all the vendors.
    * Maps the instance metrics to a standard format (min, max, idle, 10%, 50%, 100%) for all the vendors.
    */
-  private standardizeInstanceMetrics() {
-    this.initializeComputeInstances();
+  const standardizeInstanceMetrics = () => {
+    initializeComputeInstances();
 
-    this.calculateAverage('gcp', GCP_USE);
-    this.calculateAverage('azure', AZURE_USE);
-    this.calculateAverage('aws', AWS_USE);
+    calculateAverage('gcp', GCP_USE);
+    calculateAverage('azure', AZURE_USE);
+    calculateAverage('aws', AWS_USE);
 
-    this.processInstances(
+    processInstances(
       AWS_INSTANCES,
       'aws',
       'Instance type',
       'Platform Total Number of vCPU'
     );
-    this.processInstances(
+    processInstances(
       GCP_INSTANCES,
       'gcp',
       'Machine type',
       'Platform vCPUs (highest vCPU possible)'
     );
-    this.processInstances(
+    processInstances(
       AZURE_INSTANCES,
       'azure',
       'Virtual Machine',
       'Platform vCPUs (highest vCPU possible)'
     );
 
-    this.processEmbodiedEmissions(AWS_EMBODIED, 'aws');
-    this.processEmbodiedEmissions(GCP_EMBODIED, 'gcp');
-    this.processEmbodiedEmissions(AZURE_EMBODIED, 'azure');
-  }
+    processEmbodiedEmissions(AWS_EMBODIED, 'aws');
+    processEmbodiedEmissions(GCP_EMBODIED, 'gcp');
+    processEmbodiedEmissions(AZURE_EMBODIED, 'azure');
+  };
 
   /**
    * Initializes instances.
    */
-  private initializeComputeInstances() {
-    this.computeInstances['aws'] = {};
-    this.computeInstances['gcp'] = {};
-    this.computeInstances['azure'] = {};
-  }
+  const initializeComputeInstances = () => {
+    computeInstances['aws'] = {};
+    computeInstances['gcp'] = {};
+    computeInstances['azure'] = {};
+  };
 
   /**
    * Calculates average of all instances.
    */
-  private calculateAverage(vendor: string, instanceList: KeyValuePair[]) {
+  const calculateAverage = (
+    cloudVendor: string,
+    instanceList: KeyValuePair[]
+  ) => {
     const {totalMin, totalMax, count} = instanceList.reduce(
       (accumulator, instance) => {
-        this.instanceUsage[vendor][instance['Architecture']] = instance;
+        instanceUsage[cloudVendor][instance['Architecture']] = instance;
         accumulator.totalMin += parseFloat(instance['Min Watts']);
         accumulator.totalMax += parseFloat(instance['Max Watts']);
         accumulator.count += 1.0;
@@ -281,19 +258,19 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       {totalMin: 0.0, totalMax: 0.0, count: 0.0}
     );
 
-    this.instanceUsage[vendor]['Average'] = {
+    instanceUsage[cloudVendor]['Average'] = {
       'Min Watts': totalMin / count,
       'Max Watts': totalMax / count,
       Architecture: 'Average',
     };
-  }
+  };
 
   /**
    * Resolves differences in AWS instance architecture strings.
    * Modifies the input architecture string based on predefined rules.
    * Validates the resolved architecture using the validateAwsArchitecture method.
    */
-  private resolveAwsArchitecture(architecture: string) {
+  const resolveAwsArchitecture = (architecture: string) => {
     const modifyArchitecture: {[key: string]: () => void} = {
       'AMD ': () => {
         architecture = architecture.substring(4);
@@ -315,24 +292,24 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       }
     });
 
-    this.validateAwsArchitecture(architecture);
+    validateAwsArchitecture(architecture);
 
     return architecture;
-  }
+  };
 
   /**
    * Validates the AWS instance architecture against a predefined set of supported architectures.
    */
 
-  private validateAwsArchitecture(architecture: string) {
-    if (!(architecture in this.instanceUsage['aws'])) {
+  const validateAwsArchitecture = (architecture: string) => {
+    if (!(architecture in instanceUsage['aws'])) {
       throw new UnsupportedValueError(
-        this.errorBuilder({
+        errorBuilder({
           message: `Architecture '${architecture}' is not supported`,
         })
       );
     }
-  }
+  };
 
   /**
    * Calculates the embodied emissions for a given input.
@@ -345,68 +322,75 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
    * RR = Resources Reserved, the number of resources reserved for use by the software.
    * TR = Total Resources, the total number of resources available.
    */
-  private embodiedEmissions(input: KeyValuePair): number {
-    const durationInHours = input['duration'] / 3600;
+  const embodiedEmissions = (input: PluginParams): number => {
+    const {
+      'cloud/vendor': cloudVendor,
+      'cloud/instance-type': instanceType,
+      'cpu/expected-lifespan': expectedLifespan,
+      duration,
+    } = input;
+    const durationInHours = duration / 3600;
 
-    const instance = this.computeInstances[this.vendor][this.instanceType];
+    const instance = computeInstances[cloudVendor][instanceType];
 
     const totalEmissions = instance.embodiedEmission;
-    const expectedLifespan = 8760 * this.expectedLifespan;
+    const expectedLifespanInHours =
+      8760 * (expectedLifespan || deafultExpectedLifespan);
     const reservedResources = instance.vCPUs;
     const totalResources = instance.maxvCPUs;
 
     return (
       totalEmissions *
       1000 *
-      (durationInHours / expectedLifespan) *
+      (durationInHours / expectedLifespanInHours) *
       (reservedResources / totalResources)
     );
-  }
+  };
 
   /**
    * Processes a list of instances, calculates their consumption, and stores the standardized information in the computeInstances object.
    */
-  private processInstances(
+  const processInstances = (
     instances: KeyValuePair[],
-    vendor: string,
+    cloudVendor: string,
     type: string,
     maxvCPUs: string
-  ) {
+  ) => {
     instances.forEach((instance: KeyValuePair) => {
-      const vCPU = vendor === 'aws' ? 'Instance vCPU' : 'Instance vCPUs';
+      const vCPU = cloudVendor === 'aws' ? 'Instance vCPU' : 'Instance vCPUs';
       const cpus = parseInt(instance[vCPU], 10);
       const consumption =
-        vendor === 'aws'
-          ? this.calculateAwsConsumption(instance, cpus)
-          : this.calculateConsumption(instance, vendor, cpus);
+        cloudVendor === 'aws'
+          ? calculateAwsConsumption(instance, cpus)
+          : calculateConsumption(instance, cloudVendor, cpus);
 
-      this.computeInstances[vendor][instance[type]] = {
+      computeInstances[cloudVendor][instance[type]] = {
         name: instance[type],
         vCPUs: cpus,
         consumption,
         maxvCPUs: parseInt(instance[maxvCPUs], 10),
       } as ComputeInstance;
     });
-  }
+  };
 
   /**
    * Retrieves the list of architectures for a given instance based on the INSTANCE_TYPE_COMPUTE_PROCESSOR_MAPPING.
    */
-  private getInstanceArchitectures(instance: KeyValuePair): string[] {
+  const getInstanceArchitectures = (instance: KeyValuePair): string[] => {
     const architectures = INSTANCE_TYPE_COMPUTE_PROCESSOR_MAPPING[
       instance['Instance type']
     ] ?? ['Average'];
 
     return architectures.map((architecture: string) =>
-      this.resolveAwsArchitecture(architecture)
+      resolveAwsArchitecture(architecture)
     );
-  }
+  };
 
   /**
    * Calculates the average minimum and maximum watts consumption for AWS instances based on the provided architectures.
    */
-  private calculateAwsAverageWatts(architectures: string[]) {
-    const awsInstance = this.instanceUsage['aws'];
+  const calculateAwsAverageWatts = (architectures: string[]) => {
+    const awsInstance = instanceUsage['aws'];
 
     const {minWatts, maxWatts, count} = architectures.reduce(
       (accumulator, architecture) => {
@@ -422,18 +406,18 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       minWatts: minWatts / count,
       maxWatts: maxWatts / count,
     };
-  }
+  };
 
   /**
    * Calculates the consumption metrics (idle, 10%, 50%, 100%, minWatts, maxWatts) for a given compute instance.cv
    */
-  private calculateConsumption(
+  const calculateConsumption = (
     instance: KeyValuePair,
-    vendor: string,
+    cloudVendor: string,
     cpus: number
-  ) {
+  ) => {
     const architecture =
-      instance['Microarchitecture'] in this.instanceUsage[vendor]
+      instance['Microarchitecture'] in instanceUsage[cloudVendor]
         ? instance['Microarchitecture']
         : 'Average';
 
@@ -442,45 +426,50 @@ export class CloudCarbonFootprint implements ModelPluginInterface {
       tenPercent: 0,
       fiftyPercent: 0,
       hundredPercent: 0,
-      minWatts: this.instanceUsage[vendor][architecture]['Min Watts'] * cpus,
-      maxWatts: this.instanceUsage[vendor][architecture]['Max Watts'] * cpus,
+      minWatts: instanceUsage[cloudVendor][architecture]['Min Watts'] * cpus,
+      maxWatts: instanceUsage[cloudVendor][architecture]['Max Watts'] * cpus,
     };
-  }
+  };
 
   /**
    * Calculates the consumption metrics (idle, 10%, 50%, 100%, minWatts, maxWatts) for a given compute instance.
    */
-  private calculateAwsConsumption(instance: KeyValuePair, cpus: number) {
-    const architectures = this.getInstanceArchitectures(instance);
-    const {minWatts, maxWatts} = this.calculateAwsAverageWatts(architectures);
+  const calculateAwsConsumption = (instance: KeyValuePair, cpus: number) => {
+    const architectures = getInstanceArchitectures(instance);
+    const {minWatts, maxWatts} = calculateAwsAverageWatts(architectures);
 
     return {
-      idle: this.getParsedInstanceMetric(instance['Instance @ Idle']),
-      tenPercent: this.getParsedInstanceMetric(instance['Instance @ 10%']),
-      fiftyPercent: this.getParsedInstanceMetric(instance['Instance @ 50%']),
-      hundredPercent: this.getParsedInstanceMetric(instance['Instance @ 100%']),
+      idle: getParsedInstanceMetric(instance['Instance @ Idle']),
+      tenPercent: getParsedInstanceMetric(instance['Instance @ 10%']),
+      fiftyPercent: getParsedInstanceMetric(instance['Instance @ 50%']),
+      hundredPercent: getParsedInstanceMetric(instance['Instance @ 100%']),
       minWatts: minWatts * cpus,
       maxWatts: maxWatts * cpus,
     };
-  }
+  };
 
   /**
    * Parses a metric value to a floating-point number.
    */
-  private getParsedInstanceMetric(metric: string) {
+  const getParsedInstanceMetric = (metric: string) => {
     return parseFloat(metric.replace(',', '.'));
-  }
+  };
 
   /**
-   * Processes and assigns embodied emissions data to compute instances for a specific vendor.
+   * Processes and assigns embodied emissions data to compute instances for a specific cloud/vendor.
    */
-  private processEmbodiedEmissions(
+  const processEmbodiedEmissions = (
     embodiedList: KeyValuePair[],
-    vendor: string
-  ) {
+    cloudVendor: string
+  ) => {
     embodiedList.forEach((instance: KeyValuePair) => {
-      this.computeInstances[vendor][instance['type']].embodiedEmission =
+      computeInstances[cloudVendor][instance['type']].embodiedEmission =
         instance['total'];
     });
-  }
-}
+  };
+
+  return {
+    metadata,
+    execute,
+  };
+};

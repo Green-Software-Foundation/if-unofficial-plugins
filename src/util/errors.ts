@@ -3,6 +3,7 @@ const CUSTOM_ERRORS = [
   'APIRequestError',
   'InputValidationError',
   'UnsupportedValueError',
+  'ConfigValidationError',
 ] as const;
 
 type CustomErrors = {
