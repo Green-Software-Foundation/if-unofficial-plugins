@@ -47,7 +47,7 @@ export const BoaviztaCpuOutput = (
       if (!(metricType in input)) {
         throw new InputValidationError(
           errorBuilder({
-            message: 'Invalid input parameter',
+            message: `${metricType} is not provided in input`,
           })
         );
       }
@@ -74,7 +74,7 @@ export const BoaviztaCpuOutput = (
     usage: BoaviztaUsageType | undefined
   ): Promise<BoaviztaCpuOutputType> => {
     const data = Object.assign({}, input, {usage});
-    const verbose = globalConfig.verbose || false;
+    const verbose = (globalConfig && globalConfig.verbose) || false;
     const response = await boaviztaAPI.fetchCpuOutputData(
       data,
       componentType,
@@ -138,7 +138,7 @@ export const BoaviztaCloudOutput = (
       if (!(metricType in input)) {
         throw new InputValidationError(
           errorBuilder({
-            message: 'Invalid input parameter',
+            message: `${metricType} is not provided in input`,
           })
         );
       }
@@ -162,7 +162,7 @@ export const BoaviztaCloudOutput = (
     usage: BoaviztaUsageType
   ): Promise<BoaviztaCloudInstanceType> => {
     const data = Object.assign({}, input, {usage});
-    const verbose = globalConfig.verbose || false;
+    const verbose = (globalConfig && globalConfig.verbose) || false;
     const response = await boaviztaAPI.fetchCloudInstanceData(data, verbose);
 
     return baseOutput.formatResponse(response);
