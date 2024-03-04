@@ -74,6 +74,14 @@ export class ElectricityMapsModel implements ModelPluginInterface {
         this.authorizationHeader = `auth-token: ${token}`;
     }
     private async get_carbon_intensity(longitude: number, latitude: number, start: dayjs.Dayjs, end: dayjs.Dayjs): Promise<KeyValuePair[]> {
+        if (isNaN(latitude) || isNaN(longitude)) {
+            throw InputValidationError(
+                this.errorBuilder({
+                    message: 'Longitude and Latitude are required for the Electricity Maps API.',
+                    scope: 'input',
+                })
+            )
+        }
         const parameters = {
             lon: longitude,
             lat: latitude,
