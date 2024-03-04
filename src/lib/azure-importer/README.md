@@ -152,7 +152,7 @@ You can run this example `manifest` by saving it as `./examples/manifests/test/a
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --manifest ./examples/manifests/test/azure-importer.yml --output ./examples/outputs/azure-importer.yml
+ie --manifest ./examples/manifests/test/azure-importer.yml --output ./examples/outputs/azure-importer.yml
 ```
 
 The results will be saved to a new `yaml` file in `./examples/outputs`.

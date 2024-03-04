@@ -104,12 +104,12 @@ tree:
           geolocation: 37.7749,-122.4194
 ```
 
-You can run this by passing it to `if`. Run impact using the following command run from the project root:
+You can run this by passing it to `ie`. Run impact using the following command run from the project root:
 
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --manifest ./examples/manifests/test/watt-time.yml --output ./examples/outputs/watt-time.yml
+ie --manifest ./examples/manifests/test/watt-time.yml --output ./examples/outputs/watt-time.yml
 ```
 
 ## Position and effects in the manifest:

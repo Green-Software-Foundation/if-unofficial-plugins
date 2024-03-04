@@ -44,7 +44,7 @@ You can read a detailed explanation ofn the calculations in the [CCF docs](https
 
 ## Usage
 
-In IF, the plugin is called from a `manifest`. A `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`. The plugin input is expected to contain `duration`,`cpu/utilization`, `cloud/vendor` and `cloud/instance-type` fields.
+In IF, the plugin is called from a `manifest`. A `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `ie`. The plugin input is expected to contain `duration`,`cpu/utilization`, `cloud/vendor` and `cloud/instance-type` fields.
 
 You can see example Typescript invocations for each `cloud/vendor` below:
 
@@ -125,13 +125,13 @@ tree:
           cpu/utilization: 10
 ```
 
-This manifest is run using `if` using the following command, run from the project root:
+You can run this by passing it to `ie`. Run impact using the following command run from the project root:
 
 ```sh
 
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --manifest ./examples/manifests/test/ccf.yml --output ./examples/outputs/ccf.yml
+ie --manifest ./examples/manifests/test/ccf.yml --output ./examples/outputs/ccf.yml
 ```
 
 This yields a result that looks like the following (saved to `/outputs/ccf.yml`):
