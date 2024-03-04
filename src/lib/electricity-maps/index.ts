@@ -83,7 +83,7 @@ export class ElectricityMapsModel implements ModelPluginInterface {
         if (end.diff(start, 'days') > 10) {
             throw InputValidationError(
                 this.errorBuilder({
-                    message: 'The maximum duration is 10 days for the Emaps API.',
+                    message: 'The maximum duration is 10 days for the Electricity Maps API.',
                     scope: 'input',
                 })
             )
