@@ -79,10 +79,10 @@ tree:
           cpu/utilization: 10
 ```
 
-You can run this by passing it to `if`. Run impact using the following command run from the project root:
+You can run this by passing it to `ie`. Run impact using the following command run from the project root:
 
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --manifest ./examples/manifests/test/teads-aws.yml --output ./examples/outputs/teads-aws.yml
+ie --manifest ./examples/manifests/test/teads-aws.yml --output ./examples/outputs/teads-aws.yml
 ```

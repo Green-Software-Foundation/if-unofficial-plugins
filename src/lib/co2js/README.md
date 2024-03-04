@@ -39,7 +39,7 @@ The CO2JS Framework is a community plugin, not part of the IF standard library. 
 
 ## Usage
 
-In IF the plugin is called from an `manifest`. An `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `if`.
+In IF the plugin is called from an `manifest`. An `manifest` is a `.yaml` file that contains configuration metadata and usage inputs. This is interpreted by the command line tool, `ie`.
 
 The plugin config should define a `type` supported by the CO2.JS library (either `swd` or `1byte`). These are different ways to calculate the operational carbon associated with a web application; `swd` is shorthand for 'sustainable web design' plugin and `1byte` refers to the OneByte mdoel. You can read about the details of these plugins and how they differ at the [Green Web Foundation website](https://developers.thegreenwebfoundation.org/co2js/explainer/methodologies-for-calculating-website-carbon/).
 
@@ -82,12 +82,12 @@ tree:
           network/data/bytes: 1000000
 ```
 
-This manifest is run using `if` using the following command, run from the project root:
+You can run this by passing it to `ie`. Run impact using the following command run from the project root:
 
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
-if --manifest ./examples/manifests/test/co2js.yml --output ./examples/outputs/co2js.yml
+ie --manifest ./examples/manifests/test/co2js.yml --output ./examples/outputs/co2js.yml
 ```
 
 This yields a result that looks like the following (saved to `/outputs/co2js.yml`):
