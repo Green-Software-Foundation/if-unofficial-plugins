@@ -17,29 +17,30 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 
 ### Inputs
 
-- `cpu/name`: the name of the physical processor being used
-- `cpu/number-cores`: number of physical cores on a CPU
-- `cpu/expected-lifespan`: the lifespan of the component, in seconds
+- `cpu/name`: the name of the physical processor being used (required for `BoaviztaCpuOutput`)
+- `cpu/number-cores`: number of physical cores on a CPU (required for `BoaviztaCpuOutput`)
+- `cpu/expected-lifespan`: the lifespan of the component, in seconds (optional)
 - `country`: the country used to lookup grid carbon intensity, e.g. "USA" (optional - falls back to Boavizta default)
-- `cpu/utilization`: percentage CPU utilization for a given observation
-- `instance-type`: the name of the specific instance
+- `cpu/utilization`: percentage CPU utilization for a given observation (required)
+- `instance-type`: the name of the specific instance (required for `BoaviztaCloudOutput`, optional for `BoaviztaCpuOutput`)
+- `provider`: the name of cloud provider (required for `BoaviztaCloudOutput`)
 
 ## Returns
 
 - `carbon-embodied`: carbon emitted in manufacturing the device, in gCO2eq
 - `cpu/energy`: energy used by CPU in kWh
 
-## Usage
+## Usage for `BoaviztaCpuOutput`
 
-To run the `boavista-cpu` plugin an instance of `BoaviztaCpuImpact` must be created using `BoaviztaCpuImpact()` and, if applicable, passing global configurations. Subsequently, the `execute()` function can be invoked to retrieve data on `carbon-embodied` and `cpu/energy`.
+To run the `boavista-cpu` plugin an instance of `BoaviztaCpuOutput` must be created using `BoaviztaCpuOutput()` and, if applicable, passing global configurations. Subsequently, the `execute()` function can be invoked to retrieve data on `carbon-embodied` and `cpu/energy`.
 
 This is how you could run the plugin in Typescript:
 
 ```typescript
-import {BoaviztaCpuImpact} from '@grnsft/if-unofficial-plugins';
+import {BoaviztaCpuOutput} from '@grnsft/if-unofficial-plugins';
 
-const output = BoaviztaCpuImpact({});
-const usage = await output.calculate([
+const output = BoaviztaCpuOutput({});
+const usage = await output.execute([
   {
     timestamp: '2021-01-01T00:00:00Z',
     duration: 1,
@@ -114,4 +115,61 @@ You can run this by passing it to `ie`. Run impact using the following command r
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
 ie --manifest ./examples/manifests/test/boavizta.yml --output ./examples/outputs/boavizta.yml
+```
+
+## Usage for `BoaviztaCloudOutput`
+
+To run the `boavista-cloud` plugin an instance of `BoaviztaCloudOutput` must be created using `BoaviztaCloudOutput()` and, if applicable, passing global configurations. Subsequently, the `execute()` function can be invoked to retrieve data on `carbon-embodied` and `cpu/energy`.
+
+This is how you could run the plugin in Typescript:
+
+```typescript
+import {BoaviztaCloudOutput} from '@grnsft/if-unofficial-plugins';
+
+const output = BoaviztaCloudOutput({});
+const usage = await output.execute([
+  {
+    timestamp: '2021-01-01T00:00:00Z',
+    duration: 15,
+    'cpu/utilization': 34,
+    'instance-type': 't2.micro',
+    country: 'USA',
+    provider: 'aws',
+  },
+]);
+```
+
+## Example `manifest`
+
+In IF plugins are expected to be invoked from an `manifest` file. This is a yaml containing the plugin configuration and inputs. The following `manifest` initializes and runs the `boavizta-cloud` plugin:
+
+```yaml
+name: boavizta cloud demo
+description: calls boavizta api
+tags:
+initialize:
+  plugins:
+    'boavizta-cloud':
+      method: BoaviztaCloudOutput
+      path: '@grnsft/if-unofficial-plugins'
+tree:
+  children:
+    child:
+      pipeline:
+        - boavizta-cloud
+      defaults:
+        instance-type: r6g.medium
+        provider: aws
+      inputs:
+        - timestamp: '2021-01-01T00:00:00Z'
+          duration: 15 # Secs
+          cpu/utilization: 34
+```
+
+You can run this by passing it to `ie`. Run impact using the following command run from the project root:
+
+```sh
+npm i -g @grnsft/if
+npm i -g @grnsft/if-unofficial-plugins
+ie --manifest ./examples/manifests/test/boavizta-cloud.yml --output ./examples/outputs/boavizta-cloud.yml
 ```
