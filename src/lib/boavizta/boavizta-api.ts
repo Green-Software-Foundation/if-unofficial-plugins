@@ -22,9 +22,14 @@ export const BoaviztaAPI = () => {
     componentType: string,
     verbose: boolean
   ): Promise<object> => {
+    const dataCast = {
+      core_units: data['cpu/number-cores'],
+      name: data['cpu/name'],
+      tdp: data['cpu/thermal-design-power'],
+    };
     const response = await axios.post(
       `${BASE_URL}/component/${componentType}?verbose=${verbose}&duration=${data['usage']['hours_use_time']}`,
-      data
+      dataCast
     );
 
     return response.data;
