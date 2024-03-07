@@ -37,22 +37,23 @@ export const WattTimeGridEmissions = (
 
     const wattTimeData = await getWattTimeData(inputs);
 
-    return inputs.map((input, index) => {
-      const data = getWattTimeDataForDuration(wattTimeData);
+    return inputs.map(input => {
+      const safeInput = Object.assign({}, input, validateInput(input));
+      const inputStart = dayjs(safeInput.timestamp);
+      const inputEnd = inputStart.add(safeInput.duration, 'seconds');
 
-      if (data.length === 0) {
-        throw new InputValidationError(
-          errorBuilder({
-            message: `Did not receive data from WattTime API for the input[${index}] block`,
-          })
-        );
-      }
+      const data = getWattTimeDataForDuration(
+        wattTimeData,
+        inputStart,
+        inputEnd
+      );
 
       const totalEmission = data.reduce((a: number, b: number) => a + b, 0);
+      const result = totalEmission / data.length;
 
       return {
         ...input,
-        'grid/carbon-intensity': totalEmission / data.length,
+        'grid/carbon-intensity': result || 0,
       };
     });
   };
@@ -82,11 +83,25 @@ export const WattTimeGridEmissions = (
    * convert to g/KWh by multiplying by 1000. (1Kg = 1000g)
    * hence each other cancel out and g/KWh is the same as kg/MWh
    */
-  const getWattTimeDataForDuration = (wattTimeData: KeyValuePair[]) => {
+  const getWattTimeDataForDuration = (
+    wattTimeData: KeyValuePair[],
+    inputStart: dayjs.Dayjs,
+    inputEnd: dayjs.Dayjs
+  ) => {
     const kgMWh = 0.45359237;
 
     return wattTimeData.reduce((accumulator, data) => {
-      accumulator.push(data.value / kgMWh);
+      // WattTime API returns full data for the entire duration.
+      // if the data point is before the input start, ignore it.
+      // if the data point is after the input end, ignore it.
+      // if the data point is exactly the same as the input end, ignore it
+      if (
+        !dayjs(data.point_time).isBefore(inputStart) &&
+        !dayjs(data.point_time).isAfter(inputEnd) &&
+        dayjs(data.point_time).format() !== dayjs(inputEnd).format()
+      ) {
+        accumulator.push(data.value / kgMWh);
+      }
 
       return accumulator;
     }, []);
