@@ -91,10 +91,11 @@ export const WattTimeGridEmissions = (
     const kgMWh = 0.45359237;
 
     return wattTimeData.reduce((accumulator, data) => {
-      // WattTime API returns full data for the entire duration.
-      // if the data point is before the input start, ignore it.
-      // if the data point is after the input end, ignore it.
-      // if the data point is exactly the same as the input end, ignore it
+      /* WattTime API returns full data for the entire duration.
+       * if the data point is before the input start, ignore it.
+       * if the data point is after the input end, ignore it.
+       * if the data point is exactly the same as the input end, ignore it
+       */
       if (
         !dayjs(data.point_time).isBefore(inputStart) &&
         !dayjs(data.point_time).isAfter(inputEnd) &&
