@@ -5,4 +5,5 @@ export {Co2js} from './co2js';
 export {ShellExecCommand} from './shell-exec-command';
 export {TeadsAWS} from './teads-aws';
 export {TeadsCurve} from './teads-curve';
+export {TimerStart, TimerStop} from './timer';
 export {WattTimeGridEmissions} from './watt-time';
