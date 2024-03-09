@@ -153,6 +153,12 @@ describe('lib/boavizta: ', () => {
           ])
         ).toStrictEqual([
           {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 15,
+            'cpu/utilization': 34,
+            'instance-type': 't2.micro',
+            country: 'USA',
+            provider: 'aws',
             'carbon-embodied': 1.6,
             energy: 1.6408333333333334,
           },

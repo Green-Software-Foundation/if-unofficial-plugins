@@ -148,7 +148,10 @@ export const BoaviztaCloudOutput = (
         fetchData
       );
 
-      result.push(usageResult);
+      result.push({
+        ...input,
+        ...usageResult,
+      });
     }
 
     return result;
