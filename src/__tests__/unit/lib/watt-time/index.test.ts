@@ -47,7 +47,7 @@ describe('lib/watt-time: ', () => {
             geolocation: '37.7749,-122.4194',
             timestamp: '2021-01-01T00:00:00Z',
             duration: 1200,
-            'grid/carbon-intensity': 2096.256940667132,
+            'grid/carbon-intensity': 2185.332173907599,
           },
         ]);
       });
