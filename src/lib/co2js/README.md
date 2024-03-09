@@ -4,8 +4,16 @@
 
 # Parameters
 
-## Plugin global config
+## Plugin node config
 
+- `type`: supported plugins by the library, `swd` or `1byte`
+
+## Inputs
+
+- `network/data/bytes`: the number of bytes transferred or `network/data` if the number is in GB
+- `green-web-host`: true if the website is hosted on a green web host, false otherwise
+- `duration`: the amount of time the observation covers, in seconds
+- `timestamp`: a timestamp for the observation
 - `options`: **SWD Plugin Only** an object containing any Sustainable Web Design specific variables to the changed. All keys are optional.
   - `dataReloadRatio` - a value between 0 and 1 representing the percentage of data that is downloaded by return visitors. -`firstVisitPercentage` - a value between 0 and 1 representing the percentage of new visitors.
   - `returnVisitPercentage` - a value between 0 and 1 representing the percentage of returning visitors.
@@ -16,16 +24,6 @@
 
 The value for `device`, `dataCenter`, or `networks` can be a number representing the carbon intensity for the given segment (in grams per kilowatt-hour). Or, an object, which contains a key of country and a value that is an Alpha-3 ISO country code.
 
-## Plugin node config
-
-- `type`: supported plugins by the library, `swd` or `1byte`
-- `green-web-host`: true if the website is hosted on a green web host, false otherwise
-
-## Inputs
-
-- `network/data/bytes`: the number of bytes transferred or `network/data` if the number is in GB
-- `duration`: the amount of time the observation covers, in seconds
-- `timestamp`: a timestamp for the observation
 
 ## Returns
 
@@ -58,15 +56,8 @@ initialize:
     co2js:
       method: Co2js
       path: '@grnsft/if-unofficial-plugins'
-      global-config:
-        options:
-          dataReloadRatio: 0.6
-          firstVisitPercentage: 0.9
-          returnVisitPercentage: 0.1
-          gridIntensity:
-            device: 560.98
-            dataCenter:
-              country: 'TWN'
+  outputs:
+    - yaml
 tree:
   children:
     child:
@@ -75,11 +66,19 @@ tree:
       config:
         co2js:
           type: swd
-          green-web-host: true
       inputs:
         - timestamp: 2023-07-06T00:00
           duration: 1
           network/data/bytes: 1000000
+          green-web-host: true
+          options:
+            dataReloadRatio: 0.6
+            firstVisitPercentage: 0.9
+            returnVisitPercentage: 0.1
+            gridIntensity:
+              device: 560.98
+              dataCenter:
+                country: 'TWN'
 ```
 
 You can run this by passing it to `ie`. Run impact using the following command run from the project root:
@@ -101,15 +100,8 @@ initialize:
     co2js:
       path: '@grnsft/if-unofficial-plugins'
       method: Co2js
-      global-config:
-        options:
-          dataReloadRatio: 0.6
-          firstVisitPercentage: 0.9
-          returnVisitPercentage: 0.1
-          gridIntensity:
-            device: 560.98
-            dataCenter:
-              country: TWN
+  outputs:
+    - yaml
 tree:
   children:
     child:
@@ -118,15 +110,32 @@ tree:
       config:
         co2js:
           type: swd
-          green-web-host: true
       inputs:
         - timestamp: 2023-07-06T00:00
           duration: 1
           network/data/bytes: 1000000
+          green-web-host: true
+          options:
+            dataReloadRatio: 0.6
+            firstVisitPercentage: 0.9
+            returnVisitPercentage: 0.1
+            gridIntensity:
+              device: 560.98
+              dataCenter:
+                country: TWN
       outputs:
         - timestamp: 2023-07-06T00:00
           duration: 1
           network/data/bytes: 1000000
+          green-web-host: true
+          options:
+            dataReloadRatio: 0.6
+            firstVisitPercentage: 0.9
+            returnVisitPercentage: 0.1
+            gridIntensity:
+              device: 560.98
+              dataCenter:
+                country: TWN
           carbon-operational: 0.34497244224000007
 ```
 
@@ -139,31 +148,29 @@ You can see example Typescript invocations for each plugin below.
 ```typescript
 import {Co2js} from '@grnsft/if-unofficial-plugins';
 
-const globalConfig = {
-  options: {
-    // Optional
-    dataReloadRatio: 0.6,
-    firstVisitPercentage: 0.9,
-    returnVisitPercentage: 0.1,
-    gridIntensity: {
-      device: 560.98,
-      dataCenter: 50,
-      networks: 437.66,
-    },
-  },
-};
-const co2js = Co2js(globalConfig);
+const co2js = Co2js();
 const results = await co2js.execute(
   [
     {
       duration: 3600, // duration institute
       timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
       'network/data/bytes': 1000000, // bytes transferred
+      'green-web-host': true, // true if the website is hosted on a green web host, false otherwise
+      options: {
+        // Optional
+        dataReloadRatio: 0.6,
+        firstVisitPercentage: 0.9,
+        returnVisitPercentage: 0.1,
+        gridIntensity: {
+          device: 560.98,
+          dataCenter: 50,
+          networks: 437.66,
+        },
+      },
     },
   ],
   {
     type: 'swd',
-    'green-web-host': true, // true if the website is hosted on a green web host, false otherwise
   }
 );
 ```
@@ -180,11 +187,11 @@ const results = await co2js.execute(
       duration: 3600, // duration institute
       timestamp: '2021-01-01T00:00:00Z', // ISO8601 / RFC3339 timestamp
       'network/data/bytes': 1000000, // bytes transferred
+      'green-web-host': true, // true if the website is hosted on a green web host, false otherwise
     },
-  ],
+],
   {
     type: '1byte',
-    'green-web-host': true, // true if the website is hosted on a green web host, false otherwise
   }
 );
 ```
