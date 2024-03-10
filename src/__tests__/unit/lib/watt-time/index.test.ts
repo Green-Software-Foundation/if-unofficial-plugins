@@ -96,11 +96,9 @@ describe('lib/watt-time: ', () => {
       });
 
       it('throws an error when initialize with wrong username / password.', async () => {
-        process.env.WATT_TIME_USERNAME = 'test1';
-        process.env.WATT_TIME_PASSWORD = 'test2';
-        const output = WattTimeGridEmissions({
-          baseUrl: 'https://apifail.watttime.org/v2',
-        });
+        process.env.WATT_TIME_USERNAME = 'wrong1';
+        process.env.WATT_TIME_PASSWORD = 'wrong2';
+        const output = WattTimeGridEmissions();
 
         expect.assertions(1);
 
@@ -113,13 +111,13 @@ describe('lib/watt-time: ', () => {
             },
           ]);
         } catch (error) {
-          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toBeInstanceOf(AuthorizationError);
         }
       });
 
       it('throws an error when wrong `geolocation` is provided.', async () => {
         const errorMessage =
-          '"geolocation" parameter is not a comma-separated string consisting of `latitude` and `longitude`. Error code: invalid_string.';
+          '"geolocation" parameter is not a comma-separated string consisting of `latitude` and `longitude`. Error code: invalid_string.,at least one of `geolocation`, `cloud/region-wt-id`, or `cloud/region-geolocation` parameters should be provided.';
         process.env.WATT_TIME_USERNAME = 'test1';
         process.env.WATT_TIME_PASSWORD = 'test2';
 
@@ -137,7 +135,11 @@ describe('lib/watt-time: ', () => {
           ]);
         } catch (error) {
           expect(error).toBeInstanceOf(InputValidationError);
-          expect(error).toEqual(new InputValidationError(errorMessage));
+          expect(error).toEqual(
+            new InputValidationError(
+              '"geolocation" parameter is not a comma-separated string consisting of `latitude` and `longitude`. Error code: invalid_string.'
+            )
+          );
         }
 
         try {
@@ -150,7 +152,11 @@ describe('lib/watt-time: ', () => {
           ]);
         } catch (error) {
           expect(error).toBeInstanceOf(InputValidationError);
-          expect(error).toEqual(new InputValidationError(errorMessage));
+          expect(error).toEqual(
+            new InputValidationError(
+              '"geolocation" parameter is not a comma-separated string consisting of `latitude` and `longitude`. Error code: invalid_string.'
+            )
+          );
         }
 
         try {
@@ -168,13 +174,12 @@ describe('lib/watt-time: ', () => {
       });
 
       it('throws an error when no data is returned by API.', async () => {
-        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
-        process.env.WATT_TIME_USERNAME = 'test1';
-        process.env.WATT_TIME_PASSWORD = 'test2';
+        const errorMessage =
+          'WattTimeAPI: Error fetching data from WattTime API: 400.';
+        process.env.WATT_TIME_USERNAME = 'invalidData1';
+        process.env.WATT_TIME_PASSWORD = 'invalidData2';
 
-        const output = WattTimeGridEmissions({
-          baseUrl: 'https://apifail2.watttime.org/v2',
-        });
+        const output = WattTimeGridEmissions();
 
         expect.assertions(2);
         try {
@@ -198,13 +203,12 @@ describe('lib/watt-time: ', () => {
 
       it('throws an error when an unauthorized error occurs during data fetch.', async () => {
         const errorMessage =
-          'WattTimeAPI: Error fetching data from WattTime API. {"status":401,"data":{"none":{}}}.';
-        process.env.WATT_TIME_USERNAME = 'test1';
-        process.env.WATT_TIME_PASSWORD = 'test2';
+          'WattTimeAPI: Error fetching data from WattTime API: 400.';
+        process.env.WATT_TIME_USERNAME = 'fetchError1';
+        process.env.WATT_TIME_PASSWORD = 'fetchError2';
 
-        const output = WattTimeGridEmissions({
-          baseUrl: 'https://apifail3.watttime.org/v2',
-        });
+        const output = WattTimeGridEmissions();
+        expect.assertions(2);
 
         try {
           await output.execute([
@@ -232,6 +236,7 @@ describe('lib/watt-time: ', () => {
         process.env.WATT_TIME_PASSWORD = 'test2';
 
         const output = WattTimeGridEmissions();
+        expect.assertions(2);
 
         try {
           await output.execute([
