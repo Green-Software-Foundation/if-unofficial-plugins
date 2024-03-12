@@ -1,4 +1,6 @@
 import * as dayjs from 'dayjs';
+import * as utc from 'dayjs/plugin/utc';
+import * as timezone from 'dayjs/plugin/timezone';
 import {z} from 'zod';
 
 import {ERRORS} from '../../util/errors';
@@ -10,6 +12,9 @@ import {validate} from '../../util/validations';
 
 import {WattTimeParams, WattTimeRegionParams} from './types';
 import {WattTimeAPI} from './watt-time-api';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const {InputValidationError} = ERRORS;
 
@@ -112,6 +117,8 @@ export const WattTimeGridEmissions = (
     inputEnd: dayjs.Dayjs
   ) => {
     const kgMWh = 0.45359237;
+    const formatedInputStart = dayjs.tz(inputStart, 'UTC').format();
+    const formatedInputEnd = dayjs.tz(inputEnd, 'UTC').format();
 
     return wattTimeData.reduce((accumulator, data) => {
       /* WattTime API returns full data for the entire duration.
@@ -120,10 +127,9 @@ export const WattTimeGridEmissions = (
        * if the data point is exactly the same as the input end, ignore it
        */
       if (
-        !dayjs(data.point_time).isBefore(inputStart.toISOString()) &&
-        !dayjs(data.point_time).isAfter(inputEnd.toISOString()) &&
-        dayjs(data.point_time).format() !==
-          dayjs(inputEnd.toISOString()).format()
+        !dayjs(data.point_time).isBefore(formatedInputStart) &&
+        !dayjs(data.point_time).isAfter(formatedInputEnd) &&
+        dayjs(data.point_time).format() !== dayjs(formatedInputEnd).format()
       ) {
         accumulator.push(data.value / kgMWh);
       }
@@ -155,10 +161,16 @@ export const WattTimeGridEmissions = (
   const getWattTimeData = async (inputs: PluginParams[]) => {
     const {startTime, fetchDuration} = calculateStartDurationTime(inputs);
 
+    const formatedStartTime = dayjs.tz(startTime, 'UTC').format();
+    const formatEndTime = dayjs
+      .tz(startTime, 'UTC')
+      .add(fetchDuration, 'seconds')
+      .format();
+
     if (inputs[0]['cloud/region-wt-id']) {
       const params: WattTimeRegionParams = {
-        start: dayjs(startTime).toISOString(),
-        end: dayjs(startTime).add(fetchDuration, 'seconds').toISOString(),
+        start: formatedStartTime,
+        end: formatEndTime,
         region: inputs[0]['cloud/region-wt-id'],
         signal_type: inputs[0]['signal-type'],
       };
@@ -171,8 +183,8 @@ export const WattTimeGridEmissions = (
     const params: WattTimeParams = {
       latitude,
       longitude,
-      starttime: dayjs(startTime).toISOString(),
-      endtime: dayjs(startTime).add(fetchDuration, 'seconds').toISOString(),
+      starttime: formatedStartTime,
+      endtime: formatEndTime,
     };
 
     return await wattTimeAPI.fetchAndSortData(params);
@@ -195,7 +207,7 @@ export const WattTimeGridEmissions = (
       (acc, input) => {
         const safeInput = validateInput(input);
         const {duration, timestamp} = safeInput;
-        const dayjsTimestamp = dayjs(timestamp);
+        const dayjsTimestamp = dayjs.tz(timestamp, 'UTC');
         const startTime = dayjsTimestamp.isBefore(acc.startTime)
           ? dayjsTimestamp
           : acc.startTime;
@@ -206,7 +218,7 @@ export const WattTimeGridEmissions = (
 
         return {startTime: startTime, endtime: endTime};
       },
-      {startTime: dayjs('9999-12-31'), endtime: dayjs('1970-01-01')}
+      {startTime: inputs[0].timestamp, endtime: inputs[0].timestamp}
     );
 
     const fetchDuration = endtime.diff(startTime, 'seconds');
