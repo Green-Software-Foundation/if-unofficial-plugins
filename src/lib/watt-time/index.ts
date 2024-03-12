@@ -8,7 +8,7 @@ import {ConfigParams, KeyValuePair, PluginParams} from '../../types/common';
 import {PluginInterface} from '../../interfaces';
 import {validate} from '../../util/validations';
 
-import {WattTimeParams} from './types';
+import {WattTimeParams, WattTimeRegionParams} from './types';
 import {WattTimeAPI} from './watt-time-api';
 
 const {InputValidationError} = ERRORS;
@@ -24,9 +24,9 @@ export const WattTimeGridEmissions = (
    * Initialize authentication with global config.
    */
   const initializeAuthentication = async () => {
-    const safeConfig = validateConfig();
+    validateConfig();
 
-    await wattTimeAPI.authenticate(safeConfig);
+    await wattTimeAPI.authenticate();
   };
 
   /**
@@ -62,16 +62,39 @@ export const WattTimeGridEmissions = (
    * Validates input parameters.
    */
   const validateInput = (input: PluginParams) => {
-    const schema = z.object({
-      duration: z.number(),
-      timestamp: z.string(),
-      geolocation: z
-        .string()
-        .regex(new RegExp('^\\-?\\d{1,3}\\.\\d+,-?\\d{1,3}\\.\\d+$'), {
+    const schema = z
+      .object({
+        duration: z.number(),
+        timestamp: z.string(),
+        geolocation: z
+          .string()
+          .regex(new RegExp('^\\-?\\d{1,3}\\.\\d+,-?\\d{1,3}\\.\\d+$'), {
+            message:
+              'not a comma-separated string consisting of `latitude` and `longitude`',
+          })
+          .optional(),
+        'cloud/region-wt-id': z.string().optional(),
+        'cloud/region-geolocation': z.string().optional(),
+        'signal-type': z.string().optional(),
+      })
+      .refine(
+        data => {
+          const {
+            geolocation,
+            'cloud/region-wt-id': regionWtId,
+            'cloud/region-geolocation': regionGeolocation,
+          } = data;
+          return geolocation || regionWtId || regionGeolocation;
+        },
+        {
           message:
-            'not a comma-separated string consisting of `latitude` and `longitude`',
-        }),
-    });
+            'at least one of `geolocation`, `cloud/region-wt-id`, or `cloud/region-geolocation` parameters should be provided.',
+        }
+      );
+
+    if (input['cloud/region-geolocation']) {
+      input.geolocation = input['cloud/region-geolocation'];
+    }
 
     return validate<z.infer<typeof schema>>(schema, input);
   };
@@ -97,9 +120,10 @@ export const WattTimeGridEmissions = (
        * if the data point is exactly the same as the input end, ignore it
        */
       if (
-        !dayjs(data.point_time).isBefore(inputStart) &&
-        !dayjs(data.point_time).isAfter(inputEnd) &&
-        dayjs(data.point_time).format() !== dayjs(inputEnd).format()
+        !dayjs(data.point_time).isBefore(inputStart.toISOString()) &&
+        !dayjs(data.point_time).isAfter(inputEnd.toISOString()) &&
+        dayjs(data.point_time).format() !==
+          dayjs(inputEnd.toISOString()).format()
       ) {
         accumulator.push(data.value / kgMWh);
       }
@@ -130,13 +154,25 @@ export const WattTimeGridEmissions = (
    */
   const getWattTimeData = async (inputs: PluginParams[]) => {
     const {startTime, fetchDuration} = calculateStartDurationTime(inputs);
+
+    if (inputs[0]['cloud/region-wt-id']) {
+      const params: WattTimeRegionParams = {
+        start: dayjs(startTime).toISOString(),
+        end: dayjs(startTime).add(fetchDuration, 'seconds').toISOString(),
+        region: inputs[0]['cloud/region-wt-id'],
+        signal_type: inputs[0]['signal-type'],
+      };
+
+      return await wattTimeAPI.fetchDataWithRegion(params);
+    }
+
     const {latitude, longitude} = parseLocation(inputs[0].geolocation);
 
     const params: WattTimeParams = {
       latitude,
       longitude,
-      starttime: dayjs(startTime).format('YYYY-MM-DDTHH:mm:ssZ'),
-      endtime: dayjs(startTime).add(fetchDuration, 'seconds'),
+      starttime: dayjs(startTime).toISOString(),
+      endtime: dayjs(startTime).add(fetchDuration, 'seconds').toISOString(),
     };
 
     return await wattTimeAPI.fetchAndSortData(params);
@@ -152,7 +188,7 @@ export const WattTimeGridEmissions = (
   const calculateStartDurationTime = (
     inputs: PluginParams[]
   ): {
-    startTime: string;
+    startTime: dayjs.Dayjs;
     fetchDuration: number;
   } => {
     const {startTime, endtime} = inputs.reduce(
@@ -184,7 +220,7 @@ export const WattTimeGridEmissions = (
       );
     }
 
-    return {startTime: startTime.format(), fetchDuration};
+    return {startTime: startTime, fetchDuration};
   };
 
   /**
@@ -201,7 +237,6 @@ export const WattTimeGridEmissions = (
       WATT_TIME_PASSWORD: z.string().min(1, {
         message: 'not provided in .env file of `IF` root directory',
       }),
-      baseUrl: z.string().optional(),
     });
 
     return validate<z.infer<typeof schema>>(schema, {

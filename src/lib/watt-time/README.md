@@ -12,9 +12,14 @@ WattTime plugin provides a way to calculate emissions for a given time in a spec
 
 The plugin is based on the WattTime API. The plugin uses the following inputs:
 
-- `geolocation`: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
 - `timestamp`: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
 - `duration`: Duration of the recorded event in seconds (3600)
+- `geolocation`: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
+- `cloud/region-geolocation`: The same as `geolocation`, with calculations performed by the `cloud-metadata` plugin
+- `cloud/region-wt-id`: Region abbreviation associated with location (e.g. 'CAISO_NORTH')
+- `signal-type`: The signal type of selected region (optional) (e.g 'co2_moer')
+
+Either `geolocation`,`cloud/region-wt-id` or `cloud/region-geolocation` should be provided.
 
 ## Implementation
 
@@ -51,8 +56,12 @@ WATT_TIME_TOKEN: <your-token>
 **Required Parameters:**
 
 - `timestamp`: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
-- `geolocation`: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
 - `duration`: Duration of the recorded event in seconds (3600)
+- `geolocation`: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
+- `cloud/region-geolocation`: The same as `geolocation`, with calculations performed by the `cloud-metadata` plugin
+- `cloud/region-wt-id`: Region abbreviation associated with location (e.g. 'CAISO_NORTH')
+
+Either `geolocation`,`cloud/region-wt-id` or `cloud/region-geolocation` should be provided.
 
 ### Typescript Usage
 
