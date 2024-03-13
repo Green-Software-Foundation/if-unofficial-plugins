@@ -1,24 +1,27 @@
 import {KeyValuePair, PluginParams} from '../../types/common';
+import {buildErrorMessage} from '../../util/helpers';
+import {ERRORS} from '../../util/errors';
 
 import {BoaviztaUsageType} from './types';
 
+const {InputValidationError} = ERRORS;
+
 export const BoaviztaBaseOutput = () => {
-  const metricType: 'cpu/utilization' | 'gpu-util' | 'ram-util' =
-    'cpu/utilization';
+  const METRIC_TYPES = ['cpu/utilization', 'gpu-util', 'ram-util'] as const;
   const expectedLifespan: number = 4 * 365 * 24 * 60 * 60;
+  const errorBuilder = buildErrorMessage(BoaviztaBaseOutput.name);
 
   /**
    * Converts the usage from manifest input to the format required by Boavizta API.
    */
-  const transformToBoaviztaUsage = (
-    input: PluginParams,
-    metricType: string
-  ) => {
+  const transformToBoaviztaUsage = (input: PluginParams) => {
+    const metricType = getMetricType(input);
+
     // duration is in seconds, convert to hours
     // metric is between 0 and 1, convert to percentage
     const usageInput: KeyValuePair = {
       hours_use_time: input['duration'] / 3600.0,
-      time_workload: input[metricType],
+      time_workload: [input[metricType!]],
     };
 
     // convert expected lifespan from seconds to years
@@ -60,13 +63,45 @@ export const BoaviztaBaseOutput = () => {
   };
 
   /**
+   * Get the provided metric type in input.
+   */
+  const getMetricType = (input: PluginParams) =>
+    METRIC_TYPES.find(key => key in input);
+
+  /**
+   * Gets metric type data if provided in the input.
+   */
+  const getMetricTypeData = (input: PluginParams) => {
+    const metricType = getMetricType(input);
+    if (!metricType) {
+      throw new InputValidationError(
+        errorBuilder({
+          message: `One of these ${METRIC_TYPES} parameters should be provided in the input`,
+        })
+      );
+    }
+
+    const metricTypeValue =
+      metricType === 'cpu/utilization'
+        ? {
+            load_percentage: input['cpu/utilization'],
+            time_percentage: 100,
+          }
+        : input[metricType];
+
+    return {
+      [metricType]: metricTypeValue,
+    };
+  };
+
+  /**
    * Converts the usage to the format required by Boavizta API.
    */
   const calculateUsagePerInput = async (
     input: PluginParams,
     fetchData: Function
   ) => {
-    const usageInput = transformToBoaviztaUsage(input, metricType);
+    const usageInput = transformToBoaviztaUsage(input);
 
     const usage: BoaviztaUsageType = {
       hours_use_time: usageInput.hours_use_time,
@@ -81,5 +116,6 @@ export const BoaviztaBaseOutput = () => {
   return {
     formatResponse,
     calculateUsagePerInput,
+    getMetricTypeData,
   };
 };
