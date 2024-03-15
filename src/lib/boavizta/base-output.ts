@@ -2,8 +2,6 @@ import {KeyValuePair, PluginParams} from '../../types/common';
 import {buildErrorMessage} from '../../util/helpers';
 import {ERRORS} from '../../util/errors';
 
-import {BoaviztaUsageType} from './types';
-
 const {InputValidationError} = ERRORS;
 
 export const BoaviztaBaseOutput = () => {
@@ -15,13 +13,13 @@ export const BoaviztaBaseOutput = () => {
    * Converts the usage from manifest input to the format required by Boavizta API.
    */
   const transformToBoaviztaUsage = (input: PluginParams) => {
-    const metricType = getMetricType(input);
+    const metricType = validateMetricType(input);
 
     // duration is in seconds, convert to hours
     // metric is between 0 and 1, convert to percentage
     const usageInput: KeyValuePair = {
       hours_use_time: input['duration'] / 3600.0,
-      time_workload: [input[metricType!]],
+      time_workload: [input[metricType]],
     };
 
     // convert expected lifespan from seconds to years
@@ -69,9 +67,9 @@ export const BoaviztaBaseOutput = () => {
     METRIC_TYPES.find(key => key in input);
 
   /**
-   * Gets metric type data if provided in the input.
+   * Validates metric type.
    */
-  const getMetricTypeData = (input: PluginParams) => {
+  const validateMetricType = (input: PluginParams) => {
     const metricType = getMetricType(input);
     if (!metricType) {
       throw new InputValidationError(
@@ -80,6 +78,14 @@ export const BoaviztaBaseOutput = () => {
         })
       );
     }
+
+    return metricType;
+  };
+  /**
+   * Gets metric type data if provided in the input.
+   */
+  const getMetricTypeData = (input: PluginParams) => {
+    const metricType = validateMetricType(input);
 
     const metricTypeValue =
       metricType === 'cpu/utilization'
@@ -101,16 +107,15 @@ export const BoaviztaBaseOutput = () => {
     input: PluginParams,
     fetchData: Function
   ) => {
-    const usageInput = transformToBoaviztaUsage(input);
+    const {hours_use_time, time_workload, years_life_time, usage_location} =
+      transformToBoaviztaUsage(input);
 
-    const usage: BoaviztaUsageType = {
-      hours_use_time: usageInput.hours_use_time,
-      time_workload: usageInput.time_workload,
-      years_life_time: usageInput.years_life_time,
-      usage_location: usageInput.usage_location,
-    };
-
-    return fetchData(input, usage);
+    return fetchData(input, {
+      hours_use_time,
+      time_workload,
+      years_life_time,
+      usage_location,
+    });
   };
 
   return {
