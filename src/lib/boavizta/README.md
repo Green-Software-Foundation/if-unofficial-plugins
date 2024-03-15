@@ -1,7 +1,9 @@
 # Boavizta
 
 > [!NOTE]
-> Boavizta is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
+> Boavizta is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them! 
+
+> Currently there is a known issue in Boavizta calculations, and the fix is coming soon. This disclaimer will be removed then!
 
 [Boavizta](https://boavizta.org/) is an environmental impact calculator that exposes an API we use in IF to retrieve energy and embodied carbon estimates.
 
