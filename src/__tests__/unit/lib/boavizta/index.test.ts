@@ -122,7 +122,7 @@ describe('lib/boavizta: ', () => {
     });
   });
 
-  describe('Cloudoutput', () => {
+  describe('CloudOutput', () => {
     const output = BoaviztaCloudOutput({});
 
     beforeEach(() => {

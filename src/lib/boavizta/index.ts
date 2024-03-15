@@ -17,15 +17,12 @@ import {
 } from './types';
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
-const metricType: 'cpu/utilization' | 'gpu-util' | 'ram-util' =
-  'cpu/utilization';
 const boaviztaAPI = BoaviztaAPI();
 const baseOutput = BoaviztaBaseOutput();
 
 export const BoaviztaCpuOutput = (
   globalConfig: ConfigParams
 ): PluginInterface => {
-  const errorBuilder = buildErrorMessage(BoaviztaCpuOutput.name);
   const metadata = {kind: 'execute'};
   const componentType = 'cpu';
 
@@ -37,20 +34,16 @@ export const BoaviztaCpuOutput = (
 
     for await (const input of inputs) {
       const safeInput = validateInput(input);
+      const metricTypeData = baseOutput.getMetricTypeData(input);
+      const metricType = Object.keys(metricTypeData)[0];
+
       const mergedWithConfig = Object.assign(
         {},
         input,
         safeInput,
+        {[metricType]: metricTypeData[metricType]},
         globalConfig
       );
-
-      if (!(metricType in input)) {
-        throw new InputValidationError(
-          errorBuilder({
-            message: `${metricType} is not provided in input`,
-          })
-        );
-      }
 
       const usageResult = await baseOutput.calculateUsagePerInput(
         mergedWithConfig,
@@ -124,24 +117,19 @@ export const BoaviztaCloudOutput = (
 
     for await (const input of inputs) {
       const safeInput = Object.assign({}, input, validateInput(input));
+      const metricTypeData = baseOutput.getMetricTypeData(input);
+      const metricType = Object.keys(metricTypeData)[0];
       const mergedWithConfig = Object.assign(
         {},
         input,
         safeInput,
+        {[metricType]: metricTypeData[metricType]},
         globalConfig
       );
 
       await validateProvider(safeInput);
       await validateInstanceType(safeInput);
       await validateLocation(safeInput);
-
-      if (!(metricType in input)) {
-        throw new InputValidationError(
-          errorBuilder({
-            message: `${metricType} is not provided in input`,
-          })
-        );
-      }
 
       const usageResult = await baseOutput.calculateUsagePerInput(
         mergedWithConfig,

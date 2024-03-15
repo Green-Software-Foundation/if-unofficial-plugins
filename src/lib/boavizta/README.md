@@ -21,9 +21,12 @@ Boavizta exposes a [REST API](https://doc.api.boavizta.org/). If the `boavizta` 
 - `cpu/number-cores`: number of physical cores on a CPU (required for `BoaviztaCpuOutput`)
 - `cpu/expected-lifespan`: the lifespan of the component, in seconds (optional)
 - `country`: the country used to lookup grid carbon intensity, e.g. "USA" (optional - falls back to Boavizta default)
-- `cpu/utilization`: percentage CPU utilization for a given observation (required)
 - `instance-type`: the name of the specific instance (required for `BoaviztaCloudOutput`, optional for `BoaviztaCpuOutput`)
 - `provider`: the name of cloud provider (required for `BoaviztaCloudOutput`)
+  One of the metric type should be provided in the input
+- `cpu/utilization`: percentage CPU utilization for a given observation. If this metric is provided
+- `gpu-util`: percentage GPU quantity for a given observation
+- `ram-util`: number of RAM
 
 ## Returns
 
