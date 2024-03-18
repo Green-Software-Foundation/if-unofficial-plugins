@@ -108,7 +108,7 @@ export const AzureImporter = (): PluginInterface => {
   const validateConfig = (config?: ConfigParams) => {
     if (!config) {
       throw new ConfigValidationError(
-        errorBuilder({message: 'Config must be provided.'})
+        errorBuilder({message: 'Config must be provided'})
       );
     }
 

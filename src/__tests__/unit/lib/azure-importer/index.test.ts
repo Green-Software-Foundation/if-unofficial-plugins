@@ -9,7 +9,8 @@ import {
 import {AzureImporter} from '../../../../lib/azure-importer';
 import {ERRORS} from '../../../../util/errors';
 
-const {InputValidationError, UnsupportedValueError} = ERRORS;
+const {InputValidationError, UnsupportedValueError, ConfigValidationError} =
+  ERRORS;
 
 jest.mock('@azure/identity', () => ({
   __esModule: true,
@@ -95,6 +96,29 @@ describe('lib/azure-importer: ', () => {
               'cloud/vendor': 'azure',
             },
           ]);
+        });
+
+        it('throws an error for missing config.', async () => {
+          process.env.AZURE_TEST_SCENARIO = 'valid';
+          const errorMessage = 'AzureImporter: Config must be provided.';
+          const inputs = [
+            {
+              timestamp: '2023-11-02T10:35:31.820Z',
+              duration: 3600,
+            },
+          ];
+          const config = undefined;
+
+          expect.assertions(2);
+
+          try {
+            await output.execute(inputs, config);
+          } catch (error) {
+            expect(error).toStrictEqual(
+              new ConfigValidationError(errorMessage)
+            );
+            expect(error).toBeInstanceOf(ConfigValidationError);
+          }
         });
 
         it('throws an error for missing input field.', async () => {
