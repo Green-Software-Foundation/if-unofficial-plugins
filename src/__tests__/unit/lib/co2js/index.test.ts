@@ -123,6 +123,27 @@ describe('lib/co2js: ', () => {
         ]);
       });
 
+      it('throws an error when config is mising.', async () => {
+        const errorMessage = 'Co2js: Config is not provided.';
+
+        const inputs = [
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            'network/data/bytes': 100000,
+          },
+        ];
+
+        expect.assertions(2);
+
+        try {
+          await output.execute(inputs);
+        } catch (error) {
+          expect(error).toEqual(new InputValidationError(errorMessage));
+          expect(error).toBeInstanceOf(InputValidationError);
+        }
+      });
+
       it('throws an error when `type` has wrong value.', async () => {
         const errorMessage =
           "\"type\" parameter is invalid enum value. expected '1byte' | 'swd', received 'wrong'. Error code: invalid_enum_value.";
