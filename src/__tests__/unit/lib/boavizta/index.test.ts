@@ -9,7 +9,7 @@ import {ERRORS} from '../../../../util/errors';
 
 import {mockGet, mockPost} from '../../../../__mocks__/boavizta/axios';
 
-const {InputValidationError} = ERRORS;
+const {InputValidationError, UnsupportedValueError, APIRequestError} = ERRORS;
 
 jest.mock('axios');
 
@@ -186,6 +186,89 @@ describe('lib/boavizta: ', () => {
           ]);
         } catch (error) {
           expect(error).toBeInstanceOf(InputValidationError);
+        }
+      });
+
+      it('throws an error when `provider` is wrong.', async () => {
+        expect.assertions(1);
+
+        try {
+          await output.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 15,
+              'cpu/utilization': 34,
+              'instance-type': 't2.micro',
+              country: 'USA',
+              provider: 'aws1',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(UnsupportedValueError);
+        }
+      });
+
+      it('throws an error when `instance-type` is wrong.', async () => {
+        expect.assertions(1);
+
+        try {
+          await output.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 15,
+              'cpu/utilization': 34,
+              'instance-type': 'wrong-instance-type',
+              country: 'USA',
+              provider: 'aws',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(UnsupportedValueError);
+        }
+      });
+
+      it('throws an error when `country` is wrong.', async () => {
+        expect.assertions(1);
+
+        try {
+          await output.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 15,
+              'cpu/utilization': 34,
+              'instance-type': 't2.micro',
+              country: 'wrong-country',
+              provider: 'aws',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(UnsupportedValueError);
+        }
+      });
+
+      it('throws an error when response of the API is not valid.', async () => {
+        process.env.WRONG_DATA = 'true';
+
+        expect.assertions(2);
+
+        try {
+          await output.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 15,
+              'cpu/utilization': 34,
+              'instance-type': 't2.micro',
+              country: 'USA',
+              provider: 'aws',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(
+            new APIRequestError(
+              'BoaviztaAPI: Error fetching data from Boavizta API. {"data":{"response":{"detail":"error message"}}}.'
+            )
+          );
         }
       });
     });
