@@ -191,6 +191,11 @@ export function mockPost<T = any, R = AxiosResponse<T, any>>(
         },
       } as R);
     case 'https://api.boavizta.org/v1/cloud/instance?verbose=false&duration=0.004166666666666667':
+      if (process.env.WRONG_DATA) {
+        return Promise.reject({
+          data: {response: {detail: 'error message'}},
+        });
+      }
       return Promise.resolve({
         data: {
           impacts: {
