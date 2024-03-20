@@ -1,4 +1,4 @@
-import fs from 'fs';
+import {writeFileSync} from 'fs';
 import puppeteer, {KnownDevices} from 'puppeteer';
 import {z} from 'zod';
 
@@ -6,8 +6,8 @@ import {validate} from '../../util/validations';
 
 import {buildErrorMessage} from '../../util/helpers';
 import {PluginInterface} from '../../interfaces';
-import {ConfigParams, PluginParams} from '../../types/common';
-import lighthouse from 'lighthouse/core/index.cjs';
+import {ConfigParams, PluginParams} from '../../types';
+import lighthouse = require('lighthouse/core/index.cjs');
 import {resolve} from 'path';
 
 type Device = keyof typeof KnownDevices;
@@ -115,7 +115,7 @@ export const Lighthouse = (): PluginInterface => {
       `./lighthouse-report-${validatedInput.url}-${timestamp}.html`
     );
     const outputPath = escapeForFilePath(unescapedOutputPath);
-    fs.writeFileSync(
+    writeFileSync(
       outputPath,
       Array.isArray(lighthouseReport)
         ? lighthouseReport.join(' ')

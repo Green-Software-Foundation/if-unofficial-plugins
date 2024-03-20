@@ -10,7 +10,8 @@
     "experimentalDecorators": true,
     "incremental": false,
     "lib": [
-      "es2020"
+      "es2020",
+      "dom"
     ],
     "module": "CommonJS",
     "noEmitOnError": true,
