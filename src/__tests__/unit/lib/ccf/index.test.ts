@@ -135,6 +135,31 @@ describe('lib/ccf: ', () => {
             },
           ]);
         });
+
+        it('throws an error when `interpolation` persists in the config but the vendor is not `aws`.', async () => {
+          const output = CloudCarbonFootprint({interpolation: 'spline'});
+
+          const inputs = [
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 3600,
+              'cpu/utilization': 10,
+              'cloud/vendor': 'azure',
+              'cloud/instance-type': 'D2 v4',
+            },
+          ];
+
+          try {
+            await output.execute(inputs);
+          } catch (error) {
+            expect(error).toBeInstanceOf(UnsupportedValueError);
+            expect(error).toEqual(
+              new UnsupportedValueError(
+                'CloudCarbonFootprint: Interpolation spline method is not supported.'
+              )
+            );
+          }
+        });
       });
 
       describe('init with `azure` value of `cloud/vendor`.', () => {
