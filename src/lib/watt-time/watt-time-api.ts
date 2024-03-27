@@ -52,6 +52,9 @@ export const WattTimeAPI = () => {
     }
   };
 
+  /**
+   * Validates if the credentials are provided.
+   */
   const validateCredentials = () => {
     if (
       !process.env.WATT_TIME_TOKEN &&
