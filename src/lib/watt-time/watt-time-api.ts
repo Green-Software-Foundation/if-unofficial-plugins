@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
-import * as dayjs from 'dayjs';
 import axios from 'axios';
+import {Settings, DateTime} from 'luxon';
 
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
@@ -9,11 +9,12 @@ import {WattTimeParams, WattTimeRegionParams} from './types';
 
 const {AuthorizationError, APIRequestError} = ERRORS;
 
-export const WattTimeAPI = () => {
-  const baseUrl = 'https://api.watttime.org/v3';
-  let token = '';
+Settings.defaultZone = 'utc';
 
+export const WattTimeAPI = () => {
+  const BASE_URL = 'https://api.watttime.org/v3';
   const errorBuilder = buildErrorMessage(WattTimeAPI.name);
+  let token = '';
 
   /**
    * Authenticates the user with the WattTime API using the provided authentication parameters.
@@ -22,14 +23,15 @@ export const WattTimeAPI = () => {
    */
   const authenticate = async (): Promise<void> => {
     dotenv.config();
+    validateCredentials();
 
     token = process.env.WATT_TIME_TOKEN ?? '';
 
     if (token === '') {
       const tokenResponse = await axios.get('https://api.watttime.org/login', {
         auth: {
-          username: process.env.WATT_TIME_USERNAME || '',
-          password: process.env.WATT_TIME_PASSWORD || '',
+          username: process.env.WATT_TIME_USERNAME!,
+          password: process.env.WATT_TIME_PASSWORD!,
         },
       });
 
@@ -47,6 +49,21 @@ export const WattTimeAPI = () => {
       }
 
       token = tokenResponse.data.token;
+    }
+  };
+
+  const validateCredentials = () => {
+    if (
+      !process.env.WATT_TIME_TOKEN &&
+      !process.env.WATT_TIME_USERNAME &&
+      !process.env.WATT_TIME_PASSWORD
+    ) {
+      throw new AuthorizationError(
+        errorBuilder({
+          message:
+            'Invalid credentials provided. Either `token` or `username` and `password` should be provided.',
+        })
+      );
     }
   };
 
@@ -103,7 +120,7 @@ export const WattTimeAPI = () => {
    */
   const getSignalType = async (token: string) => {
     const result = await axios
-      .get(`${baseUrl}/my-access`, {
+      .get(`${BASE_URL}/my-access`, {
         params: {},
         headers: {
           Authorization: `Bearer ${token}`,
@@ -147,7 +164,7 @@ export const WattTimeAPI = () => {
     Object.assign(params, {signal_type: signalType});
 
     const result = await axios
-      .get(`${baseUrl}/forecast/historical`, {
+      .get(`${BASE_URL}/forecast/historical`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -200,7 +217,10 @@ export const WattTimeAPI = () => {
    */
   const sortData = <T extends {point_time: string}>(data: T[]) => {
     return data.sort((a: T, b: T) => {
-      return dayjs(a.point_time).unix() > dayjs(b.point_time).unix() ? 1 : -1;
+      return DateTime.fromISO(a.point_time).toSeconds() >
+        DateTime.fromISO(b.point_time).toSeconds()
+        ? 1
+        : -1;
     });
   };
 
