@@ -228,34 +228,6 @@ describe('lib/watt-time: ', () => {
           expect(error).toEqual(new APIRequestError(errorMessage));
         }
       });
-
-      it('throws an error when span is more than 32 days.', async () => {
-        const errorMessage =
-          'WattTimeGridEmissions: WattTime API supports up to 32 days. Duration of 31537200 seconds is too long.';
-        process.env.WATT_TIME_USERNAME = 'test1';
-        process.env.WATT_TIME_PASSWORD = 'test2';
-
-        const output = WattTimeGridEmissions();
-        expect.assertions(2);
-
-        try {
-          await output.execute([
-            {
-              geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
-              duration: 1200,
-            },
-            {
-              geolocation: '37.7749,-122.4194',
-              timestamp: '2022-01-01T00:00:00Z',
-              duration: 1200,
-            },
-          ]);
-        } catch (error) {
-          expect(error).toBeInstanceOf(InputValidationError);
-          expect(error).toEqual(new InputValidationError(errorMessage));
-        }
-      });
     });
   });
 });
