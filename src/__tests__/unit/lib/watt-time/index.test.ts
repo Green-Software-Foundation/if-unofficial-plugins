@@ -21,7 +21,7 @@ describe('lib/watt-time: ', () => {
 
     describe('init WattTimeGridEmissions: ', () => {
       it('initalizes object with properties.', async () => {
-        const output = WattTimeGridEmissions({});
+        const output = WattTimeGridEmissions();
 
         expect(output).toHaveProperty('metadata');
         expect(output).toHaveProperty('execute');
