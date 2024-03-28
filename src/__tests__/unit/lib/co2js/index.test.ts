@@ -88,24 +88,23 @@ describe('lib/co2js: ', () => {
 
       it('returns a result when provided `options` in the global config.', async () => {
         const config = {type: 'swd', 'green-web-host': false};
-        const output = Co2js({
-          options: {
-            dataReloadRatio: 0.6,
-            firstVisitPercentage: 0.9,
-            returnVisitPercentage: 0.1,
-            gridIntensity: {
-              device: 560.98,
-              dataCenter: 50,
-              networks: 437.66,
-            },
-          },
-        });
+        const output = Co2js();
 
         const inputs = [
           {
             timestamp: '2021-01-01T00:00:00Z',
             duration: 3600,
             'network/data/bytes': 100000,
+            options: {
+              dataReloadRatio: 0.6,
+              firstVisitPercentage: 0.9,
+              returnVisitPercentage: 0.1,
+              gridIntensity: {
+                device: 560.98,
+                dataCenter: 50,
+                networks: 437.66,
+              },
+            },
           },
         ];
 
@@ -119,6 +118,51 @@ describe('lib/co2js: ', () => {
             duration: 3600,
             'network/data/bytes': 100000,
             'carbon-operational': 0.034497244224,
+            options: {
+              dataReloadRatio: 0.6,
+              firstVisitPercentage: 0.9,
+              returnVisitPercentage: 0.1,
+              gridIntensity: {
+                device: 560.98,
+                dataCenter: 50,
+                networks: 437.66,
+              },
+            },
+          },
+        ]);
+      });
+
+      it('returns a result when config properties are provided in input.', async () => {
+        const config = {type: 'swd'};
+        const inputs = [
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            'network/data/bytes': 100000,
+            'green-web-host': false,
+            options: {
+              dataReloadRatio: 0.6,
+              firstVisitPercentage: 0.9,
+              returnVisitPercentage: 0.1,
+            },
+          },
+        ];
+        const result = await output.execute(inputs, config);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            'network/data/bytes': 100000,
+            'carbon-operational': 0.034032441600000005,
+            'green-web-host': false,
+            options: {
+              dataReloadRatio: 0.6,
+              firstVisitPercentage: 0.9,
+              returnVisitPercentage: 0.1,
+            },
           },
         ]);
       });
@@ -168,6 +212,30 @@ describe('lib/co2js: ', () => {
           expect(error).toBeInstanceOf(InputValidationError);
         }
       });
+    });
+
+    it('throws an error if `green-web-host` is neither provided in config nor in input.', async () => {
+      const config = {type: '1byte'};
+      const inputs = [
+        {
+          timestamp: '2021-01-01T00:00:00Z',
+          duration: 3600,
+          'network/data/bytes': 100000,
+        },
+      ];
+
+      expect.assertions(2);
+
+      try {
+        await output.execute(inputs, config);
+      } catch (error) {
+        expect(error).toEqual(
+          new InputValidationError(
+            `Green web host is provided neither in config nor in input.\nConfig: ${config}\nInput: ${inputs[0]}`
+          )
+        );
+        expect(error).toBeInstanceOf(InputValidationError);
+      }
     });
   });
 });
