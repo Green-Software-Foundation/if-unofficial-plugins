@@ -57,10 +57,7 @@ export const BoaviztaAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching data from Boavizta API. ${JSON.stringify(
-              (error.response &&
-                error.response.data &&
-                error.response.data.detail) ||
-                error
+              error?.response?.data?.detail || error
             )}`,
           })
         );
