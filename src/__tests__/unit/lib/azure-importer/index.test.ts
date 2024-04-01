@@ -114,7 +114,7 @@ describe('lib/azure-importer: ', () => {
           ]);
         });
 
-        it('returns a result when provided valid data.', async () => {
+        it('returns a result when the value of the unit is not valid.', async () => {
           process.env.AZURE_TEST_SCENARIO = 'valid';
 
           const inputs = [
