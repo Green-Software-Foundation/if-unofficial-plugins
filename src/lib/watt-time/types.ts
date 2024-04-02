@@ -16,3 +16,9 @@ export interface LatitudeLongitude {
   latitude: number;
   longitude: number;
 }
+
+export interface RegionFromLocationResponse {
+  signal_type: string;
+  region: string;
+  region_full_name: string;
+}
