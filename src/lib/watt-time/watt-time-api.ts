@@ -5,7 +5,11 @@ import {Settings, DateTime} from 'luxon';
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
-import {WattTimeParams, WattTimeRegionParams} from './types';
+import {
+  WattTimeParams,
+  WattTimeRegionParams,
+  RegionFromLocationResponse,
+} from './types';
 
 const {AuthorizationError, APIRequestError} = ERRORS;
 
@@ -71,14 +75,16 @@ export const WattTimeAPI = () => {
   };
 
   /**
-   * Support v2 version of WattTime API.
-   *
-   * Fetches and sorts data from the WattTime API based on the provided parameters.
+   * Fetches region for provided geolocation and then get forcast for provided time period.
+   * Sorts data from the WattTime API.
    * Throws an APIRequestError if an error occurs during the request or if the response is invalid.
    */
   const fetchAndSortData = async (params: WattTimeParams) => {
-    const result = await axios
-      .get('https://api2.watttime.org/v2/data', {
+    const signalType = await getSignalType(token);
+    Object.assign(params, {signal_type: signalType});
+
+    const response = await axios
+      .get<RegionFromLocationResponse>(`${BASE_URL}/region-from-loc`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -97,25 +103,27 @@ export const WattTimeAPI = () => {
         );
       });
 
-    if (result.status !== 200) {
+    if (response.status !== 200) {
       throw new APIRequestError(
         errorBuilder({
           message: `Error fetching data from WattTime API: ${JSON.stringify(
-            result.status
+            response.status
           )}`,
         })
       );
     }
 
-    if (!('data' in result) || !Array.isArray(result.data)) {
-      throw new APIRequestError(
-        errorBuilder({
-          message: 'Invalid response from WattTime API',
-        })
-      );
-    }
+    const result = response.data;
+    const regionParams: WattTimeRegionParams = {
+      signal_type: result.signal_type || undefined,
+      region: result.region,
+      start: params.starttime,
+      end: params.endtime,
+    };
 
-    return sortData(result.data);
+    const regionData = await fetchDataWithRegion(regionParams);
+
+    return sortData(regionData);
   };
 
   /**
