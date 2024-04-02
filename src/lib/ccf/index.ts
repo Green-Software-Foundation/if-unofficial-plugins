@@ -271,36 +271,27 @@ export const CloudCarbonFootprint = (
    * Validates the resolved architecture using the validateAwsArchitecture method.
    */
   const resolveAwsArchitecture = (architecture: string) => {
-    const modifyArchitecture: {[key: string]: () => void} = {
-      'AMD ': () => {
-        architecture = architecture.substring(4);
-      },
-      Skylake: () => {
-        architecture = 'Sky Lake';
-      },
-      Graviton: () => {
-        architecture = architecture.includes('2') ? 'Graviton2' : 'Graviton';
-      },
-      Unknown: () => {
-        architecture = 'Average';
-      },
+    let formattedArchitecture = architecture;
+
+    const architectureFormat: {[key: string]: () => string} = {
+      'AMD ': () => architecture.substring(4),
+      Skylake: () => 'Sky Lake',
+      Graviton: () => (architecture.includes('2') ? 'Graviton2' : 'Graviton'),
+      Unknown: () => 'Average',
     };
 
-    Object.keys(modifyArchitecture).forEach(key => {
+    Object.keys(architectureFormat).forEach(key => {
       if (architecture.includes(key)) {
-        modifyArchitecture[key]();
+        formattedArchitecture = architectureFormat[key]();
       }
     });
 
-    validateAwsArchitecture(architecture);
-
-    return architecture;
+    return formattedArchitecture;
   };
 
   /**
    * Validates the AWS instance architecture against a predefined set of supported architectures.
    */
-
   const validateAwsArchitecture = (architecture: string) => {
     if (!(architecture in instanceUsage['aws'])) {
       throw new UnsupportedValueError(
@@ -381,9 +372,12 @@ export const CloudCarbonFootprint = (
       instance['Instance type']
     ] ?? ['Average'];
 
-    return architectures.map((architecture: string) =>
-      resolveAwsArchitecture(architecture)
-    );
+    return architectures.map((architecture: string) => {
+      const AWSArchitecture = resolveAwsArchitecture(architecture);
+      validateAwsArchitecture(AWSArchitecture);
+
+      return AWSArchitecture;
+    });
   };
 
   /**
