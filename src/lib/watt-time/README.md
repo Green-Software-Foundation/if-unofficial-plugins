@@ -9,7 +9,7 @@ WattTime technology—based on real-time grid data, cutting-edge algorithms, and
 
 ## Overview
 
-The `WattTimeGridEmissions` plugin is designed to compute the average carbon emissions of a power grid over a specified duration. It leverages data from the WattTime API to furnish carbon intensity information for precise locations and timeframes. This plugin proves beneficial for applications requiring carbon footprint monitoring or optimization, such as energy management systems or environmental impact assessments. The plugin supports both v2 and v3 versions of the WattTime API. The API returns data in `lbs/MWh`, which the plugin converts to `Kg/MWh` (g/KWh) by dividing by `0.453592`.
+The `WattTimeGridEmissions` plugin is designed to compute the average carbon emissions of a power grid over a specified duration. It leverages data from the WattTime API to furnish carbon intensity information for precise locations and timeframes. This plugin proves beneficial for applications requiring carbon footprint monitoring or optimization, such as energy management systems or environmental impact assessments. The plugin supports only v3 version of the WattTime API. The API returns data in `lbs/MWh`, which the plugin converts to `Kg/MWh` (g/KWh) by dividing by `0.453592`.
 
 ### Authentication
 
@@ -74,7 +74,7 @@ The plugin conducts input validation using the `zod` library and may throw error
    - Iterate through each input.
 
      - If `cloud/region-wt-id` is provided, the plugin sets it to `region`, and `signal-type` to `signal_type`, and sends a request to `https://api.watttime.org/v3/forecast/historical` with calculated `start` and `end` times as well. If the `signal_type` is not provided, the plugin requests `https://api.watttime.org/v3/my-access` to obtain access to the account and takes the first signal type.
-     - If `geolocation` is provided, the plugin parses it to `latitude` and `longitude` and sends a request to `https://api2.watttime.org/v2/data` with calculated `starttime` and `endtime` as well.
+     - If `geolocation` is provided, the plugin parses it to `latitude` and `longitude`, and `signal-type` to `signal_type`, and sends a request to `https://api.watttime.org/v3/region-from-loc` to retrieve the `region`. Then, it sends a request to `https://api.watttime.org/v3/forecast/historical` with `region`, `signal_type`, calculated `start` and `end` times from `timestamp` and `duration`.
 
    - Validate input parameters. If `cloud/region-geolocation` is provided, the `geolocation` is overridden. If `cloud/region-wt-id` is provided, it takes precedence over the `geolocation`.
 
