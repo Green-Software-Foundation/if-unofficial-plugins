@@ -28,8 +28,8 @@ export const WattTimeAPI = () => {
     if (token === '') {
       const tokenResponse = await axios.get('https://api.watttime.org/login', {
         auth: {
-          username: process.env.WATT_TIME_USERNAME || '',
-          password: process.env.WATT_TIME_PASSWORD || '',
+          username: process.env.WATT_TIME_USERNAME!,
+          password: process.env.WATT_TIME_PASSWORD!,
         },
       });
 
@@ -68,10 +68,7 @@ export const WattTimeAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching data from WattTime API. ${JSON.stringify(
-              (error.response &&
-                error.response.data &&
-                error.response.data.message) ||
-                error
+              error?.response?.data?.message || error
             )}`,
           })
         );
@@ -113,10 +110,7 @@ export const WattTimeAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching \`signal_type\` from WattTime API. ${JSON.stringify(
-              (error.response &&
-                error.response.data &&
-                error.response.data.message) ||
-                error
+              error?.response?.data?.message || error
             )}`,
           })
         );
@@ -142,7 +136,7 @@ export const WattTimeAPI = () => {
    * Throws an APIRequestError if an error occurs during the request or if the response is invalid.
    */
   const fetchDataWithRegion = async (params: WattTimeRegionParams) => {
-    const signalType = (await getSignalType(token)) || params.signal_type;
+    const signalType = params.signal_type || (await getSignalType(token));
 
     Object.assign(params, {signal_type: signalType});
 
@@ -157,10 +151,7 @@ export const WattTimeAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching data from WattTime API. ${JSON.stringify(
-              (error.response &&
-                error.response.data &&
-                error.response.data.message) ||
-                error
+              error?.response?.data?.message || error
             )}`,
           })
         );
