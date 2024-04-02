@@ -125,7 +125,7 @@ tree:
       inputs:
         - timestamp: '2024-03-05T00:00:00.000Z'
           duration: 3600
-          geolocation: 37.7749,-122.4194
+          geolocation: 36.7783,-119.417931
 ```
 
 #### Output
@@ -150,11 +150,11 @@ tree:
       inputs:
         - timestamp: '2024-03-05T00:00:00.000Z'
           duration: 3600
-          geolocation: 37.7749,-122.4194
+          geolocation: 36.7783,-119.417931
       outputs:
         - timestamp: '2024-03-05T00:00:00.000Z'
           duration: 3600
-          geolocation: 37.7749,-122.4194
+          geolocation: 36.7783,-119.417931
           grid/carbon-intensity: 287.7032521512652
 ```
 
