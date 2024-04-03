@@ -194,6 +194,11 @@ export function mockPost<T = any, R = AxiosResponse<T, any>>(
       } as R);
 
     case 'https://api.boavizta.org/v1/component/cpu?verbose=true&duration=2':
+      if (process.env.CPU_WRONG_DATA) {
+        return Promise.reject({
+          data: {response: {detail: 'error message'}},
+        });
+      }
       return Promise.resolve({
         data: {
           impacts: {
