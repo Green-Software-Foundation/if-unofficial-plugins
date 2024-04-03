@@ -64,7 +64,7 @@ describe('lib/boavizta: ', () => {
         ]);
       });
 
-      it('returns a result when the impacts from the API is undefined.', async () => {
+      it('returns a result when the response data from the API is an empty object.', async () => {
         expect.assertions(1);
 
         const output = BoaviztaCpuOutput({});
@@ -157,6 +157,33 @@ describe('lib/boavizta: ', () => {
             'gpu-util': 100,
           },
         ]);
+      });
+
+      it('throws an error when response of the API is not valid.', async () => {
+        process.env.CPU_WRONG_DATA = 'true';
+        expect.assertions(2);
+
+        const output = BoaviztaCpuOutput({verbose: true});
+
+        try {
+          await output.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 7200,
+              'cpu/utilization': 100,
+              'cpu/name': 'Intel Xeon Gold 6138f',
+              'cpu/number-cores': 24,
+              country: 'USA',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(
+            new APIRequestError(
+              'BoaviztaAPI: Error fetching data from Boavizta API. {"data":{"response":{"detail":"error message"}}}.'
+            )
+          );
+        }
       });
 
       it('throws an error when the metric type is missing from the input.', async () => {
