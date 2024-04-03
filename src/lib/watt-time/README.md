@@ -117,6 +117,8 @@ initialize:
     watt-time:
       method: WattTimeGridEmissions
       path: '@grnsft/if-unofficial-plugins'
+  outputs:
+    - yaml
 tree:
   children:
     child:
