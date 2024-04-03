@@ -129,7 +129,7 @@ describe('lib/boavizta: ', () => {
         expect(await output.execute([])).toEqual([]);
       });
 
-      it('throws an error when the metric type is `gpu-util`.', async () => {
+      it('returns a result when the metric type is `gpu-util`.', async () => {
         expect.assertions(1);
 
         const output = BoaviztaCpuOutput({verbose: true});
@@ -249,7 +249,7 @@ describe('lib/boavizta: ', () => {
       });
 
       it('throws an error when `provider` is wrong.', async () => {
-        expect.assertions(1);
+        expect.assertions(2);
 
         try {
           await output.execute([
@@ -264,6 +264,11 @@ describe('lib/boavizta: ', () => {
           ]);
         } catch (error) {
           expect(error).toBeInstanceOf(UnsupportedValueError);
+          expect(error).toEqual(
+            new UnsupportedValueError(
+              "BoaviztaCloudOutput: Invalid 'provider' parameter 'aws1'. Valid values are aws."
+            )
+          );
         }
       });
 
