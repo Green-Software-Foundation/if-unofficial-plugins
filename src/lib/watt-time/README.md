@@ -95,7 +95,7 @@ const inputs = [
   {
     timestamp: '2024-03-26T12:00:000Z',
     duration: 3600, // 1 hour
-    geolocation: '37.7749,-122.4194', // San Francisco, CA
+    geolocation: '36.7783,-119.417931', // San Francisco, CA
   },
   // Add more input parameters as needed
 ];
