@@ -33,20 +33,25 @@ export const WattTimeGridEmissions = (): PluginInterface => {
     await initializeAuthentication();
     const result = [];
     let lastValidTimestamp = inputs[0] && inputs[0].timestamp;
-    let averageEmission = 0;
+    const executedInputData = {
+      averageEmission: 0,
+      locale: '',
+    };
 
     for await (const input of inputs) {
       const safeInput = Object.assign({}, input, validateInput(input));
       const validTimestamp = validateAndFormatTimestamp(safeInput.timestamp);
       const timestamp = validateAndFormatTimestamp(lastValidTimestamp);
+      const locale = safeInput['cloud/region-wt-id'] || safeInput.geolocation;
 
       if (
+        executedInputData.locale === locale &&
         safeInput.timestamp !== lastValidTimestamp &&
         validTimestamp.diff(timestamp, 'seconds').seconds < 300
       ) {
         result.push({
           ...input,
-          'grid/carbon-intensity': averageEmission,
+          'grid/carbon-intensity': executedInputData.averageEmission,
         });
 
         continue;
@@ -57,6 +62,8 @@ export const WattTimeGridEmissions = (): PluginInterface => {
       const wattTimeData = await getWattTimeData(safeInput);
       const inputStart = validateAndFormatTimestamp(lastValidTimestamp);
       const inputEnd = getEndTime(inputStart, safeInput.duration);
+      executedInputData.locale =
+        safeInput['cloud/region-wt-id'] || safeInput.geolocation || '';
 
       const data = getWattTimeDataForDuration(
         wattTimeData,
@@ -65,11 +72,11 @@ export const WattTimeGridEmissions = (): PluginInterface => {
       );
 
       const totalEmission = data.reduce((a: number, b: number) => a + b, 0);
-      averageEmission = totalEmission / data.length;
+      executedInputData.averageEmission = totalEmission / data.length;
 
       result.push({
         ...input,
-        'grid/carbon-intensity': averageEmission || 0,
+        'grid/carbon-intensity': executedInputData.averageEmission || 0,
       });
     }
 
