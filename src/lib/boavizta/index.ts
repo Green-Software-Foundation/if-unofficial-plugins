@@ -16,7 +16,7 @@ import {
   BoaviztaCloudInstanceType,
 } from './types';
 
-const {InputValidationError, UnsupportedValueError} = ERRORS;
+const {UnsupportedValueError} = ERRORS;
 const boaviztaAPI = BoaviztaAPI();
 const baseOutput = BoaviztaBaseOutput();
 
@@ -177,15 +177,15 @@ export const BoaviztaCloudOutput = (
   /**
    * Validates the provider parameter for the Cloud plugin.
    */
-  const validateProvider = async (staticParams: PluginParams) => {
+  const validateProvider = async (input: PluginParams) => {
     const supportedProviders = await boaviztaAPI.getSupportedProvidersList();
 
-    if (!supportedProviders.includes(staticParams.provider)) {
+    if (!supportedProviders.includes(input.provider)) {
       const whiteListedProviders = supportedProviders.join(', ');
 
-      throw new InputValidationError(
+      throw new UnsupportedValueError(
         errorBuilder({
-          message: `Invalid 'provider' parameter '${staticParams.provider}'. Valid values are ${whiteListedProviders}`,
+          message: `Invalid 'provider' parameter '${input.provider}'. Valid values are ${whiteListedProviders}`,
         })
       );
     }
@@ -194,20 +194,20 @@ export const BoaviztaCloudOutput = (
   /**
    * Validates the instance type parameter for the Cloud plugin.
    */
-  const validateInstanceType = async (staticParams: PluginParams) => {
-    const provider = staticParams.provider;
+  const validateInstanceType = async (input: PluginParams) => {
+    const provider = input.provider;
 
     if (!instanceTypes[provider] || instanceTypes[provider].length === 0) {
       instanceTypes[provider] =
         await boaviztaAPI.getSupportedInstancesList(provider);
     }
 
-    if (!instanceTypes[provider].includes(staticParams['instance-type'])) {
+    if (!instanceTypes[provider].includes(input['instance-type'])) {
       const whiteListedTypes = instanceTypes[provider].join(', ');
 
       throw new UnsupportedValueError(
         errorBuilder({
-          message: `Invalid 'instance-type' parameter: '${staticParams['instance-type']}'. Valid values are : ${whiteListedTypes}`,
+          message: `Invalid 'instance-type' parameter: '${input['instance-type']}'. Valid values are : ${whiteListedTypes}`,
         })
       );
     }
@@ -217,21 +217,21 @@ export const BoaviztaCloudOutput = (
    * Validates the country parameter for the Cloud plugin.
    */
   const validateLocation = async (
-    staticParams: PluginParams
+    input: PluginParams
   ): Promise<string | void> => {
-    if ('country' in staticParams) {
+    if ('country' in input) {
       const countries = await boaviztaAPI.getSupportedLocations();
       const whitelistedCountries = countries.join(', ');
 
-      if (!countries.includes(staticParams.country)) {
-        throw new InputValidationError(
+      if (!countries.includes(input.country)) {
+        throw new UnsupportedValueError(
           errorBuilder({
             message: `Invalid country parameter country. Valid values are ${whitelistedCountries}`,
           })
         );
       }
 
-      return staticParams.country;
+      return input.country;
     }
   };
 
