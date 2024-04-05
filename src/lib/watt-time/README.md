@@ -65,7 +65,7 @@ The plugin enriches each input parameter with the average carbon intensity (`gri
 
 The plugin conducts input validation using the `zod` library and may throw errors if the provided parameters are invalid or if there are authentication or data retrieval issues with the WattTime API.
 
-#### Algorithm of the Plugin
+## Plugin Algorithm
 
 1. **Initialization**: Authenticate with the WattTime API using the provided credentials. If the `token` is not provided in the environment variables, it uses `username` and `password`, otherwise, it throws an error. To authenticate users, the plugin utilizes the `https://api.watttime.org/login` URL.
 
@@ -73,8 +73,8 @@ The plugin conducts input validation using the `zod` library and may throw error
 
    - Iterate through each input.
 
-     - If `cloud/region-wt-id` is provided, the plugin sets it to `region`, and `signal-type` to `signal_type`, and sends a request to `https://api.watttime.org/v3/forecast/historical` with calculated `start` and `end` times as well. If the `signal_type` is not provided, the plugin requests `https://api.watttime.org/v3/my-access` to obtain access to the account and takes the first signal type.
-     - If `geolocation` is provided, the plugin parses it to `latitude` and `longitude`, and `signal-type` to `signal_type`, and sends a request to `https://api.watttime.org/v3/region-from-loc` to retrieve the `region`. Then, it sends a request to `https://api.watttime.org/v3/forecast/historical` with `region`, `signal_type`, calculated `start` and `end` times from `timestamp` and `duration`.
+     - If `cloud/region-wt-id is provided`, the plugin sets it to `region`, renames `signal-type` to `signal_type`, and sends a request to `https://api.watttime.org/v3/forecast/historical` endpoint with calculated `start` and `end` time as well. If the `signal_type` is not provided, the plugin requests `https://api.watttime.org/v3/my-access` to obtain access to the account and takes the first signal type from there.
+     - If `geolocation` is provided, the plugin converts it to a `latitude` and `longitude` pair, renames `signal-type` to `signal_type`, and sends a request to `https://api.watttime.org/v3/region-from-loc` to retrieve the `region`. Then the `https://api.watttime.org/v3/forecast/historical` endpoint is called with `region`, `signal_type`, calculated `start` and `end` time from `timestamp` and `duration`.
 
    - Validate input parameters. If `cloud/region-geolocation` is provided, the `geolocation` is overridden. If `cloud/region-wt-id` is provided, it takes precedence over the `geolocation`.
 
