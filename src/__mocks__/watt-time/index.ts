@@ -1,7 +1,12 @@
-import * as DATA from './data.json';
 import * as REGION_DATA from './region-data.json';
 
 export function getMockResponse(url: string) {
+  const DATA = {
+    region: 'CAISO_NORTH',
+    region_full_name: 'California ISO Northern',
+    signal_type: 'co2_moer',
+  };
+
   switch (url) {
     case 'https://api.watttime.org/login':
       if (
@@ -27,7 +32,7 @@ export function getMockResponse(url: string) {
         },
       });
 
-    case 'https://api2.watttime.org/v2/data':
+    case 'https://api.watttime.org/v3/region-from-loc':
       if (
         process.env.WATT_TIME_USERNAME === 'invalidData1' &&
         process.env.WATT_TIME_PASSWORD === 'invalidData2'
@@ -69,8 +74,10 @@ export function getMockResponse(url: string) {
 
     case 'https://api.watttime.org/v3/forecast/historical':
       if (
-        process.env.WATT_TIME_USERNAME === 'invalidRegionWT' &&
-        process.env.WATT_TIME_PASSWORD === 'invalidRegionWT'
+        (process.env.WATT_TIME_USERNAME === 'invalidRegionWT' &&
+          process.env.WATT_TIME_PASSWORD === 'invalidRegionWT') ||
+        (process.env.WATT_TIME_USERNAME === 'invalidData' &&
+          process.env.WATT_TIME_PASSWORD === 'invalidData')
       ) {
         return Promise.reject({
           status: 400,
