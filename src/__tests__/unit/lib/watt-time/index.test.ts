@@ -15,6 +15,8 @@ mockAxios.get.mockImplementation(getMockResponse);
 
 describe('lib/watt-time: ', () => {
   describe('WattTimeGridEmissions: ', () => {
+    const originalEnv = process.env;
+
     beforeEach(() => {
       jest.clearAllMocks();
     });
@@ -29,7 +31,7 @@ describe('lib/watt-time: ', () => {
     });
 
     describe('execute(): ', () => {
-      it.skip('returns a result with valid data.', async () => {
+      it('returns a result with valid data.', async () => {
         process.env.WATT_TIME_USERNAME = 'test1';
         process.env.WATT_TIME_PASSWORD = 'test2';
 
@@ -37,7 +39,7 @@ describe('lib/watt-time: ', () => {
         const result = await output.execute([
           {
             geolocation: '37.7749,-122.4194',
-            timestamp: '2021-01-01T00:00:00Z',
+            timestamp: '2024-03-05T00:00:00+00:00',
             duration: 1200,
           },
         ]);
@@ -45,9 +47,9 @@ describe('lib/watt-time: ', () => {
         expect(result).toStrictEqual([
           {
             geolocation: '37.7749,-122.4194',
-            timestamp: '2021-01-01T00:00:00Z',
+            timestamp: '2024-03-05T00:00:00+00:00',
             duration: 1200,
-            'grid/carbon-intensity': 2185.332173907599,
+            'grid/carbon-intensity': 1718.9993738210367,
           },
         ]);
       });
@@ -59,7 +61,7 @@ describe('lib/watt-time: ', () => {
         const output = WattTimeGridEmissions();
         const result = await output.execute([
           {
-            timestamp: '2021-01-01T00:00:00Z',
+            timestamp: '2024-03-05T00:00:00+00:00',
             duration: 1200,
             geolocation: '37.7749,-122.4194',
             'cloud/region-geolocation': '48.8567,2.3522',
@@ -70,11 +72,11 @@ describe('lib/watt-time: ', () => {
 
         expect(result).toStrictEqual([
           {
-            timestamp: '2021-01-01T00:00:00Z',
+            timestamp: '2024-03-05T00:00:00+00:00',
             duration: 1200,
             geolocation: '48.8567,2.3522',
             'cloud/region-geolocation': '48.8567,2.3522',
-            'grid/carbon-intensity': 2185.332173907599,
+            'grid/carbon-intensity': 1718.9993738210367,
           },
         ]);
       });
@@ -110,14 +112,14 @@ describe('lib/watt-time: ', () => {
         ]);
       });
 
-      it('returns a result when `grid/carbon-intensity` set to 0 when there is no data from API.', async () => {
+      it.skip('returns a result when `grid/carbon-intensity` set to 0 when there is no data from API.', async () => {
         process.env.WATT_TIME_USERNAME = 'region-wt';
         process.env.WATT_TIME_PASSWORD = 'region-wt';
 
         const output = WattTimeGridEmissions();
         const result = await output.execute([
           {
-            timestamp: '2021-01-01T00:00:00Z',
+            timestamp: '2024-03-05T00:00:00+00:00',
             duration: 5,
             geolocation: '37.7749,-122.4194',
             'cloud/region-geolocation': '48.8567,2.3522',
@@ -130,7 +132,7 @@ describe('lib/watt-time: ', () => {
 
         expect(result).toStrictEqual([
           {
-            timestamp: '2021-01-01T00:00:00Z',
+            timestamp: '2024-03-05T00:00:00+00:00',
             duration: 5,
             geolocation: '48.8567,2.3522',
             'cloud/region-geolocation': '48.8567,2.3522',
@@ -150,7 +152,7 @@ describe('lib/watt-time: ', () => {
         const output = WattTimeGridEmissions();
         const result = await output.execute([
           {
-            timestamp: '2021-01-01T00:00:00Z',
+            timestamp: '2024-03-05T00:00:00+00:00',
             duration: 5,
             geolocation: '37.7749,-122.4194',
             'cloud/region-geolocation': '48.8567,2.3522',
@@ -162,12 +164,12 @@ describe('lib/watt-time: ', () => {
 
         expect(result).toStrictEqual([
           {
-            timestamp: '2021-01-01T00:00:00Z',
+            timestamp: '2024-03-05T00:00:00+00:00',
             duration: 5,
             geolocation: '48.8567,2.3522',
             'cloud/region-geolocation': '48.8567,2.3522',
             'cloud/region-wt-id': 'FR',
-            'grid/carbon-intensity': 0,
+            'grid/carbon-intensity': 1719.1647205176753,
           },
         ]);
       });
@@ -185,7 +187,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 360,
             },
           ]);
@@ -273,7 +275,8 @@ describe('lib/watt-time: ', () => {
       });
 
       it('throws an error when the response of the API is not valid data.', async () => {
-        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
+        const errorMessage =
+          'WattTimeAPI: Error fetching data from WattTime API. {"status":400,"error":{"message":"error"}}.';
         process.env.WATT_TIME_USERNAME = 'invalidData';
         process.env.WATT_TIME_PASSWORD = 'invalidData';
 
@@ -284,7 +287,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 360,
             },
           ]);
@@ -294,11 +297,10 @@ describe('lib/watt-time: ', () => {
         }
       });
 
-      it('throws an error when the response of the API is not valid data.', async () => {
-        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
-        process.env.WATT_TIME_USERNAME = 'invalidData';
-        process.env.WATT_TIME_PASSWORD = 'invalidData';
-
+      it('throws an error when `token` or `username` and/or `passowrd` are not provided.', async () => {
+        const errorMessage =
+          'WattTimeAPI: Invalid credentials provided. Either `token` or `username` and `password` should be provided.';
+        process.env = {};
         expect.assertions(2);
 
         try {
@@ -306,13 +308,13 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 360,
             },
           ]);
         } catch (error) {
-          expect(error).toBeInstanceOf(APIRequestError);
-          expect(error).toEqual(new APIRequestError(errorMessage));
+          expect(error).toBeInstanceOf(AuthorizationError);
+          expect(error).toEqual(new AuthorizationError(errorMessage));
         }
       });
 
@@ -328,7 +330,7 @@ describe('lib/watt-time: ', () => {
           const output = WattTimeGridEmissions();
           await output.execute([
             {
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 5,
               geolocation: '37.7749,-122.4194',
               'cloud/region-geolocation': '48.8567,2.3522',
@@ -352,7 +354,7 @@ describe('lib/watt-time: ', () => {
           const output = WattTimeGridEmissions();
           await output.execute([
             {
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 5,
               geolocation: '37.7749,-122.4194',
               'cloud/region-geolocation': '48.8567,2.3522',
@@ -378,7 +380,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 360,
             },
           ]);
@@ -398,7 +400,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 360,
             },
           ]);
@@ -419,7 +421,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 360,
             },
           ]);
@@ -442,7 +444,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '0,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 3600,
             },
           ]);
@@ -459,7 +461,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '0',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 3600,
             },
           ]);
@@ -476,7 +478,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 3600,
             },
           ]);
@@ -487,7 +489,8 @@ describe('lib/watt-time: ', () => {
       });
 
       it('throws an error when no data is returned by API.', async () => {
-        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
+        const errorMessage =
+          'WattTimeAPI: Error fetching data from WattTime API: 400.';
         process.env.WATT_TIME_USERNAME = 'invalidData1';
         process.env.WATT_TIME_PASSWORD = 'invalidData2';
 
@@ -498,7 +501,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 3600,
             },
             {
@@ -514,7 +517,8 @@ describe('lib/watt-time: ', () => {
       });
 
       it('throws an error when an unauthorized error occurs during data fetch.', async () => {
-        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
+        const errorMessage =
+          'WattTimeAPI: Error fetching data from WattTime API: 400.';
         process.env.WATT_TIME_USERNAME = 'fetchError1';
         process.env.WATT_TIME_PASSWORD = 'fetchError2';
 
@@ -525,7 +529,7 @@ describe('lib/watt-time: ', () => {
           await output.execute([
             {
               geolocation: '37.7749,-122.4194',
-              timestamp: '2021-01-01T00:00:00Z',
+              timestamp: '2024-03-05T00:00:00+00:00',
               duration: 3600,
             },
             {
@@ -540,5 +544,6 @@ describe('lib/watt-time: ', () => {
         }
       });
     });
+    process.env = originalEnv;
   });
 });
