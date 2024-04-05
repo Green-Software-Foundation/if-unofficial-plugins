@@ -68,7 +68,7 @@ export const WattTimeAPI = () => {
       throw new AuthorizationError(
         errorBuilder({
           message:
-            'Invalid credentials provided. Either `token` or `username` and `password` should be provided.',
+            'Invalid credentials provided. Either `token` or `username` and `password` should be provided',
         })
       );
     }
