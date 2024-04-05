@@ -27,12 +27,22 @@ export const BoaviztaAPI = () => {
       name: data['cpu/name'],
       tdp: data['cpu/thermal-design-power'],
     };
-    const response = await axios.post(
-      `${BASE_URL}/component/${componentType}?verbose=${verbose}&duration=${data['usage']['hours_use_time']}`,
-      dataCast
-    );
+    const response = await axios
+      .post(
+        `${BASE_URL}/component/${componentType}?verbose=${verbose}&duration=${data['usage']['hours_use_time']}`,
+        dataCast
+      )
+      .catch(error => {
+        throw new APIRequestError(
+          errorBuilder({
+            message: `Error fetching data from Boavizta API. ${JSON.stringify(
+              error?.response?.data?.detail || error
+            )}`,
+          })
+        );
+      });
 
-    return response.data;
+    return response?.data;
   };
 
   /**
@@ -57,10 +67,7 @@ export const BoaviztaAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching data from Boavizta API. ${JSON.stringify(
-              (error.response &&
-                error.response.data &&
-                error.response.data.detail) ||
-                error
+              error?.response?.data?.detail || error
             )}`,
           })
         );

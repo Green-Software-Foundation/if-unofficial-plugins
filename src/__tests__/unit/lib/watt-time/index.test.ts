@@ -52,6 +52,319 @@ describe('lib/watt-time: ', () => {
         ]);
       });
 
+      it('returns a result `geolocation` is overriden by `cloud/region-geolocation`.', async () => {
+        process.env.WATT_TIME_USERNAME = 'test1';
+        process.env.WATT_TIME_PASSWORD = 'test2';
+
+        const output = WattTimeGridEmissions();
+        const result = await output.execute([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 1200,
+            geolocation: '37.7749,-122.4194',
+            'cloud/region-geolocation': '48.8567,2.3522',
+          },
+        ]);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 1200,
+            geolocation: '48.8567,2.3522',
+            'cloud/region-geolocation': '48.8567,2.3522',
+            'grid/carbon-intensity': 2185.332173907599,
+          },
+        ]);
+      });
+
+      it('returns a result `cloud/region-wt-id` is provided.', async () => {
+        process.env.WATT_TIME_USERNAME = 'region-wt';
+        process.env.WATT_TIME_PASSWORD = 'region-wt';
+
+        const output = WattTimeGridEmissions();
+        const result = await output.execute([
+          {
+            timestamp: '2024-03-05T00:00:00.000Z',
+            duration: 5,
+            geolocation: '37.7749,-122.4194',
+            'cloud/region-geolocation': '48.8567,2.3522',
+            'cloud/region-wt-id': 'FR',
+            'signal-type': 'co2_moer',
+          },
+        ]);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2024-03-05T00:00:00.000Z',
+            duration: 5,
+            geolocation: '48.8567,2.3522',
+            'cloud/region-geolocation': '48.8567,2.3522',
+            'cloud/region-wt-id': 'FR',
+            'grid/carbon-intensity': 1719.1647205176753,
+            'signal-type': 'co2_moer',
+          },
+        ]);
+      });
+
+      it('returns a result when `grid/carbon-intensity` set to 0 when there is no data from API.', async () => {
+        process.env.WATT_TIME_USERNAME = 'region-wt';
+        process.env.WATT_TIME_PASSWORD = 'region-wt';
+
+        const output = WattTimeGridEmissions();
+        const result = await output.execute([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 5,
+            geolocation: '37.7749,-122.4194',
+            'cloud/region-geolocation': '48.8567,2.3522',
+            'cloud/region-wt-id': 'FR',
+            'signal-type': 'co2_moer',
+          },
+        ]);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 5,
+            geolocation: '48.8567,2.3522',
+            'cloud/region-geolocation': '48.8567,2.3522',
+            'cloud/region-wt-id': 'FR',
+            'grid/carbon-intensity': 0,
+            'signal-type': 'co2_moer',
+          },
+        ]);
+      });
+
+      it('returns a result when `signal-type` is not provided.', async () => {
+        process.env.WATT_TIME_USERNAME = 'signalType';
+        process.env.WATT_TIME_PASSWORD = 'signalType';
+
+        expect.assertions(2);
+
+        const output = WattTimeGridEmissions();
+        const result = await output.execute([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 5,
+            geolocation: '37.7749,-122.4194',
+            'cloud/region-geolocation': '48.8567,2.3522',
+            'cloud/region-wt-id': 'FR',
+          },
+        ]);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 5,
+            geolocation: '48.8567,2.3522',
+            'cloud/region-geolocation': '48.8567,2.3522',
+            'cloud/region-wt-id': 'FR',
+            'grid/carbon-intensity': 0,
+          },
+        ]);
+      });
+
+      it('throws an error when API gives an error.', async () => {
+        const errorMessage =
+          'WattTimeAPI: Error fetching data from WattTime API. {"status":400,"error":{"message":"error"}}.';
+        process.env.WATT_TIME_USERNAME = 'API_error';
+        process.env.WATT_TIME_PASSWORD = 'API_error';
+
+        expect.assertions(2);
+
+        try {
+          const output = WattTimeGridEmissions();
+          await output.execute([
+            {
+              geolocation: '37.7749,-122.4194',
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 360,
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(new APIRequestError(errorMessage));
+        }
+      });
+
+      it('throws an error when API gives an error for getting `cloud/region-wt-id`.', async () => {
+        const errorMessage =
+          'WattTimeAPI: Error fetching data from WattTime API. {"status":400,"error":{"message":"error"}}.';
+        process.env.WATT_TIME_USERNAME = 'invalidRegionWT';
+        process.env.WATT_TIME_PASSWORD = 'invalidRegionWT';
+
+        expect.assertions(2);
+
+        try {
+          const output = WattTimeGridEmissions();
+          await output.execute([
+            {
+              timestamp: '2024-03-05T00:00:00.000Z',
+              duration: 5,
+              geolocation: '37.7749,-122.4194',
+              'cloud/region-geolocation': '48.8567,2.3522',
+              'cloud/region-wt-id': 'FR',
+              'signal-type': 'co2_moer',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(new APIRequestError(errorMessage));
+        }
+      });
+
+      it("throws an error when API's status is not 200 while attempting to retrieve `cloud/region-wt-id` data.", async () => {
+        const errorMessage =
+          'WattTimeAPI: Error fetching data from WattTime API: 400.';
+        process.env.WATT_TIME_USERNAME = 'invalidRegionWT1';
+        process.env.WATT_TIME_PASSWORD = 'invalidRegionWT1';
+
+        expect.assertions(2);
+
+        try {
+          const output = WattTimeGridEmissions();
+          await output.execute([
+            {
+              timestamp: '2024-03-05T00:00:00.000Z',
+              duration: 5,
+              geolocation: '37.7749,-122.4194',
+              'cloud/region-geolocation': '48.8567,2.3522',
+              'cloud/region-wt-id': 'FR',
+              'signal-type': 'co2_moer',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(new APIRequestError(errorMessage));
+        }
+      });
+
+      it('throws an error when API gives an not valid data for `cloud/region-wt-id`.', async () => {
+        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
+        process.env.WATT_TIME_USERNAME = 'invalidRegionWT2';
+        process.env.WATT_TIME_PASSWORD = 'invalidRegionWT2';
+
+        expect.assertions(2);
+
+        try {
+          const output = WattTimeGridEmissions();
+          await output.execute([
+            {
+              timestamp: '2024-03-05T00:00:00.000Z',
+              duration: 5,
+              geolocation: '37.7749,-122.4194',
+              'cloud/region-geolocation': '48.8567,2.3522',
+              'cloud/region-wt-id': 'FR',
+              'signal-type': 'co2_moer',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(new APIRequestError(errorMessage));
+        }
+      });
+
+      it('throws an error when the response of the API is not valid data.', async () => {
+        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
+        process.env.WATT_TIME_USERNAME = 'invalidData';
+        process.env.WATT_TIME_PASSWORD = 'invalidData';
+
+        expect.assertions(2);
+
+        try {
+          const output = WattTimeGridEmissions();
+          await output.execute([
+            {
+              geolocation: '37.7749,-122.4194',
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 360,
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(new APIRequestError(errorMessage));
+        }
+      });
+
+      it('throws an error when the response of the API is not valid data.', async () => {
+        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
+        process.env.WATT_TIME_USERNAME = 'invalidData';
+        process.env.WATT_TIME_PASSWORD = 'invalidData';
+
+        expect.assertions(2);
+
+        try {
+          const output = WattTimeGridEmissions();
+          await output.execute([
+            {
+              geolocation: '37.7749,-122.4194',
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 360,
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(new APIRequestError(errorMessage));
+        }
+      });
+
+      it('throws an error when for getting `signal-type` the API gives an error.', async () => {
+        const errorMessage =
+          'WattTimeAPI: Error fetching `signal_type` from WattTime API. {"status":400,"error":{"message":"error"}}.';
+        process.env.WATT_TIME_USERNAME = 'invalidSignalType';
+        process.env.WATT_TIME_PASSWORD = 'invalidSignalType';
+
+        expect.assertions(2);
+
+        try {
+          const output = WattTimeGridEmissions();
+          await output.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 5,
+              geolocation: '37.7749,-122.4194',
+              'cloud/region-geolocation': '48.8567,2.3522',
+              'cloud/region-wt-id': 'FR',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(new APIRequestError(errorMessage));
+        }
+      });
+
+      it('throws an error when the API gives an invalid `signal-type` data.', async () => {
+        const errorMessage = 'WattTimeAPI: Invalid response from WattTime API.';
+        process.env.WATT_TIME_USERNAME = 'invalidSignalType1';
+        process.env.WATT_TIME_PASSWORD = 'invalidSignalType1';
+
+        expect.assertions(2);
+
+        try {
+          const output = WattTimeGridEmissions();
+          await output.execute([
+            {
+              timestamp: '2021-01-01T00:00:00Z',
+              duration: 5,
+              geolocation: '37.7749,-122.4194',
+              'cloud/region-geolocation': '48.8567,2.3522',
+              'cloud/region-wt-id': 'FR',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(new APIRequestError(errorMessage));
+        }
+      });
+
       it('throws an error when `token` is missing.', async () => {
         const errorMessage =
           'WattTimeAPI(authorization): Missing token in response. Invalid credentials provided.';
