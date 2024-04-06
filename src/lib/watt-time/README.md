@@ -143,7 +143,6 @@ initialize:
       method: WattTimeGridEmissions
   outputs:
     - yaml
-if-version: v0.3.1
 tree:
   children:
     child:
