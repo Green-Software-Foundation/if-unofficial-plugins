@@ -112,19 +112,18 @@ describe('lib/watt-time: ', () => {
         ]);
       });
 
-      it.skip('returns a result when `grid/carbon-intensity` set to 0 when there is no data from API.', async () => {
-        process.env.WATT_TIME_USERNAME = 'region-wt';
-        process.env.WATT_TIME_PASSWORD = 'region-wt';
+      it('returns a result when the data value is not a number from API.', async () => {
+        process.env.WATT_TIME_USERNAME = 'INVALID_DATA';
+        process.env.WATT_TIME_PASSWORD = 'INVALID_DATA';
+
+        expect.assertions(2);
 
         const output = WattTimeGridEmissions();
         const result = await output.execute([
           {
-            timestamp: '2024-03-05T00:00:00+00:00',
-            duration: 5,
-            geolocation: '37.7749,-122.4194',
-            'cloud/region-geolocation': '48.8567,2.3522',
+            timestamp: '2024-03-05 00:00:00',
+            duration: 60,
             'cloud/region-wt-id': 'FR',
-            'signal-type': 'co2_moer',
           },
         ]);
 
@@ -132,17 +131,13 @@ describe('lib/watt-time: ', () => {
 
         expect(result).toStrictEqual([
           {
-            timestamp: '2024-03-05T00:00:00+00:00',
-            duration: 5,
-            geolocation: '48.8567,2.3522',
-            'cloud/region-geolocation': '48.8567,2.3522',
+            timestamp: '2024-03-05 00:00:00',
+            duration: 60,
             'cloud/region-wt-id': 'FR',
             'grid/carbon-intensity': 0,
-            'signal-type': 'co2_moer',
           },
         ]);
       });
-
       it('returns a result when `signal-type` is not provided.', async () => {
         process.env.WATT_TIME_USERNAME = 'signalType';
         process.env.WATT_TIME_PASSWORD = 'signalType';
@@ -172,6 +167,160 @@ describe('lib/watt-time: ', () => {
             'grid/carbon-intensity': 1719.1647205176753,
           },
         ]);
+      });
+
+      it('returns a result when `cloud/region-wt-id` differs in inputs but duration is greater then 5 mins.', async () => {
+        process.env.WATT_TIME_USERNAME = 'REGION_WT_ID';
+        process.env.WATT_TIME_PASSWORD = 'REGION_WT_ID';
+
+        expect.assertions(2);
+
+        const output = WattTimeGridEmissions();
+        const result = await output.execute([
+          {
+            timestamp: '2024-03-05T00:00:00+00:00',
+            duration: 15 * 60,
+            'cloud/region-wt-id': 'FR',
+          },
+          {
+            timestamp: '2024-03-05T00:05:00+00:00',
+            duration: 5,
+            'cloud/region-wt-id': 'CAISO_NORTH',
+          },
+        ]);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2024-03-05T00:00:00+00:00',
+            duration: 15 * 60,
+            'cloud/region-wt-id': 'FR',
+            'grid/carbon-intensity': 1719.091233096947,
+          },
+          {
+            timestamp: '2024-03-05T00:05:00+00:00',
+            duration: 5,
+            'cloud/region-wt-id': 'CAISO_NORTH',
+            'grid/carbon-intensity': 1719.1647205176753,
+          },
+        ]);
+      });
+
+      it('returns a result when `cloud/region-wt-id` is the same in inputs but duration is lower then 5 mins.', async () => {
+        process.env.WATT_TIME_USERNAME = 'REGION_WT_ID';
+        process.env.WATT_TIME_PASSWORD = 'REGION_WT_ID';
+
+        expect.assertions(2);
+
+        const output = WattTimeGridEmissions();
+        const result = await output.execute([
+          {
+            timestamp: '2024-03-05T00:00:00+00:00',
+            duration: 3 * 60,
+            'cloud/region-wt-id': 'FR',
+          },
+          {
+            timestamp: '2024-03-05T00:00:03+00:00',
+            duration: 5,
+            'cloud/region-wt-id': 'FR',
+          },
+        ]);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2024-03-05T00:00:00+00:00',
+            duration: 3 * 60,
+            'cloud/region-wt-id': 'FR',
+            'grid/carbon-intensity': 1719.1647205176753,
+          },
+          {
+            timestamp: '2024-03-05T00:00:03+00:00',
+            duration: 5,
+            'cloud/region-wt-id': 'FR',
+            'grid/carbon-intensity': 1719.1647205176753,
+          },
+        ]);
+      });
+
+      it('returns a result when the API data is not sorted.', async () => {
+        process.env.WATT_TIME_USERNAME = 'SORT_DATA';
+        process.env.WATT_TIME_PASSWORD = 'SORT_DATA';
+
+        expect.assertions(2);
+
+        const output = WattTimeGridEmissions();
+        const result = await output.execute([
+          {
+            timestamp: '2024-03-05T00:00:00+00:00',
+            duration: 3 * 60,
+            'cloud/region-wt-id': 'FR',
+          },
+        ]);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2024-03-05T00:00:00+00:00',
+            duration: 3 * 60,
+            'cloud/region-wt-id': 'FR',
+            'grid/carbon-intensity': 1719.1647205176753,
+          },
+        ]);
+      });
+
+      it('returns a result when `timestamp` date format is not ISO date.', async () => {
+        process.env.WATT_TIME_USERNAME = 'REGION_WT_ID';
+        process.env.WATT_TIME_PASSWORD = 'REGION_WT_ID';
+
+        expect.assertions(2);
+
+        const output = WattTimeGridEmissions();
+        const result = await output.execute([
+          {
+            timestamp: '2024-03-05 00:00:00',
+            duration: 60,
+            'cloud/region-wt-id': 'FR',
+          },
+        ]);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2024-03-05 00:00:00',
+            duration: 60,
+            'cloud/region-wt-id': 'FR',
+            'grid/carbon-intensity': 1719.1647205176753,
+          },
+        ]);
+      });
+
+      it('throws an error when the `timestamp` has wrong data format.', async () => {
+        expect.assertions(2);
+
+        const output = WattTimeGridEmissions();
+        expect.assertions(2);
+
+        try {
+          await output.execute([
+            {
+              timestamp: '2024-03-050:00:00',
+              duration: 60,
+              'cloud/region-wt-id': 'FR',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(InputValidationError);
+          expect(error).toEqual(
+            new InputValidationError(
+              'WattTimeGridEmissions: Timestamp is not valid date format.'
+            )
+          );
+        }
       });
 
       it('throws an error when API gives an error.', async () => {
@@ -297,7 +446,7 @@ describe('lib/watt-time: ', () => {
         }
       });
 
-      it('throws an error when `token` or `username` and/or `passowrd` are not provided.', async () => {
+      it('throws an error when `token` or `username` and/or `password` are not provided.', async () => {
         const errorMessage =
           'WattTimeAPI: Invalid credentials provided. Either `token` or `username` and `password` should be provided.';
         process.env = {};
