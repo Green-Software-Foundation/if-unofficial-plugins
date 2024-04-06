@@ -62,8 +62,8 @@ export const WattTimeGridEmissions = (): PluginInterface => {
       const wattTimeData = await getWattTimeData(safeInput);
       const inputStart = validateAndFormatTimestamp(lastValidTimestamp);
       const inputEnd = getEndTime(inputStart, safeInput.duration);
-      executedInputData.locale =
-        safeInput['cloud/region-wt-id'] || safeInput.geolocation || '';
+      executedInputData.locale = (safeInput['cloud/region-wt-id'] ||
+        safeInput.geolocation)!;
 
       const data = getWattTimeDataForDuration(
         wattTimeData,
@@ -214,7 +214,7 @@ export const WattTimeGridEmissions = (): PluginInterface => {
     } else {
       throw new InputValidationError(
         errorBuilder({
-          message: 'Timestamp is not valid date format.',
+          message: 'Timestamp is not valid date format',
         })
       );
     }
