@@ -94,7 +94,7 @@ export const WattTimeAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching data from WattTime API. ${JSON.stringify(
-              error?.response?.data?.message || error
+              error?.response?.data?.error || error
             )}`,
           })
         );
@@ -118,9 +118,7 @@ export const WattTimeAPI = () => {
       end: params.endtime,
     };
 
-    const regionData = await fetchDataWithRegion(regionParams);
-
-    return sortData(regionData);
+    return await fetchDataWithRegion(regionParams);
   };
 
   /**
@@ -203,7 +201,7 @@ export const WattTimeAPI = () => {
       );
     }
 
-    return simplifyAndSortData(result.data.data).flat();
+    return simplifyAndSortData(result.data.data);
   };
 
   const simplifyAndSortData = (data: any) => {
@@ -211,7 +209,7 @@ export const WattTimeAPI = () => {
       (item: {forecast: []; generated_at: string}) => item.forecast
     );
 
-    return sortData(forecasts);
+    return sortData(forecasts.flat());
   };
 
   /**
