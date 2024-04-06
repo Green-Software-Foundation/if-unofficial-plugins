@@ -99,7 +99,56 @@ export function getMockResponse(url: string) {
           status: 200,
           data: {},
         });
+      } else if (
+        process.env.WATT_TIME_USERNAME === 'SORT_DATA' &&
+        process.env.WATT_TIME_PASSWORD === 'SORT_DATA'
+      ) {
+        return Promise.resolve({
+          status: 200,
+          data: {
+            data: [
+              {
+                generated_at: '2024-03-05T00: 00: 00+00: 00',
+                forecast: [
+                  {
+                    point_time: '2024-03-05T00:05:00+00:00',
+                    value: 779.8,
+                  },
+                  {
+                    point_time: '2024-03-05T00:00:00+00:00',
+                    value: 779.8,
+                  },
+                ],
+              },
+            ],
+          },
+        });
+      } else if (
+        process.env.WATT_TIME_USERNAME === 'INVALID_DATA' &&
+        process.env.WATT_TIME_PASSWORD === 'INVALID_DATA'
+      ) {
+        return Promise.resolve({
+          status: 200,
+          data: {
+            data: [
+              {
+                generated_at: '2024-03-05T00: 00: 00+00: 00',
+                forecast: [
+                  {
+                    point_time: '2024-03-05T00:00:00+00:00',
+                    value: 'nn',
+                  },
+                  {
+                    point_time: '2024-03-05T00:05:00+00:00',
+                    value: 779.8,
+                  },
+                ],
+              },
+            ],
+          },
+        });
       }
+
       return Promise.resolve({
         data: REGION_DATA,
         status: 200,
