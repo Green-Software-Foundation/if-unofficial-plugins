@@ -195,6 +195,7 @@ export const WattTimeGridEmissions = (): PluginInterface => {
       longitude,
       starttime: formatedStartTime.toString(),
       endtime: formatedEndTime.toString(),
+      signal_type: input['signal-type'],
     };
 
     return await wattTimeAPI.fetchAndSortData(params);

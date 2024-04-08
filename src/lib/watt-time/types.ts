@@ -3,6 +3,7 @@ export interface WattTimeParams {
   longitude: number;
   starttime: string;
   endtime: string;
+  signal_type?: string;
 }
 
 export interface WattTimeRegionParams {

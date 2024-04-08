@@ -80,7 +80,7 @@ export const WattTimeAPI = () => {
    * Throws an APIRequestError if an error occurs during the request or if the response is invalid.
    */
   const fetchAndSortData = async (params: WattTimeParams) => {
-    const signalType = await getSignalType(token);
+    const signalType = params.signal_type || (await getSignalType(token));
     Object.assign(params, {signal_type: signalType});
 
     const response = await axios
