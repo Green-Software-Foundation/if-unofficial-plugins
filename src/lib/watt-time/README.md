@@ -1,38 +1,25 @@
-# WattTime Grid Emissions plugin
+# WattTime Grid Emissions Plugin
 
-> [!NOTE] > `Watt-time` is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
+> [!NOTE] >
+> `Watt-time` is a community plugin and not a part of the IF standard library. As a result, the IF core team does not closely monitor these plugins for updates. It is recommended to conduct your own research before implementing them.
 
 ## Introduction
 
 WattTime technology—based on real-time grid data, cutting-edge algorithms, and machine learning—provides first-of-its-kind insight into your local electricity grid’s marginal emissions rate. [Read More...](https://www.watttime.org/api-documentation/#introduction)
 
-## Scope
+## Overview
 
-WattTime plugin provides a way to calculate emissions for a given time in a specific geolocation.
-
-The plugin is based on the WattTime API. The plugin uses the following inputs:
-
-- `timestamp`: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
-- `duration`: Duration of the recorded event in seconds (3600)
-- `geolocation`: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
-- `cloud/region-geolocation`: The same as `geolocation`, with calculations performed by the `cloud-metadata` plugin
-- `cloud/region-wt-id`: Region abbreviation associated with location (e.g. 'CAISO_NORTH')
-- `signal-type`: The signal type of selected region (optional) (e.g 'co2_moer')
-
-Either `geolocation`,`cloud/region-wt-id` or `cloud/region-geolocation` should be provided.
-
-## Implementation
-
-Limitations:
-
-- Set of inputs are to be within 32 days of each other.
-- Emissions are aggregated for every 5 minutes regardless of the granularity of the inputs.
+The `WattTimeGridEmissions` plugin is designed to compute the average carbon emissions of a power grid over a specified duration. It leverages data from the WattTime API to furnish carbon intensity information for precise locations and timeframes. This plugin proves beneficial for applications requiring carbon footprint monitoring or optimization, such as energy management systems or environmental impact assessments. The plugin supports only v3 version of the WattTime API. The API returns data in `lbs/MWh`, which the plugin converts to `Kg/MWh` (g/KWh) by dividing by `0.453592`.
 
 ### Authentication
 
 WattTime API requires activation of subscription before usage. Please refer to the [WattTime website](https://watttime.org/docs-dev/data-plans/) for more information.
 
-Create a `.env` file in the IF project root directory. This is where you can store your WattTime authentication details. Your `.env` file should look as follows:
+## Prerequisites
+
+Before utilizing this plugin, ensure the following prerequisites are fulfilled:
+
+1. **Environment Variables**: The plugin requires environment variables `WATT_TIME_USERNAME` and `WATT_TIME_PASSWORD` to be set. These credentials are utilized for authentication with the WattTime API.
 
 **Required Parameters:**
 
@@ -47,51 +34,79 @@ WATT_TIME_PASSWORD: <your-password>
 WATT_TIME_TOKEN: <your-token>
 ```
 
-### Plugin global config
+2. **Dependencies**: Confirm the installation of all required dependencies, including `luxon` and `zod`. These dependencies are imperative for date-time manipulation and input validation, respectively.
 
-- `base-url`: The URL for the WattTime API endpoint.
+## Usage
 
-### Inputs
+To employ the `WattTimeGridEmissions` plugin, adhere to these steps:
 
-**Required Parameters:**
+1. **Initialize Plugin**: Import the `WattTimeGridEmissions` function and initialize it with optional global configuration parameters.
 
-- `timestamp`: Timestamp of the recorded event (2021-01-01T00:00:00Z) RFC3339
-- `duration`: Duration of the recorded event in seconds (3600)
-- `geolocation`: Location of the software system (latitude in decimal degrees, longitude in decimal degrees). "latitude,longitude"
-- `cloud/region-geolocation`: The same as `geolocation`, with calculations performed by the `cloud-metadata` plugin
-- `cloud/region-wt-id`: Region abbreviation associated with location (e.g. 'CAISO_NORTH')
+2. **Execute Plugin**: Invoke the `execute` method of the initialized plugin instance with an array of input parameters. Each input parameter should include a `timestamp`, `duration`, and either `geolocation`, `cloud/region-wt-id`, or `cloud/region-geolocation` information.
 
-Either `geolocation`,`cloud/region-wt-id` or `cloud/region-geolocation` should be provided.
+3. **Result**: The plugin will return an array of plugin parameters enriched with the calculated average carbon intensity (`grid/carbon-intensity`) for each input.
 
-### Typescript Usage
+## Input Parameters
 
-```typescript
-// environment variable configuration
-// export WATT_TIME_USERNAME=test1
-// export WATT_TIME_PASSWORD=test2
-// use environment variables to configure the plugin
-const output = WattTimeGridEmissions();
-const result = await output.execute([
+The plugin expects the following input parameters:
+
+- `timestamp`: A string representing the start time of the query period.
+- `duration`: A number indicating the duration of the query period in seconds.
+- `geolocation`: A string representing the latitude and longitude of the location in the format `latitude,longitude`. Alternatively, this information can be provided through `cloud/region-geolocation` or `cloud/region-wt-id` parameters.
+- `cloud/region-geolocation`: Similar to `geolocation`, with calculations performed by the `cloud-metadata` plugin.
+- `cloud/region-wt-id`: A string representing the region abbreviation associated with the location (e.g., 'CAISO_NORTH').
+- `signal-type`: A string representing the signal type of the selected region (optional) (e.g., 'co2_moer').
+
+## Output
+
+The plugin enriches each input parameter with the average carbon intensity (`grid/carbon-intensity`) calculated over the specified duration.
+
+## Error Handling
+
+The plugin conducts input validation using the `zod` library and may throw errors if the provided parameters are invalid or if there are authentication or data retrieval issues with the WattTime API.
+
+## Plugin Algorithm
+
+1. **Initialization**: Authenticate with the WattTime API using the provided credentials. If the `token` is not provided in the environment variables, it uses `username` and `password`, otherwise, it throws an error. To authenticate users, the plugin utilizes the `https://api.watttime.org/login` URL.
+
+2. **Execution**:
+
+   - Iterate through each input.
+
+     - If `cloud/region-wt-id is provided`, the plugin sets it to `region`, renames `signal-type` to `signal_type`, and sends a request to `https://api.watttime.org/v3/forecast/historical` endpoint with calculated `start` and `end` time as well. If the `signal_type` is not provided, the plugin requests `https://api.watttime.org/v3/my-access` to obtain access to the account and takes the first signal type from there.
+     - If `geolocation` is provided, the plugin converts it to a `latitude` and `longitude` pair, renames `signal-type` to `signal_type`, and sends a request to `https://api.watttime.org/v3/region-from-loc` to retrieve the `region`. Then the `https://api.watttime.org/v3/forecast/historical` endpoint is called with `region`, `signal_type`, calculated `start` and `end` time from `timestamp` and `duration`.
+
+   - Validate input parameters. If `cloud/region-geolocation` is provided, the `geolocation` is overridden. If `cloud/region-wt-id` is provided, it takes precedence over the `geolocation`.
+
+   - Retrieve WattTime data for the specified duration. The WattTime API adds aggregated emissions for every 5 minutes. To address this limitation, the plugin sets the previous emission's value if the specified `duration` is less than 5 minutes.
+
+   - Calculate average emissions based on retrieved data. The WattTime API returns full data for the entire duration; the plugin checks if the data's period time is within the specified input range and collects data in `kgMWh`.
+
+3. **Output**: Return results with the average grid emissions for each input.
+
+### TypeScript Usage
+
+```ts
+// Initialize the plugin
+const plugin = WattTimeGridEmissions();
+
+// Execute the plugin with input parameters
+const inputs = [
   {
-    timestamp: '2021-01-01T00:00:00Z',
-    geolocation: '43.22,-80.22',
-    duration: 3600,
+    timestamp: '2024-03-26T12:00:000Z',
+    duration: 3600, // 1 hour
+    geolocation: '36.7783,-119.417931', // San Francisco, CA
   },
-]);
+  // Add more input parameters as needed
+];
+const result = await plugin.execute(inputs);
+
+console.log(result);
 ```
 
 ### Manifest Usage
 
-#### Input for manifest
-
-```yaml
-inputs:
-  - timestamp: 2021-01-01T00:00:00Z
-    geolocation: '43.22,-80.22'
-    duration: 3600
-```
-
-## Example manifest
+#### Input
 
 ```yaml
 name: watt-time
@@ -102,26 +117,52 @@ initialize:
     watt-time:
       method: WattTimeGridEmissions
       path: '@grnsft/if-unofficial-plugins'
+  outputs:
+    - yaml
 tree:
   children:
     child:
       pipeline:
         - watt-time
       inputs:
-        - timestamp: 2023-07-06T00:00
+        - timestamp: '2024-03-05T00:00:00.000Z'
           duration: 3600
-          geolocation: 37.7749,-122.4194
+          geolocation: 36.7783,-119.417931
 ```
 
-You can run this by passing it to `ie`. Run impact using the following command run from the project root:
+#### Output
+
+```yaml
+name: watt-time
+description: simple demo invoking watt-time
+tags: null
+initialize:
+  plugins:
+    watt-time:
+      path: '@grnsft/if-unofficial-plugins'
+      method: WattTimeGridEmissions
+  outputs:
+    - yaml
+tree:
+  children:
+    child:
+      pipeline:
+        - watt-time
+      inputs:
+        - timestamp: '2024-03-05T00:00:00.000Z'
+          duration: 3600
+          geolocation: 36.7783,-119.417931
+      outputs:
+        - timestamp: '2024-03-05T00:00:00.000Z'
+          duration: 3600
+          geolocation: 36.7783,-119.417931
+          grid/carbon-intensity: 287.7032521512652
+```
+
+You can execute this by passing it to `ie`. Run the impact using the following command from the project root:
 
 ```sh
 npm i -g @grnsft/if
 npm i -g @grnsft/if-unofficial-plugins
 ie --manifest ./examples/manifests/test/watt-time.yml --output ./examples/outputs/watt-time.yml
 ```
-
-## Position and effects in the manifest:
-
-- Technically, WattTime plugin sets (or overwrites any preconfigured value of) the `grid/carbon-intensity` attribute.
-- As such, it should be positioned before the _sci-o_ plugin, if such a plugin is used.
