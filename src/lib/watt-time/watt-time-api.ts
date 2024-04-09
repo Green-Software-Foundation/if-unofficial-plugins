@@ -32,12 +32,22 @@ export const WattTimeAPI = () => {
     token = process.env.WATT_TIME_TOKEN ?? '';
 
     if (token === '') {
-      const tokenResponse = await axios.get('https://api.watttime.org/login', {
-        auth: {
-          username: process.env.WATT_TIME_USERNAME!,
-          password: process.env.WATT_TIME_PASSWORD!,
-        },
-      });
+      const tokenResponse = await axios
+        .get('https://api.watttime.org/login', {
+          auth: {
+            username: process.env.WATT_TIME_USERNAME!,
+            password: process.env.WATT_TIME_PASSWORD!,
+          },
+        })
+        .catch(error => {
+          throw new APIRequestError(
+            errorBuilder({
+              message: `Authorization error from WattTime API. ${JSON.stringify(
+                error?.message || error
+              )}`,
+            })
+          );
+        });
 
       if (
         tokenResponse === undefined ||
