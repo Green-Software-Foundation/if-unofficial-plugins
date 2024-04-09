@@ -138,6 +138,7 @@ describe('lib/watt-time: ', () => {
           },
         ]);
       });
+
       it('returns a result when `signal-type` is not provided.', async () => {
         process.env.WATT_TIME_USERNAME = 'signalType';
         process.env.WATT_TIME_PASSWORD = 'signalType';
@@ -318,6 +319,60 @@ describe('lib/watt-time: ', () => {
           expect(error).toEqual(
             new InputValidationError(
               'WattTimeGridEmissions: Timestamp is not valid date format.'
+            )
+          );
+        }
+      });
+
+      it('throws an error when the credentials are wrong.', async () => {
+        process.env.WATT_TIME_USERNAME = 'WRONG_USERNAME';
+        process.env.WATT_TIME_PASSWORD = 'WRONG_PASSWORD';
+
+        expect.assertions(2);
+
+        const output = WattTimeGridEmissions();
+        expect.assertions(2);
+
+        try {
+          await output.execute([
+            {
+              timestamp: '2024-03-05 00:00:00',
+              duration: 60,
+              'cloud/region-wt-id': 'FR',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(
+            new APIRequestError(
+              'WattTimeAPI: Authorization error from WattTime API. "Unothorized error".'
+            )
+          );
+        }
+      });
+
+      it('throws an error when the credentials are wrong and the message is not provided in the error object.', async () => {
+        process.env.WATT_TIME_USERNAME = 'WRONG_USERNAME1';
+        process.env.WATT_TIME_PASSWORD = 'WRONG_PASSWORD1';
+
+        expect.assertions(2);
+
+        const output = WattTimeGridEmissions();
+        expect.assertions(2);
+
+        try {
+          await output.execute([
+            {
+              timestamp: '2024-03-05 00:00:00',
+              duration: 60,
+              'cloud/region-wt-id': 'FR',
+            },
+          ]);
+        } catch (error) {
+          expect(error).toBeInstanceOf(APIRequestError);
+          expect(error).toEqual(
+            new APIRequestError(
+              'WattTimeAPI: Authorization error from WattTime API. "Unothorized error".'
             )
           );
         }

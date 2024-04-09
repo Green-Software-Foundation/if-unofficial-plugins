@@ -23,6 +23,19 @@ export function getMockResponse(url: string) {
           status: 401,
           data: {},
         });
+      } else if (
+        process.env.WATT_TIME_USERNAME === 'WRONG_USERNAME' &&
+        process.env.WATT_TIME_PASSWORD === 'WRONG_PASSWORD'
+      ) {
+        return Promise.reject({
+          status: 403,
+          message: 'Unothorized error',
+        });
+      } else if (
+        process.env.WATT_TIME_USERNAME === 'WRONG_USERNAME1' &&
+        process.env.WATT_TIME_PASSWORD === 'WRONG_PASSWORD1'
+      ) {
+        return Promise.reject('Unothorized error');
       }
 
       return Promise.resolve({
