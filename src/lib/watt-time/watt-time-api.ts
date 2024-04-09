@@ -1,19 +1,24 @@
 import * as dotenv from 'dotenv';
-import * as dayjs from 'dayjs';
 import axios from 'axios';
+import {Settings, DateTime} from 'luxon';
 
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
-import {WattTimeParams, WattTimeRegionParams} from './types';
+import {
+  WattTimeParams,
+  WattTimeRegionParams,
+  RegionFromLocationResponse,
+} from './types';
 
 const {AuthorizationError, APIRequestError} = ERRORS;
 
-export const WattTimeAPI = () => {
-  const baseUrl = 'https://api.watttime.org/v3';
-  let token = '';
+Settings.defaultZone = 'utc';
 
+export const WattTimeAPI = () => {
+  const BASE_URL = 'https://api.watttime.org/v3';
   const errorBuilder = buildErrorMessage(WattTimeAPI.name);
+  let token = '';
 
   /**
    * Authenticates the user with the WattTime API using the provided authentication parameters.
@@ -22,16 +27,27 @@ export const WattTimeAPI = () => {
    */
   const authenticate = async (): Promise<void> => {
     dotenv.config();
+    validateCredentials();
 
     token = process.env.WATT_TIME_TOKEN ?? '';
 
     if (token === '') {
-      const tokenResponse = await axios.get('https://api.watttime.org/login', {
-        auth: {
-          username: process.env.WATT_TIME_USERNAME || '',
-          password: process.env.WATT_TIME_PASSWORD || '',
-        },
-      });
+      const tokenResponse = await axios
+        .get('https://api.watttime.org/login', {
+          auth: {
+            username: process.env.WATT_TIME_USERNAME!,
+            password: process.env.WATT_TIME_PASSWORD!,
+          },
+        })
+        .catch(error => {
+          throw new APIRequestError(
+            errorBuilder({
+              message: `Authorization error from WattTime API. ${JSON.stringify(
+                error?.message || error
+              )}`,
+            })
+          );
+        });
 
       if (
         tokenResponse === undefined ||
@@ -51,14 +67,34 @@ export const WattTimeAPI = () => {
   };
 
   /**
-   * Support v2 version of WattTime API.
-   *
-   * Fetches and sorts data from the WattTime API based on the provided parameters.
+   * Validates if the credentials are provided.
+   */
+  const validateCredentials = () => {
+    if (
+      !process.env.WATT_TIME_TOKEN &&
+      !process.env.WATT_TIME_USERNAME &&
+      !process.env.WATT_TIME_PASSWORD
+    ) {
+      throw new AuthorizationError(
+        errorBuilder({
+          message:
+            'Invalid credentials provided. Either `token` or `username` and `password` should be provided',
+        })
+      );
+    }
+  };
+
+  /**
+   * Fetches region for provided geolocation and then get forcast for provided time period.
+   * Sorts data from the WattTime API.
    * Throws an APIRequestError if an error occurs during the request or if the response is invalid.
    */
   const fetchAndSortData = async (params: WattTimeParams) => {
-    const result = await axios
-      .get('https://api2.watttime.org/v2/data', {
+    const signalType = params.signal_type || (await getSignalType(token));
+    Object.assign(params, {signal_type: signalType});
+
+    const response = await axios
+      .get<RegionFromLocationResponse>(`${BASE_URL}/region-from-loc`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -68,34 +104,31 @@ export const WattTimeAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching data from WattTime API. ${JSON.stringify(
-              (error.response &&
-                error.response.data &&
-                error.response.data.message) ||
-                error
+              error?.response?.data?.error || error
             )}`,
           })
         );
       });
 
-    if (result.status !== 200) {
+    if (response.status !== 200) {
       throw new APIRequestError(
         errorBuilder({
           message: `Error fetching data from WattTime API: ${JSON.stringify(
-            result.status
+            response.status
           )}`,
         })
       );
     }
 
-    if (!('data' in result) || !Array.isArray(result.data)) {
-      throw new APIRequestError(
-        errorBuilder({
-          message: 'Invalid response from WattTime API',
-        })
-      );
-    }
+    const result = response.data;
+    const regionParams: WattTimeRegionParams = {
+      signal_type: result.signal_type || undefined,
+      region: result.region,
+      start: params.starttime,
+      end: params.endtime,
+    };
 
-    return sortData(result.data);
+    return await fetchDataWithRegion(regionParams);
   };
 
   /**
@@ -103,7 +136,7 @@ export const WattTimeAPI = () => {
    */
   const getSignalType = async (token: string) => {
     const result = await axios
-      .get(`${baseUrl}/my-access`, {
+      .get(`${BASE_URL}/my-access`, {
         params: {},
         headers: {
           Authorization: `Bearer ${token}`,
@@ -113,10 +146,7 @@ export const WattTimeAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching \`signal_type\` from WattTime API. ${JSON.stringify(
-              (error.response &&
-                error.response.data &&
-                error.response.data.message) ||
-                error
+              error?.response?.data?.message || error
             )}`,
           })
         );
@@ -142,12 +172,12 @@ export const WattTimeAPI = () => {
    * Throws an APIRequestError if an error occurs during the request or if the response is invalid.
    */
   const fetchDataWithRegion = async (params: WattTimeRegionParams) => {
-    const signalType = (await getSignalType(token)) || params.signal_type;
+    const signalType = params.signal_type || (await getSignalType(token));
 
     Object.assign(params, {signal_type: signalType});
 
     const result = await axios
-      .get(`${baseUrl}/forecast/historical`, {
+      .get(`${BASE_URL}/forecast/historical`, {
         params,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -157,10 +187,7 @@ export const WattTimeAPI = () => {
         throw new APIRequestError(
           errorBuilder({
             message: `Error fetching data from WattTime API. ${JSON.stringify(
-              (error.response &&
-                error.response.data &&
-                error.response.data.message) ||
-                error
+              error?.response?.data?.message || error
             )}`,
           })
         );
@@ -184,7 +211,7 @@ export const WattTimeAPI = () => {
       );
     }
 
-    return simplifyAndSortData(result.data.data).flat();
+    return simplifyAndSortData(result.data.data);
   };
 
   const simplifyAndSortData = (data: any) => {
@@ -192,7 +219,7 @@ export const WattTimeAPI = () => {
       (item: {forecast: []; generated_at: string}) => item.forecast
     );
 
-    return sortData(forecasts);
+    return sortData(forecasts.flat());
   };
 
   /**
@@ -200,7 +227,10 @@ export const WattTimeAPI = () => {
    */
   const sortData = <T extends {point_time: string}>(data: T[]) => {
     return data.sort((a: T, b: T) => {
-      return dayjs(a.point_time).unix() > dayjs(b.point_time).unix() ? 1 : -1;
+      return DateTime.fromISO(a.point_time).toSeconds() >
+        DateTime.fromISO(b.point_time).toSeconds()
+        ? 1
+        : -1;
     });
   };
 

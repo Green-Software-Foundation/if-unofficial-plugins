@@ -4,9 +4,30 @@ import {ERRORS} from '../../../../util/errors';
 
 const {InputValidationError} = ERRORS;
 
+jest.mock('@tgwf/co2', () => {
+  const original = jest.requireActual('@tgwf/co2');
+
+  return {
+    __esModule: true,
+    co2: jest.fn(() => {
+      if (process.env.WRONG_MODEL === 'true') {
+        return {perByte: () => undefined};
+      } else if (process.env.SWD_TYPE === 'true') {
+        return new original.co2({model: 'swd'});
+      }
+      return new original.co2({model: '1byte'});
+    }),
+  };
+});
+
 describe('lib/co2js: ', () => {
   describe('Co2js: ', () => {
     const output = Co2js();
+
+    beforeEach(() => {
+      process.env.WRONG_MODEL = 'false';
+      jest.clearAllMocks();
+    });
 
     describe('init Co2js: ', () => {
       it('initalizes object with properties.', async () => {
@@ -39,6 +60,52 @@ describe('lib/co2js: ', () => {
         ]);
       });
 
+      it('returns the same input data when the co2 model returns undefined for the `type`.', async () => {
+        process.env.WRONG_MODEL = 'true';
+        const config = {type: '1byte', 'green-web-host': true};
+        const inputs = [
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            'network/data/bytes': 100000,
+          },
+        ];
+        const result = await output.execute(inputs, config);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            'network/data/bytes': 100000,
+          },
+        ]);
+      });
+
+      it('returns a result when `network/data` is provided.', async () => {
+        const config = {type: '1byte', 'green-web-host': true};
+        const inputs = [
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            'network/data': 10,
+          },
+        ];
+        const result = await output.execute(inputs, config);
+
+        expect.assertions(1);
+
+        expect(result).toStrictEqual([
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            'network/data': 10,
+            'carbon-operational': 2319.583333333333,
+          },
+        ]);
+      });
+
       it('returns a result when `green-web-host` is false.', async () => {
         const config = {type: '1byte', 'green-web-host': false};
         const inputs = [
@@ -63,6 +130,7 @@ describe('lib/co2js: ', () => {
       });
 
       it('returns a result when `type` has `swg` value in the config.', async () => {
+        process.env.SWD_TYPE = 'true';
         const config = {type: 'swd', 'green-web-host': true};
         const inputs = [
           {
@@ -87,6 +155,7 @@ describe('lib/co2js: ', () => {
       });
 
       it('returns a result when provided `options` in the global config.', async () => {
+        process.env.SWD_TYPE = 'true';
         const config = {type: 'swd', 'green-web-host': false};
         const output = Co2js({
           options: {
@@ -121,6 +190,27 @@ describe('lib/co2js: ', () => {
             'carbon-operational': 0.034497244224,
           },
         ]);
+      });
+
+      it('throws an error when config is mising.', async () => {
+        const errorMessage = 'Co2js: Config is not provided.';
+
+        const inputs = [
+          {
+            timestamp: '2021-01-01T00:00:00Z',
+            duration: 3600,
+            'network/data/bytes': 100000,
+          },
+        ];
+
+        expect.assertions(2);
+
+        try {
+          await output.execute(inputs);
+        } catch (error) {
+          expect(error).toEqual(new InputValidationError(errorMessage));
+          expect(error).toBeInstanceOf(InputValidationError);
+        }
       });
 
       it('throws an error when `type` has wrong value.', async () => {

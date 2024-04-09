@@ -19,6 +19,9 @@ import * as AWS_EMBODIED from './aws-embodied.json';
 
 const {InputValidationError, UnsupportedValueError} = ERRORS;
 
+/**
+ * @deprecated This plugin will be removed.
+ */
 export const TeadsAWS = (globalConfig: ConfigParams): PluginInterface => {
   const metadata = {kind: 'execute'};
   const computeInstances: Record<string, ComputeInstance> = {};

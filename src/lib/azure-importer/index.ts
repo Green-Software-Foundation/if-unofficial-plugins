@@ -108,7 +108,7 @@ export const AzureImporter = (): PluginInterface => {
   const validateConfig = (config?: ConfigParams) => {
     if (!config) {
       throw new ConfigValidationError(
-        errorBuilder({message: 'Config must be provided.'})
+        errorBuilder({message: 'Config must be provided'})
       );
     }
 
@@ -153,11 +153,11 @@ export const AzureImporter = (): PluginInterface => {
 
     // Helper function to parse metric data and populate metricArray and timestamps.
     const parseMetrics = async (
-      timeSeriesData: Promise<MetricValue[]>,
+      timeSeriesData: MetricValue[],
       metricArray: string[],
       metricName: string
     ) => {
-      for (const data of (await timeSeriesData) ?? []) {
+      for (const data of timeSeriesData) {
         if (typeof data.average !== 'undefined') {
           metricArray.push(data.average.toString());
           if (metricName === 'cpuUtilizations') {
@@ -167,8 +167,12 @@ export const AzureImporter = (): PluginInterface => {
       }
     };
 
-    parseMetrics(getCPUMetrics(metricParams), cpuUtils, 'cpuUtilizations');
-    parseMetrics(getRawMetrics(metricParams), memAvailable, '');
+    parseMetrics(
+      await getCPUMetrics(metricParams),
+      cpuUtils,
+      'cpuUtilizations'
+    );
+    parseMetrics(await getRawMetrics(metricParams), memAvailable, '');
 
     return {timestamps, cpuUtilizations: cpuUtils, memAvailable};
   };

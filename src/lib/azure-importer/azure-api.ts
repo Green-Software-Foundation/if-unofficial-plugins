@@ -45,7 +45,7 @@ export class AzureAPI {
       }
     );
 
-    return (response.value[0].timeseries || [])
+    return (response?.value[0].timeseries || [])
       .map(series => series.data || [])
       .flat();
   }

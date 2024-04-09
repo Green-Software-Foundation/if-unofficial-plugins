@@ -1,26 +1,20 @@
-import * as dayjs from 'dayjs';
-import * as utc from 'dayjs/plugin/utc';
-import * as timezone from 'dayjs/plugin/timezone';
+import {Settings, DateTime, Duration} from 'luxon';
 import {z} from 'zod';
 
 import {ERRORS} from '../../util/errors';
 import {buildErrorMessage} from '../../util/helpers';
 
-import {ConfigParams, KeyValuePair, PluginParams} from '../../types/common';
+import {KeyValuePair, PluginParams} from '../../types/common';
 import {PluginInterface} from '../../interfaces';
 import {validate} from '../../util/validations';
 
 import {WattTimeParams, WattTimeRegionParams} from './types';
 import {WattTimeAPI} from './watt-time-api';
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
 const {InputValidationError} = ERRORS;
+Settings.defaultZone = 'utc';
 
-export const WattTimeGridEmissions = (
-  globalConfig?: ConfigParams
-): PluginInterface => {
+export const WattTimeGridEmissions = (): PluginInterface => {
   const metadata = {kind: 'execute'};
   const wattTimeAPI = WattTimeAPI();
   const errorBuilder = buildErrorMessage(WattTimeGridEmissions.name);
@@ -29,8 +23,6 @@ export const WattTimeGridEmissions = (
    * Initialize authentication with global config.
    */
   const initializeAuthentication = async () => {
-    validateConfig();
-
     await wattTimeAPI.authenticate();
   };
 
@@ -39,13 +31,39 @@ export const WattTimeGridEmissions = (
    */
   const execute = async (inputs: PluginParams[]) => {
     await initializeAuthentication();
+    const result = [];
+    let lastValidTimestamp = inputs[0] && inputs[0].timestamp;
+    const executedInputData = {
+      averageEmission: 0,
+      locale: '',
+    };
 
-    const wattTimeData = await getWattTimeData(inputs);
-
-    return inputs.map(input => {
+    for await (const input of inputs) {
       const safeInput = Object.assign({}, input, validateInput(input));
-      const inputStart = dayjs(safeInput.timestamp);
-      const inputEnd = inputStart.add(safeInput.duration, 'seconds');
+      const validTimestamp = validateAndFormatTimestamp(safeInput.timestamp);
+      const timestamp = validateAndFormatTimestamp(lastValidTimestamp);
+      const locale = safeInput['cloud/region-wt-id'] || safeInput.geolocation;
+
+      if (
+        executedInputData.locale === locale &&
+        safeInput.timestamp !== lastValidTimestamp &&
+        validTimestamp.diff(timestamp, 'seconds').seconds < 300
+      ) {
+        result.push({
+          ...input,
+          'grid/carbon-intensity': executedInputData.averageEmission,
+        });
+
+        continue;
+      }
+
+      lastValidTimestamp = safeInput.timestamp;
+
+      const wattTimeData = await getWattTimeData(safeInput);
+      const inputStart = validateAndFormatTimestamp(lastValidTimestamp);
+      const inputEnd = getEndTime(inputStart, safeInput.duration);
+      executedInputData.locale = (safeInput['cloud/region-wt-id'] ||
+        safeInput.geolocation)!;
 
       const data = getWattTimeDataForDuration(
         wattTimeData,
@@ -54,13 +72,15 @@ export const WattTimeGridEmissions = (
       );
 
       const totalEmission = data.reduce((a: number, b: number) => a + b, 0);
-      const result = totalEmission / data.length;
+      executedInputData.averageEmission = totalEmission / data.length;
 
-      return {
+      result.push({
         ...input,
-        'grid/carbon-intensity': result || 0,
-      };
-    });
+        'grid/carbon-intensity': executedInputData.averageEmission || 0,
+      });
+    }
+
+    return result;
   };
 
   /**
@@ -69,7 +89,14 @@ export const WattTimeGridEmissions = (
   const validateInput = (input: PluginParams) => {
     const schema = z
       .object({
-        duration: z.number(),
+        duration: z.number().refine(value => {
+          if (value < 300) {
+            console.warn(
+              'WARN (Watt-TIME): your timestamps are spaced less than 300s apart. The minimum resolution of the Watt-time API is 300s. To account for this, we make API requests every 300s and interpolate the values in between. To use real Watt-time data only, change your time resolution to >= 300 seconds.'
+            );
+          }
+          return value;
+        }),
         timestamp: z.string(),
         geolocation: z
           .string()
@@ -113,23 +140,17 @@ export const WattTimeGridEmissions = (
    */
   const getWattTimeDataForDuration = (
     wattTimeData: KeyValuePair[],
-    inputStart: dayjs.Dayjs,
-    inputEnd: dayjs.Dayjs
+    inputStart: DateTime,
+    inputEnd: DateTime
   ) => {
     const kgMWh = 0.45359237;
-    const formatedInputStart = dayjs.tz(inputStart, 'UTC').format();
-    const formatedInputEnd = dayjs.tz(inputEnd, 'UTC').format();
 
     return wattTimeData.reduce((accumulator, data) => {
-      /* WattTime API returns full data for the entire duration.
-       * if the data point is before the input start, ignore it.
-       * if the data point is after the input end, ignore it.
-       * if the data point is exactly the same as the input end, ignore it
-       */
+      const pointTimeInSeconds = DateTime.fromISO(data.point_time).toSeconds();
+
       if (
-        !dayjs(data.point_time).isBefore(formatedInputStart) &&
-        !dayjs(data.point_time).isAfter(formatedInputEnd) &&
-        dayjs(data.point_time).format() !== dayjs(formatedInputEnd).format()
+        pointTimeInSeconds >= inputStart.toSeconds() &&
+        pointTimeInSeconds < inputEnd.toSeconds()
       ) {
         accumulator.push(data.value / kgMWh);
       }
@@ -154,109 +175,64 @@ export const WattTimeGridEmissions = (
   };
 
   /**
-   * Retrieves data from the WattTime API based on the provided inputs.
+   * Retrieves data from the WattTime API based on the provided input.
    * Determines the start time and fetch duration from the inputs, and parses the geolocation.
    * Fetches data from the WattTime API for the entire duration and returns the sorted data.
    */
-  const getWattTimeData = async (inputs: PluginParams[]) => {
-    const {startTime, fetchDuration} = calculateStartDurationTime(inputs);
+  const getWattTimeData = async (input: PluginParams) => {
+    const {timestamp: startTime, duration} = input;
+    const formatedStartTime = validateAndFormatTimestamp(startTime);
+    const formatedEndTime = getEndTime(formatedStartTime, duration);
 
-    const formatedStartTime = dayjs.tz(startTime, 'UTC').format();
-    const formatEndTime = dayjs
-      .tz(startTime, 'UTC')
-      .add(fetchDuration, 'seconds')
-      .format();
-
-    if (inputs[0]['cloud/region-wt-id']) {
+    if (input['cloud/region-wt-id']) {
       const params: WattTimeRegionParams = {
-        start: formatedStartTime,
-        end: formatEndTime,
-        region: inputs[0]['cloud/region-wt-id'],
-        signal_type: inputs[0]['signal-type'],
+        start: formatedStartTime.toString(),
+        end: formatedEndTime.toString(),
+        region: input['cloud/region-wt-id'],
+        signal_type: input['signal-type'],
       };
 
       return await wattTimeAPI.fetchDataWithRegion(params);
     }
 
-    const {latitude, longitude} = parseLocation(inputs[0].geolocation);
+    const {latitude, longitude} = parseLocation(input.geolocation);
 
     const params: WattTimeParams = {
       latitude,
       longitude,
-      starttime: formatedStartTime,
-      endtime: formatEndTime,
+      starttime: formatedStartTime.toString(),
+      endtime: formatedEndTime.toString(),
+      signal_type: input['signal-type'],
     };
 
     return await wattTimeAPI.fetchAndSortData(params);
   };
 
   /**
-   * Calculates the start time and fetch duration based on the provided inputs.
-   * Iterates through the inputs to find the earliest start time and latest end time.
-   * Calculates the fetch duration based on the time range.
-   * Throws an InputValidationError if the fetch duration exceeds the maximum supported by the WattTime API.
-   *
+   * Validates timestamp format.
    */
-  const calculateStartDurationTime = (
-    inputs: PluginParams[]
-  ): {
-    startTime: dayjs.Dayjs;
-    fetchDuration: number;
-  } => {
-    const {startTime, endtime} = inputs.reduce(
-      (acc, input) => {
-        const safeInput = validateInput(input);
-        const {duration, timestamp} = safeInput;
-        const dayjsTimestamp = dayjs.tz(timestamp, 'UTC');
-        const startTime = dayjsTimestamp.isBefore(acc.startTime)
-          ? dayjsTimestamp
-          : acc.startTime;
-        const durationInSeconds = dayjsTimestamp.add(duration, 'seconds');
-        const endTime = durationInSeconds.isAfter(acc.endtime)
-          ? durationInSeconds
-          : acc.endtime;
+  const validateAndFormatTimestamp = (timestamp: string) => {
+    const isoDateTime = DateTime.fromISO(timestamp);
+    const sqlDateTime = DateTime.fromSQL(timestamp);
 
-        return {startTime: startTime, endtime: endTime};
-      },
-      {startTime: inputs[0].timestamp, endtime: inputs[0].timestamp}
-    );
-
-    const fetchDuration = endtime.diff(startTime, 'seconds');
-
-    // WattTime API only supports up to 32 days
-    if (fetchDuration > 32 * 24 * 60 * 60) {
+    if (isoDateTime.isValid) {
+      return isoDateTime;
+    } else if (sqlDateTime.isValid) {
+      return sqlDateTime;
+    } else {
       throw new InputValidationError(
         errorBuilder({
-          message: `WattTime API supports up to 32 days. Duration of ${fetchDuration} seconds is too long`,
+          message: 'Timestamp is not valid date format',
         })
       );
     }
-
-    return {startTime: startTime, fetchDuration};
   };
 
   /**
-   * Validates static parameters.
+   * Calculates end time with given start time and duration.
    */
-  const validateConfig = () => {
-    const WATT_TIME_USERNAME = process.env.WATT_TIME_USERNAME;
-    const WATT_TIME_PASSWORD = process.env.WATT_TIME_PASSWORD;
-
-    const schema = z.object({
-      WATT_TIME_USERNAME: z.string({
-        required_error: 'not provided in .env file of `IF` root directory',
-      }),
-      WATT_TIME_PASSWORD: z.string().min(1, {
-        message: 'not provided in .env file of `IF` root directory',
-      }),
-    });
-
-    return validate<z.infer<typeof schema>>(schema, {
-      ...(globalConfig || {}),
-      WATT_TIME_USERNAME,
-      WATT_TIME_PASSWORD,
-    });
-  };
+  const getEndTime = (startTime: DateTime, duration: number) =>
+    startTime.plus(Duration.fromObject({seconds: duration}));
 
   return {
     metadata,
