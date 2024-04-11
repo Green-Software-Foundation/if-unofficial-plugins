@@ -18,6 +18,7 @@ export const WattTimeGridEmissions = (): PluginInterface => {
   const metadata = {kind: 'execute'};
   const wattTimeAPI = WattTimeAPI();
   const errorBuilder = buildErrorMessage(WattTimeGridEmissions.name);
+  let isWarned = false;
 
   /**
    * Initialize authentication with global config.
@@ -90,11 +91,13 @@ export const WattTimeGridEmissions = (): PluginInterface => {
     const schema = z
       .object({
         duration: z.number().refine(value => {
-          if (value < 300) {
+          if (value < 300 && !isWarned) {
+            isWarned = true;
             console.warn(
               'WARN (Watt-TIME): your timestamps are spaced less than 300s apart. The minimum resolution of the Watt-time API is 300s. To account for this, we make API requests every 300s and interpolate the values in between. To use real Watt-time data only, change your time resolution to >= 300 seconds.'
             );
           }
+
           return value;
         }),
         timestamp: z.string(),
