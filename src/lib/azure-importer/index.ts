@@ -70,7 +70,7 @@ export const AzureImporter = (): PluginInterface => {
   ) => {
     return rawResults.timestamps.map((timestamp, index) => ({
       'cloud/vendor': 'azure',
-      'cpu/utilization': rawResults.cpuUtilizations[index],
+      'cpu/utilization': parseFloat(rawResults.cpuUtilizations[index]),
       'memory/available/GB': parseFloat(rawResults.memAvailable[index]) * 1e-9,
       'memory/used/GB':
         parseFloat(rawMetadataResults.totalMemoryGB) -
