@@ -38,8 +38,9 @@ export const AzureImporter = (): PluginInterface => {
     for await (const input of inputs) {
       const mergedWithConfig = Object.assign(
         {},
-        validateInput(input),
-        validatedConfig
+        validatedConfig,
+        input,
+        validateInput(input)
       );
       const azureInput = mapInputToAzureInputs(mergedWithConfig);
       const rawResults = await getVmUsage(azureInput);
