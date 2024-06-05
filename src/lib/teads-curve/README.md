@@ -1,6 +1,8 @@
 # Teads' CPU Estimation Plugin
 
-> [!NOTE] > `Teads-Curve` is a community plugin, not part of the IF standard library. This means the IF core team are not closely monitoring these plugins to keep them up to date. You should do your own research before implementing them!
+**IMPORTANT**
+
+**This plugin is deprecated and will be deleted, likely before July 2024. Instead of providing a Teads plugin we have created a set of generic arithmetic plugins that can be chained together to replicate the behaviour of this plugin. We have added an example manifest to the IF repository to use as a template. You should start migrating your pipelines over to this method as soon as possible instead of relying on this Teads curve plugin.**
 
 Teads Engineering team has built a plugin that is capable of estimating CPU usages across varying type of CPUs using a curve commonly known as Teads Curve.
 
