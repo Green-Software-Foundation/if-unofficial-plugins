@@ -1,6 +1,6 @@
 # Teads' AWS Estimation Plugin
 
-[!CAUTION] **This plugin is deprecated and will be deleted, likely before July 2024. We no longer want to support this plugin. It is possibel to replicate its behaviour using a set of generic arithmetic plugins that now come bundled in IF. You should start migrating your pipelines over to this method as soon as possible instead of relying on this plugin.**
+> [!CAUTION] **This plugin is deprecated and will be deleted, likely before July 2024. We no longer want to support this plugin. It is possible to replicate its behaviour using a set of generic arithmetic plugins that now come bundled in IF. You should start migrating your pipelines over to this method as soon as possible instead of relying on this plugin.**
 
 Teads Engineering Team built a plugin for estimating AWS instances energy usage. This plugin creates a power curve on a correlation to SPEC Power database. This allows the plugin to generate a power curve for any AWS EC2 instance type based on publicly available AWS EC2 Instance CPU data.
 
