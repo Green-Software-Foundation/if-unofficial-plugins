@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> If you are participating in Carbon Hack 24, please **don't submit your plugin to the if-unofficial-plugins repository**. This is a library of plugins for Impact Framework which are being migrated to new owners and will eventually be decomissioned. Please commit your plugin to your **own repository** and submit a link to your repo in your final submission for the hackaton. More info about building and publishing plugins [here](https://if.greensoftware.foundation/developers/how-to-build-plugins#step-5-publishing-your-plugin).
+> This repository is deprecated and is no longer actively maintained. Instead, the plugins in this repository have been replaced using IF builtins or handed off to external owners. You can search for plugins using the [IF Explorer](explorer.if.greensoftware.foundation).
 
 
 
