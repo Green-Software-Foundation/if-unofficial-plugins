@@ -4,32 +4,29 @@ import {z} from 'zod';
 import {PluginInterface} from '../../interfaces';
 import {ConfigParams, PluginParams} from '../../types';
 
-import {allDefined, validate} from '../../util/validations';
+import {validate} from '../../util/validations';
 import {buildErrorMessage} from '../../util/helpers';
 import {ERRORS} from '../../util/errors';
 
 const {InputValidationError} = ERRORS;
 
-export const Co2js = (globalConfig?: ConfigParams): PluginInterface => {
+export const Co2js = (): PluginInterface => {
   const metadata = {kind: 'execute'};
   const errorBuilder = buildErrorMessage(Co2js.name);
-
   /**
    * Executes the plugin for a list of input parameters.
    */
   const execute = async (inputs: PluginParams[], config?: ConfigParams) => {
-    const mergedValidatedConfig = Object.assign(
-      {},
-      validateConfig(config),
-      validateGlobalConfig()
-    );
-    const model = new co2({model: mergedValidatedConfig.type});
+    const validatedConfig = validateConfig(config);
+    const model = new co2({model: validatedConfig.type});
 
     return inputs.map(input => {
+      const validatedInput = validateInput(input);
+
       const mergedWithConfig = Object.assign(
         {},
-        validateInput(input),
-        mergedValidatedConfig
+        validatedConfig,
+        validatedInput
       );
       const result = calculateResultByParams(mergedWithConfig, model);
 
@@ -72,51 +69,41 @@ export const Co2js = (globalConfig?: ConfigParams): PluginInterface => {
    * Validates input parameters.
    */
   const validateInput = (input: PluginParams) => {
-    const schema = z
+    const inputSchema = z
       .object({
-        'network/data/bytes': z.number(),
-        'network/data': z.number(),
+        'network/data/bytes': z.number().optional(),
+        'network/data': z.number().optional(),
+        'green-web-host': z.boolean(),
+        options: z
+          .object({
+            dataReloadRatio: z.number().min(0).max(1).optional(),
+            firstVisitPercentage: z.number().min(0).max(1).optional(),
+            returnVisitPercentage: z.number().min(0).max(1).optional(),
+            gridIntensity: z
+              .object({
+                device: z
+                  .number()
+                  .or(z.object({country: z.string()}))
+                  .optional(),
+                dataCenter: z
+                  .number()
+                  .or(z.object({country: z.string()}))
+                  .optional(),
+                networks: z
+                  .number()
+                  .or(z.object({country: z.string()}))
+                  .optional(),
+              })
+              .optional(),
+          })
+          .optional(),
       })
-      .partial()
       .refine(data => !!data['network/data/bytes'] || !!data['network/data'], {
         message:
           'Either `network/data/bytes` or `network/data` should be provided in the input.',
       });
 
-    return validate<z.infer<typeof schema>>(schema, input);
-  };
-
-  /**
-   * Validates Global config parameters.
-   */
-  const validateGlobalConfig = () => {
-    const schema = z.object({
-      options: z
-        .object({
-          dataReloadRatio: z.number().min(0).max(1).optional(),
-          firstVisitPercentage: z.number().min(0).max(1).optional(),
-          returnVisitPercentage: z.number().min(0).max(1).optional(),
-          gridIntensity: z
-            .object({
-              device: z
-                .number()
-                .or(z.object({country: z.string()}))
-                .optional(),
-              dataCenter: z
-                .number()
-                .or(z.object({country: z.string()}))
-                .optional(),
-              networks: z
-                .number()
-                .or(z.object({country: z.string()}))
-                .optional(),
-            })
-            .optional(),
-        })
-        .optional(),
-    });
-
-    return validate<z.infer<typeof schema>>(schema, globalConfig || {});
+    return validate<z.infer<typeof inputSchema>>(inputSchema, input);
   };
 
   /**
@@ -131,14 +118,9 @@ export const Co2js = (globalConfig?: ConfigParams): PluginInterface => {
       );
     }
 
-    const schema = z
-      .object({
-        type: z.enum(['1byte', 'swd']),
-        'green-web-host': z.boolean(),
-      })
-      .refine(allDefined, {
-        message: '`type` and `green-web-host` are not provided in node config',
-      });
+    const schema = z.object({
+      type: z.enum(['1byte', 'swd']),
+    });
 
     return validate<z.infer<typeof schema>>(schema, config);
   };
